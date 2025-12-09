@@ -1,0 +1,3 @@
+const injectScript=()=>{}
+
+export {injectScript}

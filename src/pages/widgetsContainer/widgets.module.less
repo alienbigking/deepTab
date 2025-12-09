@@ -1,0 +1,157 @@
+// 小部件卡片通用样式
+.widgetCard {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+
+  &:hover {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+  }
+
+  :global {
+    .ant-card-body {
+      padding: 16px;
+    }
+  }
+}
+
+// 日历小部件
+.calendarWidget {
+  width: 200px;
+  text-align: center;
+
+  .calendarHeader {
+    margin-bottom: 12px;
+
+    .monthYear {
+      font-size: 14px;
+      color: #666;
+    }
+  }
+
+  .calendarDay {
+    margin-bottom: 8px;
+
+    .dayNumber {
+      font-size: 48px;
+      font-weight: bold;
+      color: #333;
+      line-height: 1;
+    }
+  }
+
+  .calendarWeekday {
+    span {
+      font-size: 16px;
+      color: #999;
+    }
+  }
+}
+
+// 天气小部件
+.weatherWidget {
+  width: 280px;
+
+  .weatherTemp {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    margin-bottom: 8px;
+
+    .tempNumber {
+      font-size: 48px;
+      font-weight: bold;
+      color: #333;
+      line-height: 1;
+    }
+
+    .tempUnit {
+      font-size: 24px;
+      color: #666;
+      margin-left: 4px;
+    }
+  }
+
+  .weatherDesc {
+    text-align: center;
+    font-size: 14px;
+    color: #999;
+    margin-bottom: 16px;
+  }
+
+  .weatherForecast {
+    display: flex;
+    justify-content: space-around;
+    padding-top: 12px;
+    border-top: 1px solid #f0f0f0;
+
+    .forecastItem {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: #666;
+
+      span:nth-child(2) {
+        font-size: 20px;
+      }
+    }
+  }
+}
+
+// 待办事项小部件
+.todoWidget {
+  width: 320px;
+
+  .todoHeader {
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f0f0;
+
+    .todoTitle {
+      font-size: 16px;
+      font-weight: 500;
+      color: #333;
+    }
+  }
+
+  .todoList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 180px;
+    overflow-y: auto;
+
+    .todoItem {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px;
+      border-radius: 8px;
+      transition: background 0.2s;
+
+      &:hover {
+        background: #f5f5f5;
+      }
+
+      .todoTime {
+        font-size: 12px;
+        color: #999;
+        min-width: 45px;
+      }
+
+      .todoText {
+        font-size: 14px;
+        color: #666;
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+/**
+ * wallpaper 模块类型定义
+ */
+
+// 壁纸类型
+type WallpaperType = 'gradient' | 'image' | 'dynamic'
+
+// 渐变壁纸
+interface IGradientWallpaper {
+  id: string
+  type: 'gradient'
+  gradient: string
+  angle: number
+  colors: string[]
+}
+
+// 图片壁纸
+interface IImageWallpaper {
+  id: string
+  type: 'image'
+  url: string
+  thumbnail: string
+  author?: string
+  source?: string
+}
+
+// 动态壁纸
+interface IDynamicWallpaper {
+  id: string
+  type: 'dynamic'
+  videoUrl: string
+  thumbnail: string
+}
+
+// 壁纸配置
+interface IWallpaperConfig {
+  currentWallpaper: IGradientWallpaper | IImageWallpaper | IDynamicWallpaper
+  brightness: number
+  blur: number
+}
+
+export {
+  WallpaperType,
+  IGradientWallpaper,
+  IImageWallpaper,
+  IDynamicWallpaper,
+  IWallpaperConfig
+}

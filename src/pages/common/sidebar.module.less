@@ -1,0 +1,20 @@
+.sidebar {
+  //    display: flex;
+  :global {
+    .ant-layout-sider-children {
+      .ant-menu {
+        .ant-menu-item {
+          display: flex;
+          padding-left: 0 !important;
+          padding-right: 0 !important;
+          padding-inline: 0 !important;
+          justify-content: center;
+          align-items: center;
+          .ant-menu-title-content{
+            display: none;
+          }
+        }
+      }
+    }
+  }
+}

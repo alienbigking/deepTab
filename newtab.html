@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>新标签页</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        #root {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* 确保只显示我们的内容 */
+        body > *:not(#root):not(script) {
+            display: none !important;
+        }
+        
+        /* 隐藏可能的自定义按钮 */
+        #backgroundImageAttribution,
+        .customize-chrome-button,
+        [aria-label*="自定义"],
+        [aria-label*="Customize"],
+        [class*="customize"],
+        [id*="customize"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            position: absolute !important;
+            left: -9999px !important;
+            width: 0 !important;
+            height: 0 !important;
+        }
+    </style>
+</head>
+<body>
+<div id="root"></div>
+</body>
+</html>

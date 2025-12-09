@@ -1,0 +1,36 @@
+// 新标签页主容器样式
+.container {
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #ff8c42 100%);
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+}
+
+// 设置按钮
+.settingsButton {
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 100;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}

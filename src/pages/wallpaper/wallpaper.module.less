@@ -1,0 +1,157 @@
+// 壁纸内容
+.wallpaperContent {
+  padding: 20px 40px;
+}
+
+// 壁纸标签页
+.wallpaperTabs {
+  margin-bottom: 20px;
+
+  :global {
+    .ant-tabs-nav {
+      margin-bottom: 0;
+    }
+
+    .ant-tabs-tab {
+      font-size: 15px;
+      padding: 12px 20px;
+    }
+
+    .ant-tabs-tab-active {
+      .ant-tabs-tab-btn {
+        color: #000;
+        font-weight: 500;
+      }
+    }
+
+    .ant-tabs-ink-bar {
+      background: #000;
+    }
+  }
+}
+
+// 颜色过滤器
+.colorFilters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 20px 0;
+}
+
+.colorFilter {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+
+  &:hover {
+    transform: scale(1.1);
+  }
+
+  &.active {
+    border-color: #000;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .allText {
+    font-size: 12px;
+    font-weight: 500;
+    color: #fff;
+    background: #000;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+  }
+
+  .colorDot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+  }
+}
+
+// 渐变色网格
+.gradientGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 30px;
+}
+
+.gradientCard {
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  }
+}
+
+// 底部控制器
+.controls {
+  display: flex;
+  gap: 40px;
+  padding: 20px 0;
+  border-top: 1px solid #f0f0f0;
+}
+
+.controlItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  .controlLabel {
+    font-size: 13px;
+    color: #666;
+  }
+
+  .slider {
+    :global {
+      .ant-slider-rail {
+        background: #e9ecef;
+      }
+
+      .ant-slider-track {
+        background: #000;
+      }
+
+      .ant-slider-handle {
+        border-color: #000;
+
+        &:hover,
+        &:focus {
+          border-color: #000;
+          box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.1);
+        }
+      }
+    }
+  }
+
+  .angleControl {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 60px;
+    border: 2px solid #e9ecef;
+    border-radius: 50%;
+    width: 60px;
+
+    .angleValue {
+      font-size: 16px;
+      font-weight: 500;
+    }
+  }
+}
