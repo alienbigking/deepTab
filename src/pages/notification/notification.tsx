@@ -1,10 +1,11 @@
 import React from 'react'
+import cn from 'classnames'
 import { Card, Switch, Form, Select } from 'antd'
 import styles from './notification.module.less'
 
 const Notification: React.FC = () => {
   return (
-    <div className={styles.container}>
+    <div className={cn(styles.container)}>
       <Card title='通知设置'>
         <Form layout='vertical'>
           <Form.Item label='浏览器通知' valuePropName='checked'>

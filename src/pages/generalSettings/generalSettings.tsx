@@ -1,10 +1,11 @@
 import React from 'react'
+import cn from 'classnames'
 import { Form, Select, Switch, Button } from 'antd'
 import styles from './generalSettings.module.less'
 
 const GeneralSettings: React.FC = () => {
   return (
-    <div className={styles.container}>
+    <div className={cn(styles.container)}>
       <Form layout='vertical'>
         <Form.Item label='语言'>
           <Select defaultValue='zh'>

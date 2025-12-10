@@ -1,10 +1,11 @@
 import React from 'react'
+import cn from 'classnames'
 import { Form, Input, Select, Button, Card } from 'antd'
 import styles from './feedback.module.less'
 
 const Feedback: React.FC = () => {
   return (
-    <div className={styles.container}>
+    <div className={cn(styles.container)}>
       <Card title='投诉与反馈'>
         <Form layout='vertical'>
           <Form.Item label='反馈类型' name='type' required>

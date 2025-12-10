@@ -1,12 +1,17 @@
-import { atom } from 'recoil'
+import { create } from 'zustand'
 import { ISearchEngineConfig } from '../types/searchEngine'
 
-const searchEngineConfigStore = atom<ISearchEngineConfig>({
-  key: 'searchEngineConfigStore',
-  default: {
+interface SearchEngineStore {
+  config: ISearchEngineConfig
+  setConfig: (config: ISearchEngineConfig) => void
+}
+
+export const useSearchEngineStore = create<SearchEngineStore>((set) => ({
+  config: {
     defaultEngine: 'baidu',
     customEngines: []
-  }
-})
+  },
+  setConfig: (config) => set({ config })
+}))
 
-export default { searchEngineConfigStore }
+export default useSearchEngineStore

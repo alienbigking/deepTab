@@ -1,8 +1,13 @@
-import { atom } from 'recoil'
+import { create } from 'zustand'
 
-const feedbackListStore = atom({
-  key: 'feedbackListStore',
-  default: []
-})
+interface FeedbackStore {
+  feedbackList: any[]
+  setFeedbackList: (list: any[]) => void
+}
 
-export default { feedbackListStore }
+export const useFeedbackStore = create<FeedbackStore>((set) => ({
+  feedbackList: [],
+  setFeedbackList: (feedbackList) => set({ feedbackList })
+}))
+
+export default useFeedbackStore

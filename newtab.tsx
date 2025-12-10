@@ -1,6 +1,6 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
-import NewTab from './src/pages/newtab'
+import Main from './src/pages/main'
 import './src/i18n'
 import './global.less'
 import { ConfigProvider } from 'antd'
@@ -14,7 +14,7 @@ const App: React.FC = () => {
 
   return (
     <ConfigProvider locale={locale}>
-      <NewTab />
+      <Main />
     </ConfigProvider>
   )
 }

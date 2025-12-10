@@ -1,20 +1,22 @@
-import { atom } from 'recoil'
+import { create } from 'zustand'
 import { ISubscriptionStatus } from '../types/subscription'
 
-// 订阅状态
-const subscriptionStatusStore = atom<ISubscriptionStatus>({
-  key: 'subscriptionStatusStore',
-  default: {
+interface SubscriptionStore {
+  status: ISubscriptionStatus
+  showUpgradeModal: boolean
+  setStatus: (status: ISubscriptionStatus) => void
+  setShowUpgradeModal: (show: boolean) => void
+}
+
+export const useSubscriptionStore = create<SubscriptionStore>((set) => ({
+  status: {
     plan: 'free',
     isActive: true,
     autoRenew: false
-  }
-})
+  },
+  showUpgradeModal: false,
+  setStatus: (status) => set({ status }),
+  setShowUpgradeModal: (showUpgradeModal) => set({ showUpgradeModal })
+}))
 
-// 是否显示升级弹窗
-const showUpgradeModalStore = atom<boolean>({
-  key: 'showUpgradeModalStore',
-  default: false
-})
-
-export default { subscriptionStatusStore, showUpgradeModalStore }
+export default useSubscriptionStore

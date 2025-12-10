@@ -1,11 +1,12 @@
 import React from 'react'
+import cn from 'classnames'
 import { Card, Radio, Space } from 'antd'
 import { SunOutlined, MoonOutlined, BulbOutlined } from '@ant-design/icons'
 import styles from './theme.module.less'
 
 const Theme: React.FC = () => {
   return (
-    <div className={styles.container}>
+    <div className={cn(styles.container)}>
       <Card title='主题模式'>
         <Radio.Group defaultValue='auto'>
           <Space direction='vertical' size='large'>

@@ -1,53 +1,213 @@
 import { http } from '@/utils'
 import { env } from '@/config/env'
-import {
-  IAddParams,
-  IAllListParams,
-  IListParams,
-  IUpdateParams
-} from '../types/appGrid'
+import type { App, AddAppParams, UpdateAppParams } from '../types/appGrid'
 
+// ========== 本地存储工具 ==========
+const STORAGE_KEY = 'app_grid_data'
+
+const storageUtils = {
+  // 获取本地应用列表
+  async getLocal(): Promise<App[]> {
+    return new Promise((resolve) => {
+      chrome.storage.local.get([STORAGE_KEY], (result) => {
+        const apps = result[STORAGE_KEY] || []
+        resolve(apps.sort((a: App, b: App) => a.order - b.order))
+      })
+    })
+  },
+
+  // 保存到本地
+  async saveLocal(apps: App[]): Promise<void> {
+    return new Promise((resolve) => {
+      chrome.storage.local.set({ [STORAGE_KEY]: apps }, resolve)
+    })
+  },
+
+  // 生成唯一 ID
+  generateId(): string {
+    return `app_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  },
+
+  // 获取下一个排序号
+  async getNextOrder(): Promise<number> {
+    const apps = await this.getLocal()
+    return apps.length > 0 ? Math.max(...apps.map((a) => a.order)) + 1 : 0
+  }
+}
+
+// ========== 远程 API 接口(预留) ==========
+const apiService = {
+  // 获取应用列表
+  getList() {
+    // TODO: 接入后端 API
+    // return http(`${env.HOST_API_URL}apps`).then((response) => {
+    //   return response
+    // })
+    throw new Error('远程 API 未实现')
+  },
+
+  // 添加应用
+  add(params: AddAppParams) {
+    // TODO: 接入后端 API
+    // return http(`${env.HOST_API_URL}apps`, {
+    //   method: 'POST',
+    //   data: params
+    // }).then((response) => {
+    //   return response
+    // })
+    console.log('[API] 添加应用', params)
+  },
+
+  // 更新应用
+  update(id: string, params: UpdateAppParams) {
+    // TODO: 接入后端 API
+    // return http(`${env.HOST_API_URL}apps/${id}`, {
+    //   method: 'PUT',
+    //   data: params
+    // }).then((response) => {
+    //   return response
+    // })
+    console.log('[API] 更新应用', id, params)
+  },
+
+  // 删除应用
+  delete(id: string) {
+    // TODO: 接入后端 API
+    // return http(`${env.HOST_API_URL}apps/${id}`, {
+    //   method: 'DELETE'
+    // }).then((response) => {
+    //   return response
+    // })
+    console.log('[API] 删除应用', id)
+  },
+
+  // 批量更新顺序
+  updateOrder(apps: Array<{ id: string; order: number }>) {
+    // TODO: 接入后端 API
+    // return http(`${env.HOST_API_URL}apps/order`, {
+    //   method: 'PUT',
+    //   data: { apps }
+    // }).then((response) => {
+    //   return response
+    // })
+    console.log('[API] 更新顺序', apps.length)
+  }
+}
+
+// ========== 业务逻辑层(本地 + 远程同步) ==========
 export default {
-  getList(params?: IListParams) {
-    return http(`${env.HOST_API_URL}yxpt/sys/roles`, {
-      params: params
-    }).then((response) => {
-      return response
-    })
+  /**
+   * 获取应用列表
+   * 优先从本地读取,如果已登录则从远程同步
+   */
+  async getList(): Promise<App[]> {
+    // 1. 先从本地读取
+    const localApps = await storageUtils.getLocal()
+
+    // 2. TODO: 如果已登录,尝试从远程同步
+    // if (isLoggedIn()) {
+    //   try {
+    //     const response = await apiService.getList()
+    //     const remoteApps = response.data
+    //     await storageUtils.saveLocal(remoteApps)
+    //     return remoteApps
+    //   } catch (error) {
+    //     console.warn('远程同步失败,使用本地数据', error)
+    //   }
+    // }
+
+    return localApps
   },
-  getAllList(params?: IAllListParams) {
-    return http(`${env.HOST_API_URL}yxpt/sys/roles/list`, {
-      params: params
-    }).then((response) => {
-      return response
-    })
+
+  /**
+   * 添加应用
+   */
+  async add(params: AddAppParams): Promise<App> {
+    const newApp: App = {
+      ...params,
+      id: storageUtils.generateId(),
+      order: await storageUtils.getNextOrder(),
+      createdAt: new Date().toISOString(),
+      syncStatus: 'pending'
+    }
+
+    // 1. 保存到本地
+    const apps = await storageUtils.getLocal()
+    apps.push(newApp)
+    await storageUtils.saveLocal(apps)
+
+    // 2. TODO: 如果已登录,同步到远程
+    // if (isLoggedIn()) {
+    //   apiService.add(params).catch(console.error)
+    // }
+
+    return newApp
   },
-  getDetail(id: number) {
-    return http(`${env.HOST_API_URL}yxpt/sys/roles/${id}`).then((response) => {
-      return response
-    })
+
+  /**
+   * 更新应用
+   */
+  async update(id: string, params: UpdateAppParams): Promise<App> {
+    const apps = await storageUtils.getLocal()
+    const index = apps.findIndex((app) => app.id === id)
+
+    if (index === -1) {
+      throw new Error('应用不存在')
+    }
+
+    const updatedApp: App = {
+      ...apps[index],
+      ...params,
+      updatedAt: new Date().toISOString(),
+      syncStatus: 'pending'
+    }
+
+    apps[index] = updatedApp
+    await storageUtils.saveLocal(apps)
+
+    // TODO: 如果已登录,同步到远程
+    // if (isLoggedIn()) {
+    //   apiService.update(id, params).catch(console.error)
+    // }
+
+    return updatedApp
   },
-  add(params: IAddParams) {
-    return http(`${env.HOST_API_URL}yxpt/sys/roles`, {
-      method: 'POST',
-      data: params
-    }).then((response) => {
-      return response
-    })
+
+  /**
+   * 删除应用
+   */
+  async delete(id: string): Promise<void> {
+    const apps = await storageUtils.getLocal()
+    const filteredApps = apps.filter((app) => app.id !== id)
+
+    // 1. 从本地删除
+    await storageUtils.saveLocal(filteredApps)
+
+    // 2. TODO: 如果已登录,同步到远程
+    // if (isLoggedIn()) {
+    //   apiService.delete(id).catch(console.error)
+    // }
   },
-  update(id: number, params: IUpdateParams) {
-    return http(`${env.HOST_API_URL}yxpt/sys/roles/${id}`, {
-      method: 'PUT',
-      data: params
-    }).then((response) => {
-      return response
-    })
-  },
-  delete(id: number) {
-    return http(`${env.HOST_API_URL}yxpt/sys/roles/${id}`, {
-      method: 'DELETE'
-    }).then((response) => {
-      return response
-    })
+
+  /**
+   * 更新应用顺序
+   */
+  async updateOrder(apps: App[]): Promise<void> {
+    // 更新 order 字段
+    const updatedApps = apps.map((app, index) => ({
+      ...app,
+      order: index,
+      updatedAt: new Date().toISOString(),
+      syncStatus: 'pending' as const
+    }))
+
+    // 1. 更新本地
+    await storageUtils.saveLocal(updatedApps)
+
+    // 2. TODO: 如果已登录,同步到远程
+    // if (isLoggedIn()) {
+    //   const orderData = updatedApps.map(a => ({ id: a.id, order: a.order }))
+    //   apiService.updateOrder(orderData).catch(console.error)
+    // }
   }
 }

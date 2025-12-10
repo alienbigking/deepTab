@@ -1,14 +1,19 @@
-import { atom } from 'recoil'
+import { create } from 'zustand'
 import { INotificationSettings } from '../types/notification'
 
-const notificationSettingsStore = atom<INotificationSettings>({
-  key: 'notificationSettingsStore',
-  default: {
+interface NotificationStore {
+  settings: INotificationSettings
+  setSettings: (settings: INotificationSettings) => void
+}
+
+export const useNotificationStore = create<NotificationStore>((set) => ({
+  settings: {
     enableBrowserNotification: true,
     enableEmailNotification: false,
     enableSoundNotification: true,
     notificationFrequency: 'realtime'
-  }
-})
+  },
+  setSettings: (settings) => set({ settings })
+}))
 
-export default { notificationSettingsStore }
+export default useNotificationStore

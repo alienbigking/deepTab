@@ -1,16 +1,21 @@
-import { atom } from 'recoil'
+import { create } from 'zustand'
 import { IGeneralSettings } from '../types/generalSettings'
 
-const generalSettingsStore = atom<IGeneralSettings>({
-  key: 'generalSettingsStore',
-  default: {
+interface GeneralSettingsStore {
+  settings: IGeneralSettings
+  setSettings: (settings: IGeneralSettings) => void
+}
+
+export const useGeneralSettingsStore = create<GeneralSettingsStore>((set) => ({
+  settings: {
     language: 'zh',
     timeFormat: '24',
     showWeather: true,
     showClock: true,
     autoSave: true,
     animations: true
-  }
-})
+  },
+  setSettings: (settings) => set({ settings })
+}))
 
-export default { generalSettingsStore }
+export default useGeneralSettingsStore

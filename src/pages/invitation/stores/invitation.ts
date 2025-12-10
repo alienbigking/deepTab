@@ -1,9 +1,14 @@
-import { atom } from 'recoil'
+import { create } from 'zustand'
 import { IInvitationStats } from '../types/invitation'
 
-const invitationStatsStore = atom<IInvitationStats | null>({
-  key: 'invitationStatsStore',
-  default: null
-})
+interface InvitationStore {
+  stats: IInvitationStats | null
+  setStats: (stats: IInvitationStats | null) => void
+}
 
-export default { invitationStatsStore }
+export const useInvitationStore = create<InvitationStore>((set) => ({
+  stats: null,
+  setStats: (stats) => set({ stats })
+}))
+
+export default useInvitationStore

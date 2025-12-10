@@ -1,13 +1,39 @@
-import { atom } from 'recoil'
+import { create } from 'zustand'
+import type { App, ContextMenuState } from '../types/appGrid'
 
-const showStore = atom({
-  default: false,
-  key: 'showStore'
-})
+interface AppGridStore {
+  // 状态
+  apps: App[]
+  isEditMode: boolean
+  contextMenu: ContextMenuState | null
+  isLoading: boolean
+  syncStatus: 'idle' | 'syncing' | 'error'
 
-const showStore1 = atom({
-  default: false,
-  key: 'showStore1'
-})
+  // Actions
+  setApps: (apps: App[]) => void
+  setIsEditMode: (isEditMode: boolean) => void
+  setContextMenu: (contextMenu: ContextMenuState | null) => void
+  setIsLoading: (isLoading: boolean) => void
+  setSyncStatus: (syncStatus: 'idle' | 'syncing' | 'error') => void
+}
 
-export default { showStore, showStore1 }
+/**
+ * AppGrid 状态管理 Store
+ */
+export const useAppGridStore = create<AppGridStore>((set) => ({
+  // 初始状态
+  apps: [],
+  isEditMode: false,
+  contextMenu: null,
+  isLoading: false,
+  syncStatus: 'idle',
+
+  // Actions
+  setApps: (apps) => set({ apps }),
+  setIsEditMode: (isEditMode) => set({ isEditMode }),
+  setContextMenu: (contextMenu) => set({ contextMenu }),
+  setIsLoading: (isLoading) => set({ isLoading }),
+  setSyncStatus: (syncStatus) => set({ syncStatus })
+}))
+
+export default useAppGridStore

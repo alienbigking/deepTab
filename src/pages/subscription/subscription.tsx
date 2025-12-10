@@ -1,4 +1,5 @@
 import React from 'react'
+import cn from 'classnames'
 import { Card, Button, Badge } from 'antd'
 import { CrownOutlined } from '@ant-design/icons'
 import styles from './subscription.module.less'
@@ -8,11 +9,11 @@ import styles from './subscription.module.less'
  */
 const Subscription: React.FC = () => {
   return (
-    <div className={styles.container}>
-      <div className={styles.currentPlan}>
+    <div className={cn(styles.container)}>
+      <div className={cn(styles.currentPlan)}>
         <Badge.Ribbon text='FREE' color='gray'>
           <Card>
-            <div className={styles.planInfo}>
+            <div className={cn(styles.planInfo)}>
               <CrownOutlined style={{ fontSize: 32, color: '#999' }} />
               <h3>免费版</h3>
               <p>基础功能，永久免费</p>
@@ -21,7 +22,7 @@ const Subscription: React.FC = () => {
         </Badge.Ribbon>
       </div>
 
-      <div className={styles.upgradeTip}>
+      <div className={cn(styles.upgradeTip)}>
         <Button type='primary' size='large'>
           升级到专业版
         </Button>

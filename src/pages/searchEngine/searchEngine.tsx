@@ -1,10 +1,11 @@
 import React from 'react'
+import cn from 'classnames'
 import { Card, Radio, Space } from 'antd'
 import styles from './searchEngine.module.less'
 
 const SearchEngine: React.FC = () => {
   return (
-    <div className={styles.container}>
+    <div className={cn(styles.container)}>
       <Card title='默认搜索引擎'>
         <Radio.Group defaultValue='baidu'>
           <Space direction='vertical'>

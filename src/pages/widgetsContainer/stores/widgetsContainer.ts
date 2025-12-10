@@ -1,27 +1,27 @@
-import { atom } from 'recoil'
+import { create } from 'zustand'
 import { IWeatherData, ITodoItem, IWidgetConfig } from '../types/widgetsContainer'
 
-// 天气数据
-const weatherDataStore = atom<IWeatherData | null>({
-  key: 'weatherDataStore',
-  default: null
-})
+interface WidgetsContainerStore {
+  weatherData: IWeatherData | null
+  todoList: ITodoItem[]
+  widgetConfig: IWidgetConfig
+  setWeatherData: (data: IWeatherData | null) => void
+  setTodoList: (list: ITodoItem[]) => void
+  setWidgetConfig: (config: IWidgetConfig) => void
+}
 
-// 待办事项列表
-const todoListStore = atom<ITodoItem[]>({
-  key: 'todoListStore',
-  default: []
-})
-
-// 小部件配置
-const widgetConfigStore = atom<IWidgetConfig>({
-  key: 'widgetConfigStore',
-  default: {
+export const useWidgetsContainerStore = create<WidgetsContainerStore>((set) => ({
+  weatherData: null,
+  todoList: [],
+  widgetConfig: {
     showCalendar: true,
     showWeather: true,
     showTodo: true,
     weatherCity: '北京'
-  }
-})
+  },
+  setWeatherData: (weatherData) => set({ weatherData }),
+  setTodoList: (todoList) => set({ todoList }),
+  setWidgetConfig: (widgetConfig) => set({ widgetConfig })
+}))
 
-export default { weatherDataStore, todoListStore, widgetConfigStore }
+export default useWidgetsContainerStore

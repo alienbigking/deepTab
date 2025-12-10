@@ -1,8 +1,13 @@
-import { atom } from 'recoil'
+import { create } from 'zustand'
 
-const relatedAppsStore = atom({
-  key: 'relatedAppsStore',
-  default: []
-})
+interface RelatedAppsStore {
+  apps: any[]
+  setApps: (apps: any[]) => void
+}
 
-export default { relatedAppsStore }
+export const useRelatedAppsStore = create<RelatedAppsStore>((set) => ({
+  apps: [],
+  setApps: (apps) => set({ apps })
+}))
+
+export default useRelatedAppsStore

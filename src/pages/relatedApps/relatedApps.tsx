@@ -1,14 +1,13 @@
 import React from 'react'
+import cn from 'classnames'
 import { Card, List } from 'antd'
 import styles from './relatedApps.module.less'
 
 const RelatedApps: React.FC = () => {
-  const apps = [
-    { id: '1', name: 'deepTab Pro', description: '专业版扩展', icon: '🎨' }
-  ]
+  const apps = [{ id: '1', name: 'deepTab Pro', description: '专业版扩展', icon: '🎨' }]
 
   return (
-    <div className={styles.container}>
+    <div className={cn(styles.container)}>
       <List
         grid={{ gutter: 16, column: 3 }}
         dataSource={apps}

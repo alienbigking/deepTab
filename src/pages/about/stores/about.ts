@@ -1,8 +1,13 @@
-import { atom } from 'recoil'
+import { create } from 'zustand'
 
-const aboutInfoStore = atom({
-  key: 'aboutInfoStore',
-  default: null
-})
+interface AboutStore {
+  info: any
+  setInfo: (info: any) => void
+}
 
-export default { aboutInfoStore }
+export const useAboutStore = create<AboutStore>((set) => ({
+  info: null,
+  setInfo: (info) => set({ info })
+}))
+
+export default useAboutStore

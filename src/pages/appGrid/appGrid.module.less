@@ -1,10 +1,36 @@
+// 抖动动画
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  25% {
+    transform: translateX(-2px) rotate(-1deg);
+  }
+  50% {
+    transform: translateX(2px) rotate(1deg);
+  }
+  75% {
+    transform: translateX(-2px) rotate(-1deg);
+  }
+}
+
 // 应用网格容器
 .appGridContainer {
   padding: 0 80px;
   flex: 1;
   overflow-y: auto;
   display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+// 添加按钮容器
+.addBtnWrapper {
+  margin: 20px 0;
+  display: flex;
   justify-content: center;
+  align-items: center;
 }
 
 // 应用网格
@@ -25,6 +51,8 @@
   gap: 8px;
   cursor: pointer;
   transition: transform 0.2s ease;
+  position: relative;
+  user-select: none;
 
   &:hover {
     transform: translateY(-4px);
@@ -36,6 +64,50 @@
 
   &:active {
     transform: translateY(-2px);
+  }
+
+  // 编辑模式样式
+  &.editMode {
+    animation: shake 0.5s ease-in-out infinite;
+
+    .iconWrapper {
+      box-shadow: 0 4px 12px rgba(255, 0, 0, 0.2);
+    }
+  }
+
+  // 拖拽中样式
+  &.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+  }
+
+  // 删除按钮
+  .deleteBtn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #ff4d4f;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    font-size: 16px;
+    box-shadow: 0 2px 8px rgba(255, 77, 79, 0.3);
+    transition: all 0.2s ease;
+
+    &:hover {
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(255, 77, 79, 0.5);
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
   }
 
   .iconWrapper {
@@ -66,4 +138,42 @@
     text-overflow: ellipsis;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   }
+}
+
+// 右键菜单容器
+.contextMenuWrapper {
+  position: fixed;
+  z-index: 1000;
+
+  // 设置下拉菜单的最小宽度
+  :global {
+    .ant-dropdown {
+      min-width: 160px;
+    }
+
+    .ant-dropdown-menu {
+      min-width: 160px;
+    }
+
+    .ant-dropdown-menu-item {
+      min-width: 160px;
+      padding: 8px 12px;
+    }
+  }
+}
+
+// 右键菜单触发器
+.contextMenuTrigger {
+  width: 1px;
+  height: 1px;
+}
+
+// 添加应用表单
+.addAppForm {
+  margin-top: 24px;
+}
+
+// 完成按钮
+.doneBtn {
+  margin-left: 8px;
 }

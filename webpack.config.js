@@ -55,33 +55,40 @@ class VersionPlugin {
 class ChromeExtensionReloader {
   apply(compiler) {
     compiler.hooks.done.tap('ChromeExtensionReloader', () => {
-      console.log('✅ 扩展已自动刷新完成！')
-      clearTimeout(timer)
-      timer = setTimeout(() => {
-        const platform = process.platform
-        let command = ''
+      // 只在生产模式下自动打开浏览器
+      const isProduction = compiler.options.mode === 'production'
 
-        // 根据操作系统选择不同的命令
-        if (platform === 'darwin') {
-          // macOS
-          command = 'open -a "Google Chrome" "http://reload.extensions"'
-        } else if (platform === 'win32') {
-          // Windows
-          command = 'start chrome "http://reload.extensions"'
-        } else {
-          // Linux
-          command = 'google-chrome "http://reload.extensions"'
-        }
+      if (isProduction) {
+        console.log('✅ 扩展已自动刷新完成！')
+        clearTimeout(timer)
+        timer = setTimeout(() => {
+          const platform = process.platform
+          let command = ''
 
-        exec(command, (error) => {
-          if (error) {
-            console.log('⚠️ 无法自动打开浏览器，请手动刷新扩展')
-            console.log('   访问: chrome://extensions/ 然后点击刷新按钮')
+          // 根据操作系统选择不同的命令
+          if (platform === 'darwin') {
+            // macOS
+            command = 'open -a "Google Chrome" "http://reload.extensions"'
+          } else if (platform === 'win32') {
+            // Windows
+            command = 'start chrome "http://reload.extensions"'
           } else {
-            console.log('🔄 扩展重新加载完成')
+            // Linux
+            command = 'google-chrome "http://reload.extensions"'
           }
-        })
-      }, 800)
+
+          exec(command, (error) => {
+            if (error) {
+              console.log('⚠️ 无法自动打开浏览器，请手动刷新扩展')
+              console.log('   访问: chrome://extensions/ 然后点击刷新按钮')
+            } else {
+              console.log('🔄 扩展重新加载完成')
+            }
+          })
+        }, 800)
+      } else {
+        console.log('✅ 开发模式构建完成！请手动刷新扩展')
+      }
     })
   }
 }

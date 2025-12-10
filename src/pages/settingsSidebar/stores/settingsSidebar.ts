@@ -1,16 +1,16 @@
-import { atom } from 'recoil'
+import { create } from 'zustand'
 import { IAppSettings } from '../types/settingsSidebar'
 
-// 侧边栏打开状态
-const sidebarOpenStore = atom<boolean>({
-  key: 'sidebarOpenStore',
-  default: false
-})
+interface SettingsSidebarStore {
+  sidebarOpen: boolean
+  appSettings: IAppSettings
+  setSidebarOpen: (open: boolean) => void
+  setAppSettings: (settings: IAppSettings) => void
+}
 
-// 应用设置
-const appSettingsStore = atom<IAppSettings>({
-  key: 'appSettingsStore',
-  default: {
+export const useSettingsSidebarStore = create<SettingsSidebarStore>((set) => ({
+  sidebarOpen: false,
+  appSettings: {
     wallpaper: {
       type: 'gradient',
       gradient: 'linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #ff8c42 100%)'
@@ -23,7 +23,9 @@ const appSettingsStore = atom<IAppSettings>({
     searchEngine: 'baidu',
     language: 'zh',
     theme: 'auto'
-  }
-})
+  },
+  setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
+  setAppSettings: (appSettings) => set({ appSettings })
+}))
 
-export default { sidebarOpenStore, appSettingsStore }
+export default useSettingsSidebarStore

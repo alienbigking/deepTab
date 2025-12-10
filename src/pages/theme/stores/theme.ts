@@ -1,13 +1,18 @@
-import { atom } from 'recoil'
+import { create } from 'zustand'
 import { IThemeConfig } from '../types/theme'
 
-const themeConfigStore = atom<IThemeConfig>({
-  key: 'themeConfigStore',
-  default: {
+interface ThemeStore {
+  config: IThemeConfig
+  setConfig: (config: IThemeConfig) => void
+}
+
+export const useThemeStore = create<ThemeStore>((set) => ({
+  config: {
     mode: 'auto',
     primaryColor: '#ff6b35',
     borderRadius: 8
-  }
-})
+  },
+  setConfig: (config) => set({ config })
+}))
 
-export default { themeConfigStore }
+export default useThemeStore

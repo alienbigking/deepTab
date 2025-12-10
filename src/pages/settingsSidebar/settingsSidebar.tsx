@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import cn from 'classnames'
 import { Drawer, Avatar, Badge } from 'antd'
 import {
   UserOutlined,
@@ -46,7 +47,8 @@ type MenuKey =
  * 设置侧边栏组件
  * 完整的设置面板，包含多个功能模块
  */
-const SettingsSidebar: React.FC<SettingsSidebarProps> = ({ open, onClose }) => {
+const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
+  const { open = false, onClose } = props
   const [activeMenu, setActiveMenu] = useState<MenuKey>('wallpaper')
 
   // 菜单项
@@ -100,40 +102,41 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({ open, onClose }) => {
       onClose={onClose}
       open={open}
       width={1000}
-      className={styles.settingsDrawer}
+      className={cn(styles.settingsDrawer)}
       closable={false}
       styles={{
         body: { padding: 0 }
       }}
+      getContainer={false}
     >
-      <div className={styles.sidebarLayout}>
+      <div className={cn(styles.sidebarLayout)}>
         {/* 左侧菜单 */}
-        <div className={styles.leftMenu}>
+        <div className={cn(styles.leftMenu)}>
           {/* 用户信息 */}
-          <div className={styles.userInfo}>
+          <div className={cn(styles.userInfo)}>
             <Avatar size={48} icon={<UserOutlined />} />
-            <span className={styles.userEmail}>1260213657@qq.com</span>
+            <span className={cn(styles.userEmail)}>1260213657@qq.com</span>
           </div>
 
           {/* 菜单列表 */}
-          <div className={styles.menuList}>
+          <div className={cn(styles.menuList)}>
             {menuItems.map((item) => (
               <div
                 key={item.key}
-                className={`${styles.menuItem} ${activeMenu === item.key ? styles.active : ''}`}
+                className={cn(styles.menuItem, { [styles.active]: activeMenu === item.key })}
                 onClick={() => setActiveMenu(item.key as MenuKey)}
               >
-                <span className={styles.menuIcon}>{item.icon}</span>
-                <span className={styles.menuLabel}>{item.label}</span>
-                {item.badge && <Badge count={item.badge} className={styles.menuBadge} />}
+                <span className={cn(styles.menuIcon)}>{item.icon}</span>
+                <span className={cn(styles.menuLabel)}>{item.label}</span>
+                {item.badge && <Badge count={item.badge} className={cn(styles.menuBadge)} />}
               </div>
             ))}
           </div>
 
           {/* 底部信息 */}
-          <div className={styles.bottomInfo}>
-            <div className={styles.version}>V2.2.22</div>
-            <div className={styles.links}>
+          <div className={cn(styles.bottomInfo)}>
+            <div className={cn(styles.version)}>V2.2.22</div>
+            <div className={cn(styles.links)}>
               <span>用户协议</span>
               <span>隐私政策</span>
             </div>
@@ -141,7 +144,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({ open, onClose }) => {
         </div>
 
         {/* 右侧内容 */}
-        <div className={styles.rightContent}>{renderContent()}</div>
+        <div className={cn(styles.rightContent)}>{renderContent()}</div>
       </div>
     </Drawer>
   )

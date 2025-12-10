@@ -1,25 +1,128 @@
-import React from 'react'
+import React, { useRef, useEffect } from 'react'
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { CloseCircleFilled } from '@ant-design/icons'
+import cn from 'classnames'
 import styles from './appGrid.module.less'
 
 interface AppIconProps {
+  id: string
   name: string
   icon: string
   url: string
+  isEditMode: boolean
+  onDelete: (id: string) => void
+  onContextMenu: (e: React.MouseEvent, id: string) => void
+  onLongPress: () => void
 }
 
 /**
  * 单个应用图标组件
+ * 支持拖拽、长按进入编辑模式、右键菜单
  */
-const AppIcon: React.FC<AppIconProps> = ({ name, icon, url }) => {
-  const handleClick = () => {
+const AppIcon: React.FC<AppIconProps> = (props) => {
+  const { id, name, icon, url, isEditMode = false, onDelete, onContextMenu, onLongPress } = props
+
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null)
+  const longPressTriggered = useRef(false)
+
+  // 拖拽相关
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1
+  }
+
+  // 点击打开链接
+  const handleClick = (e: React.MouseEvent) => {
+    // 编辑模式下不打开链接
+    if (isEditMode) {
+      e.preventDefault()
+      return
+    }
+
+    // 如果是长按触发,不打开链接
+    if (longPressTriggered.current) {
+      longPressTriggered.current = false
+      return
+    }
+
     window.open(url, '_blank')
   }
 
+  // 长按开始
+  const handleMouseDown = () => {
+    if (isEditMode) return
+
+    longPressTriggered.current = false
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true
+      onLongPress()
+    }, 1000) // 1000ms (1秒) 长按触发
+  }
+
+  // 长按结束
+  const handleMouseUp = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }
+
+  // 右键菜单
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault()
+    onContextMenu(e, id)
+  }
+
+  // 删除按钮点击
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onDelete(id)
+  }
+
+  // 清理定时器
+  useEffect(() => {
+    return () => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current)
+      }
+    }
+  }, [])
+
   return (
-    <div className={styles.appIcon} onClick={handleClick}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(styles.appIcon, {
+        [styles.editMode]: isEditMode,
+        [styles.dragging]: isDragging
+      })}
+      onClick={handleClick}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      onContextMenu={handleContextMenu}
+      {...attributes}
+      {...listeners}
+    >
+      {/* 删除按钮 */}
+      {isEditMode && (
+        <div className={styles.deleteBtn} onClick={handleDelete}>
+          <CloseCircleFilled />
+        </div>
+      )}
+
+      {/* 图标 */}
       <div className={styles.iconWrapper}>
         <span className={styles.iconEmoji}>{icon}</span>
       </div>
+
+      {/* 应用名称 */}
       <div className={styles.appName}>{name}</div>
     </div>
   )

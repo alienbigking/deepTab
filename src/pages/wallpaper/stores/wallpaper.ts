@@ -1,22 +1,22 @@
-import { atom } from 'recoil'
+import { create } from 'zustand'
 import { IWallpaperConfig } from '../types/wallpaper'
 
-// 壁纸配置
-const wallpaperConfigStore = atom<IWallpaperConfig | null>({
-  key: 'wallpaperConfigStore',
-  default: null
-})
+interface WallpaperStore {
+  config: IWallpaperConfig | null
+  activeTab: string
+  selectedColor: string
+  setConfig: (config: IWallpaperConfig | null) => void
+  setActiveTab: (tab: string) => void
+  setSelectedColor: (color: string) => void
+}
 
-// 当前选中的标签页
-const activeTabStore = atom<string>({
-  key: 'wallpaperActiveTabStore',
-  default: 'gradient'
-})
+export const useWallpaperStore = create<WallpaperStore>((set) => ({
+  config: null,
+  activeTab: 'gradient',
+  selectedColor: 'all',
+  setConfig: (config) => set({ config }),
+  setActiveTab: (activeTab) => set({ activeTab }),
+  setSelectedColor: (selectedColor) => set({ selectedColor })
+}))
 
-// 选中的颜色过滤器
-const selectedColorStore = atom<string>({
-  key: 'wallpaperSelectedColorStore',
-  default: 'all'
-})
-
-export default { wallpaperConfigStore, activeTabStore, selectedColorStore }
+export default useWallpaperStore

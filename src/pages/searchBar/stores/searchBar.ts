@@ -1,26 +1,26 @@
-import { atom } from 'recoil'
+import { create } from 'zustand'
 import { SearchEngine, ISearchSettings } from '../types/searchBar'
 
-// 当前搜索引擎
-const searchEngineStore = atom<SearchEngine>({
-  key: 'searchEngineStore',
-  default: 'baidu'
-})
+interface SearchBarStore {
+  searchEngine: SearchEngine
+  searchSettings: ISearchSettings
+  searchFocus: boolean
+  setSearchEngine: (engine: SearchEngine) => void
+  setSearchSettings: (settings: ISearchSettings) => void
+  setSearchFocus: (focus: boolean) => void
+}
 
-// 搜索设置
-const searchSettingsStore = atom<ISearchSettings>({
-  key: 'searchSettingsStore',
-  default: {
+export const useSearchBarStore = create<SearchBarStore>((set) => ({
+  searchEngine: 'baidu',
+  searchSettings: {
     defaultEngine: 'baidu',
     enableHistory: true,
     maxHistoryCount: 50
-  }
-})
+  },
+  searchFocus: false,
+  setSearchEngine: (searchEngine) => set({ searchEngine }),
+  setSearchSettings: (searchSettings) => set({ searchSettings }),
+  setSearchFocus: (searchFocus) => set({ searchFocus })
+}))
 
-// 搜索框焦点状态
-const searchFocusStore = atom<boolean>({
-  key: 'searchFocusStore',
-  default: false
-})
-
-export default { searchEngineStore, searchSettingsStore, searchFocusStore }
+export default useSearchBarStore
