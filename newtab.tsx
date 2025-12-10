@@ -7,15 +7,18 @@ import { ConfigProvider } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import enUS from 'antd/locale/en_US'
 import { useTranslation } from 'react-i18next'
+import { AppUIProvider } from './src/common/ui'
 
 const App: React.FC = () => {
   const { i18n } = useTranslation()
   const locale = i18n.language === 'zh' ? zhCN : enUS
 
   return (
-    <ConfigProvider locale={locale}>
-      <Main />
-    </ConfigProvider>
+    <AppUIProvider>
+      <ConfigProvider locale={locale}>
+        <Main />
+      </ConfigProvider>
+    </AppUIProvider>
   )
 }
 

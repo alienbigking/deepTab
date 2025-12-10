@@ -23,6 +23,9 @@
     "default_icon": "src/assets/images/icon.png",
     "default_popup": "popup.html"
   },
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  },
   "icons": {
     "16": "src/assets/images/icon16.png",
     "48": "src/assets/images/icon48.png",

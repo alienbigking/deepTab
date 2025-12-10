@@ -10,7 +10,7 @@ interface AppGridStore {
   syncStatus: 'idle' | 'syncing' | 'error'
 
   // Actions
-  setApps: (apps: App[]) => void
+  setApps: (apps: App[] | ((prevApps: App[]) => App[])) => void
   setIsEditMode: (isEditMode: boolean) => void
   setContextMenu: (contextMenu: ContextMenuState | null) => void
   setIsLoading: (isLoading: boolean) => void
@@ -29,7 +29,10 @@ export const useAppGridStore = create<AppGridStore>((set) => ({
   syncStatus: 'idle',
 
   // Actions
-  setApps: (apps) => set({ apps }),
+  setApps: (apps) =>
+    set((state) => ({
+      apps: typeof apps === 'function' ? apps(state.apps) : apps
+    })),
   setIsEditMode: (isEditMode) => set({ isEditMode }),
   setContextMenu: (contextMenu) => set({ contextMenu }),
   setIsLoading: (isLoading) => set({ isLoading }),

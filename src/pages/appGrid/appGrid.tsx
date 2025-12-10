@@ -14,7 +14,7 @@ import {
   sortableKeyboardCoordinates,
   rectSortingStrategy
 } from '@dnd-kit/sortable'
-import { Button, Modal, message } from 'antd'
+import { Button, message, Modal } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import cn from 'classnames'
 import styles from './appGrid.module.less'
@@ -25,6 +25,7 @@ import appGridService from './services/appGrid'
 import useAppGridStore from './stores/appGrid'
 import type { App, ContextMenuState } from './types/appGrid'
 import { initDefaultApps } from './initData'
+import { useToast, useNotification, useConfirm } from '@/common/ui'
 
 /**
  * 应用图标网格组件
@@ -35,6 +36,9 @@ const AppGrid: React.FC = () => {
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [editingApp, setEditingApp] = useState<App | null>(null)
   const [contextMenuData, setContextMenuData] = useState<ContextMenuState | null>(null)
+  const { showToast } = useToast()
+  const { showNotification } = useNotification()
+  const { confirm } = useConfirm()
 
   // 拖拽传感器配置
   const sensors = useSensors(
@@ -51,6 +55,7 @@ const AppGrid: React.FC = () => {
   // 初始化加载数据
   useEffect(() => {
     initAndLoadApps()
+    message.success('成功弹出了')
   }, [])
 
   // 初始化并加载应用列表
@@ -72,7 +77,7 @@ const AppGrid: React.FC = () => {
       setApps(data)
     } catch (error) {
       console.error('加载应用列表失败:', error)
-      message.error('加载失败')
+      showToast('error', '加载应用列表失败')
     }
   }
 
@@ -92,7 +97,7 @@ const AppGrid: React.FC = () => {
         await appGridService.updateOrder(newApps)
       } catch (error) {
         console.error('保存顺序失败:', error)
-        message.error('保存失败')
+        showToast('error', '保存顺序失败')
       }
     }
   }
@@ -125,25 +130,21 @@ const AppGrid: React.FC = () => {
     }
   }
 
-  // 删除应用
-  const handleDelete = (id: string) => {
-    Modal.confirm({
-      title: '确认删除',
-      content: '确定要删除这个应用吗?',
-      okText: '删除',
-      cancelText: '取消',
-      okButtonProps: { danger: true },
-      onOk: async () => {
-        try {
-          await appGridService.delete(id)
-          setApps(apps.filter((app) => app.id !== id))
-          message.success('删除成功')
-        } catch (error) {
-          console.error('删除失败:', error)
-          message.error('删除失败')
-        }
-      }
-    })
+  // 删除应用(由图标或右键菜单触发)
+  const handleDelete = async (id: string) => {
+    console.log('待删除 id =', id)
+    try {
+      await appGridService.delete(id)
+      setApps((prevApps) => {
+        const next = prevApps.filter((app) => app.id !== id)
+        console.log('删除后 apps 长度:', next.length)
+        return next
+      })
+      showToast('success', '删除成功，应用已从首页移除')
+    } catch (error) {
+      console.error('删除失败:', error)
+      showToast('error', '删除失败，请稍后重试')
+    }
   }
 
   // 右键菜单
@@ -161,22 +162,85 @@ const AppGrid: React.FC = () => {
     setContextMenuData(null)
   }
 
+  // URL 规范化 - 确保 URL 以 http:// 或 https:// 开头
+  const normalizeUrl = (url: string): string => {
+    if (!url) return ''
+    const trimmedUrl = url.trim()
+    if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
+      return `https://${trimmedUrl}`
+    }
+    return trimmedUrl
+  }
+
   // 右键菜单 - 在当前标签页打开
   const handleOpenCurrent = () => {
     const app = apps.find((a) => a.id === contextMenuData?.appId)
     if (app) {
-      window.location.href = app.url
+      try {
+        const normalizedUrl = normalizeUrl(app.url)
+        if (!normalizedUrl) {
+          showNotification('error', '无效的链接地址')
+          closeContextMenu()
+          return
+        }
+        // 使用 Chrome API 在当前标签页打开
+        chrome.tabs.getCurrent((tab) => {
+          if (tab?.id) {
+            chrome.tabs.update(tab.id, { url: normalizedUrl })
+          } else {
+            // 如果获取不到当前标签页,降级使用 window.location
+            window.location.href = normalizedUrl
+          }
+        })
+      } catch (error) {
+        console.error('打开失败:', error)
+        showNotification('error', '打开失败')
+      }
     }
     closeContextMenu()
   }
 
   // 右键菜单 - 在新标签页打开
   const handleOpenNew = () => {
+    console.log('新标签页打开链接')
     const app = apps.find((a) => a.id === contextMenuData?.appId)
-    if (app) {
-      window.open(app.url, '_blank')
-    }
+    console.log('找到的应用:', app)
+
+    // 先关闭菜单,避免后续操作
     closeContextMenu()
+
+    if (app) {
+      try {
+        const normalizedUrl = normalizeUrl(app.url)
+        console.log('规范化后的 URL:', normalizedUrl)
+        if (!normalizedUrl) {
+          showToast('error', '无效的链接地址')
+          return
+        }
+        // 使用 Chrome API 创建新标签页
+        console.log('准备调用 chrome.tabs.create, URL:', normalizedUrl)
+        chrome.tabs.create(
+          {
+            url: normalizedUrl,
+            active: true // 激活新标签页
+          },
+          (tab) => {
+            console.log('标签页创建成功:', tab)
+            if (chrome.runtime.lastError) {
+              console.error('Chrome API 错误:', chrome.runtime.lastError)
+              showToast('error', '打开失败')
+            } else {
+              showToast('success', `已在新标签页打开 ${app.name}`)
+            }
+          }
+        )
+      } catch (error) {
+        console.error('打开失败:', error)
+        showToast('error', '打开失败')
+      }
+    } else {
+      console.log('未找到应用, contextMenuData:', contextMenuData)
+    }
   }
 
   // 右键菜单 - 编辑
@@ -189,12 +253,31 @@ const AppGrid: React.FC = () => {
     closeContextMenu()
   }
 
-  // 右键菜单 - 删除
-  const handleContextDelete = () => {
-    if (contextMenuData?.appId) {
-      handleDelete(contextMenuData.appId)
+  // 右键菜单 - 删除(复用同一删除逻辑, 不再使用 Modal 确认)
+  const handleContextDelete = async () => {
+    console.log('右键菜单删除点击, contextMenuData =', contextMenuData)
+
+    const appId = contextMenuData?.appId
+    console.log('准备弹出自定义 Confirm, appId =', appId)
+
+    if (!appId) {
+      console.warn('右键删除时未找到 appId')
+      return
     }
+
+    // 先关闭右键菜单,避免遮挡弹窗
     closeContextMenu()
+
+    const ok = await confirm({
+      title: '确认删除',
+      content: '确定要删除这个应用吗?',
+      okText: '删除',
+      cancelText: '取消'
+    })
+
+    if (ok) {
+      await handleDelete(appId)
+    }
   }
 
   // 添加应用

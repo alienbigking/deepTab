@@ -59,14 +59,12 @@ const ContextMenu: React.FC<ContextMenuProps> = (props) => {
     {
       key: 'open-current',
       label: '在当前标签页打开',
-      icon: <FolderOpenOutlined />,
-      onClick: onOpenCurrent
+      icon: <FolderOpenOutlined />
     },
     {
       key: 'open-new',
       label: '在新标签页打开',
-      icon: <FolderAddOutlined />,
-      onClick: onOpenNew
+      icon: <FolderAddOutlined />
     },
     {
       type: 'divider'
@@ -74,36 +72,64 @@ const ContextMenu: React.FC<ContextMenuProps> = (props) => {
     {
       key: 'edit',
       label: '编辑',
-      icon: <EditOutlined />,
-      onClick: onEdit
+      icon: <EditOutlined />
     },
     {
       key: 'delete',
       label: '删除',
       icon: <DeleteOutlined />,
-      danger: true,
-      onClick: onDelete
+      danger: true
     }
   ]
 
-  if (!visible) return null
+  // 处理菜单点击事件
+  const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
+    console.log('触发了菜单项, key:', key)
+    switch (key) {
+      case 'open-current':
+        console.log('执行: 在当前标签页打开')
+        onOpenCurrent()
+        break
+      case 'open-new':
+        console.log('执行: 在新标签页打开')
+        onOpenNew()
+        break
+      case 'edit':
+        console.log('执行: 编辑')
+        onEdit()
+        break
+      case 'delete':
+        console.log('执行: 删除')
+        onDelete()
+        break
+    }
+  }
+
+  if (!visible) {
+    console.log('ContextMenu: visible = false, 不渲染')
+    return null
+  }
+
+  console.log('ContextMenu 渲染:', { visible, x, y, menuItemsCount: menuItems.length })
 
   return (
     <div
       className={cn(styles.contextMenuWrapper)}
       style={{
+        position: 'fixed',
         left: `${x}px`,
-        top: `${y}px`
+        top: `${y}px`,
+        zIndex: 1000
       }}
-      onClick={(e) => e.stopPropagation()}
     >
       <Dropdown
-        menu={{ items: menuItems }}
+        menu={{ items: menuItems, onClick: handleMenuClick }}
         open={true}
         trigger={['click']}
-        getPopupContainer={(node) => node.parentElement || document.body}
+        placement='bottomLeft'
+        getPopupContainer={(trigger) => trigger.parentElement || document.body}
       >
-        <div className={styles.contextMenuTrigger} />
+        <div style={{ width: 1, height: 1, cursor: 'pointer' }} />
       </Dropdown>
     </div>
   )

@@ -102,7 +102,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
       onClose={onClose}
       open={open}
       width={1000}
-      className={cn(styles.settingsDrawer)}
+      rootClassName={cn(styles.settingsDrawer)}
       closable={false}
       styles={{
         body: { padding: 0 }
