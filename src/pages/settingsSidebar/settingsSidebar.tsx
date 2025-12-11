@@ -12,7 +12,10 @@ import {
   BellOutlined,
   InfoCircleOutlined,
   AppstoreOutlined,
-  MessageOutlined
+  MessageOutlined,
+  ReloadOutlined,
+  CloudSyncOutlined,
+  AppstoreAddOutlined
 } from '@ant-design/icons'
 import styles from './settingsSidebar.module.less'
 import Subscription from '@/pages/subscription/subscription'
@@ -25,6 +28,9 @@ import Notification from '@/pages/notification/notification'
 import About from '@/pages/about/about'
 import RelatedApps from '@/pages/relatedApps/relatedApps'
 import Feedback from '@/pages/feedback/feedback'
+import ResetSettings from '@/pages/resetSettings/resetSettings'
+import BackupRestore from '@/pages/backupRestore/backupRestore'
+import IconControl from '@/pages/iconControl/iconControl'
 
 interface SettingsSidebarProps {
   open: boolean
@@ -42,6 +48,9 @@ type MenuKey =
   | 'about'
   | 'apps'
   | 'feedback'
+  | 'reset'
+  | 'backup'
+  | 'iconControl'
 
 /**
  * 设置侧边栏组件
@@ -60,6 +69,9 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
     { key: 'theme', icon: <SkinOutlined />, label: '主题切换' },
     { key: 'search', icon: <SearchOutlined />, label: '搜索引擎' },
     { key: 'notification', icon: <BellOutlined />, label: '消息通知' },
+    { key: 'reset', icon: <ReloadOutlined />, label: '重置设置' },
+    { key: 'backup', icon: <CloudSyncOutlined />, label: '备份与恢复' },
+    { key: 'iconControl', icon: <AppstoreAddOutlined />, label: '图标控制' },
     { key: 'about', icon: <InfoCircleOutlined />, label: '关于我们' },
     { key: 'apps', icon: <AppstoreOutlined />, label: '相关应用' },
     { key: 'feedback', icon: <MessageOutlined />, label: '投诉与反馈' }
@@ -81,6 +93,12 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
         return <SearchEngine />
       case 'notification':
         return <Notification />
+      case 'reset':
+        return <ResetSettings />
+      case 'backup':
+        return <BackupRestore />
+      case 'iconControl':
+        return <IconControl />
       case 'about':
         return <About />
       case 'apps':
