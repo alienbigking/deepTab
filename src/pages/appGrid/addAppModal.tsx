@@ -1,13 +1,17 @@
-import React, { useEffect } from 'react'
-import { Modal, Form, Input, message } from 'antd'
+import React, { useEffect, useState } from 'react'
+import { Modal, Form, Input, message, Button, Select } from 'antd'
 import cn from 'classnames'
-import type { App, AddAppParams } from './types/appGrid'
+import type { Apps, AddAppParams } from './types/appGrid'
 import appGridService from './services/appGrid'
-import styles from './appGrid.module.less'
+import styles from './addAppModal.module.less'
+import AddAppModalSidebar, { AddAppModalSidebarMode } from './addAppModalSidebar'
+import AddAppModalCustom from './addAppModalCustom'
+import AddAppModalWidgets from './addAppModalWidgets'
+import AddAppModalNav from './addAppModalNav'
 
 interface AddAppModalProps {
   open: boolean
-  editingApp?: App | null
+  editingApp?: Apps | null
   onClose: () => void
   onSuccess: () => void
 }
@@ -15,6 +19,9 @@ interface AddAppModalProps {
 const AddAppModal: React.FC<AddAppModalProps> = (props) => {
   const { open = false, editingApp = null, onClose, onSuccess } = props
   const [form] = Form.useForm()
+  const [activeSidebar, setActiveSidebar] = useState<AddAppModalSidebarMode>('nav')
+  const [activeSubTab, setActiveSubTab] = useState<'today' | 'recent' | 'popular'>('today')
+  const [iconColor, setIconColor] = useState<string>('#1890ff')
 
   // 编辑时填充表单
   useEffect(() => {
@@ -24,10 +31,60 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
         icon: editingApp.icon,
         url: editingApp.url
       })
+      setActiveSidebar('custom')
     } else if (open) {
       form.resetFields()
+      setActiveSidebar('nav')
+      setActiveSubTab('today')
+      setIconColor('#1890ff')
     }
   }, [open, editingApp, form])
+
+  const recommendedApps: { key: string; name: string; icon: string; url: string; desc: string }[] =
+    [
+      {
+        key: 'google',
+        name: 'Google 搜索',
+        icon: '🔍',
+        url: 'https://www.google.com',
+        desc: '快速打开 Google 搜索'
+      },
+      {
+        key: 'github',
+        name: 'GitHub',
+        icon: '🐱',
+        url: 'https://github.com',
+        desc: '访问你的代码仓库'
+      },
+      {
+        key: 'chatgpt',
+        name: 'ChatGPT',
+        icon: '🤖',
+        url: 'https://chat.openai.com',
+        desc: 'AI 助手，提升效率'
+      },
+      {
+        key: 'bilibili',
+        name: '哔哩哔哩',
+        icon: '📺',
+        url: 'https://www.bilibili.com',
+        desc: '追番与学习两不误'
+      },
+      {
+        key: 'youtube',
+        name: 'YouTube',
+        icon: '▶️',
+        url: 'https://www.youtube.com',
+        desc: '全球最大视频平台'
+      },
+      {
+        key: 'twitter',
+        name: 'Twitter',
+        icon: '🐦',
+        url: 'https://twitter.com',
+        desc: '关注全球实时热点'
+      }
+    ]
 
   const handleOk = async () => {
     try {
@@ -60,41 +117,90 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
     <Modal
       title={editingApp ? '编辑应用' : '添加应用'}
       open={open}
-      onOk={handleOk}
       onCancel={handleCancel}
-      okText='确定'
-      cancelText='取消'
+      rootClassName={styles.addAppModalRoot}
+      centered
+      width={1000}
+      bodyStyle={{ minHeight: 600 }}
+      footer={null}
       destroyOnClose
     >
-      <Form form={form} layout='vertical' autoComplete='off' className={cn(styles.addAppForm)}>
-        <Form.Item
-          label='应用名称'
-          name='name'
-          rules={[{ required: true, message: '请输入应用名称' }]}
-        >
-          <Input placeholder='例如: Google' />
-        </Form.Item>
+      <div className={styles.addAppModal}>
+        <AddAppModalSidebar active={activeSidebar} onChange={setActiveSidebar} />
 
-        <Form.Item
-          label='图标'
-          name='icon'
-          rules={[{ required: true, message: '请输入图标' }]}
-          extra='可以使用 Emoji 或图片 URL'
-        >
-          <Input placeholder='例如: 🔍 或 https://...' />
-        </Form.Item>
+        <div className={styles.addAppContent}>
+          <div className={styles.addAppHeader}>
+            <div>选择常用网站快速添加，或切换到“自定义图标”手动填写</div>
+          </div>
 
-        <Form.Item
-          label='链接地址'
-          name='url'
-          rules={[
-            { required: true, message: '请输入链接地址' },
-            { type: 'url', message: '请输入有效的 URL' }
-          ]}
-        >
-          <Input placeholder='例如: https://www.google.com' />
-        </Form.Item>
-      </Form>
+          {/* 第一块：搜索 + 添加到 */}
+          <div className={styles.addAppSearchRow}>
+            <Input.Search placeholder='搜索站点或应用' allowClear />
+            <Select
+              style={{ width: 140 }}
+              defaultValue='home'
+              options={[
+                { value: 'home', label: '添加到：主页' },
+                { value: 'work', label: '添加到：工作区' }
+              ]}
+            />
+          </div>
+          {activeSidebar === 'custom' ? (
+            <AddAppModalCustom
+              form={form}
+              iconColor={iconColor}
+              onIconColorChange={setIconColor}
+              onSave={handleOk}
+              onSaveAndContinue={async () => {
+                await handleOk()
+                setActiveSidebar('custom')
+              }}
+            />
+          ) : activeSidebar === 'widgets' ? (
+            <AddAppModalWidgets
+              apps={recommendedApps}
+              activeSubTab={activeSubTab}
+              onChangeSubTab={(key) => setActiveSubTab(key)}
+              onAddApp={async (app) => {
+                try {
+                  await appGridService.add({
+                    name: app.name,
+                    icon: app.icon,
+                    url: app.url
+                  })
+                  message.success(`已添加 ${app.name}`)
+                  onSuccess()
+                  onClose()
+                } catch (error) {
+                  console.error('添加失败:', error)
+                  message.error('添加失败，请稍后重试')
+                }
+              }}
+            />
+          ) : (
+            <AddAppModalNav
+              apps={recommendedApps}
+              activeSubTab={activeSubTab}
+              onChangeSubTab={(key) => setActiveSubTab(key)}
+              onAddApp={async (app) => {
+                try {
+                  await appGridService.add({
+                    name: app.name,
+                    icon: app.icon,
+                    url: app.url
+                  })
+                  message.success(`已添加 ${app.name}`)
+                  onSuccess()
+                  onClose()
+                } catch (error) {
+                  console.error('添加失败:', error)
+                  message.error('添加失败，请稍后重试')
+                }
+              }}
+            />
+          )}
+        </div>
+      </div>
     </Modal>
   )
 }

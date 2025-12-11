@@ -1,23 +1,23 @@
 import { http } from '@/utils'
 import { env } from '@/config/env'
-import type { App, AddAppParams, UpdateAppParams } from '../types/appGrid'
+import type { Apps, AddAppParams, UpdateAppParams } from '../types/appGrid'
 
 // ========== 本地存储工具 ==========
 const STORAGE_KEY = 'app_grid_data'
 
 const storageUtils = {
   // 获取本地应用列表
-  async getLocal(): Promise<App[]> {
+  async getLocal(): Promise<Apps[]> {
     return new Promise((resolve) => {
       chrome.storage.local.get([STORAGE_KEY], (result) => {
         const apps = result[STORAGE_KEY] || []
-        resolve(apps.sort((a: App, b: App) => a.order - b.order))
+        resolve(apps.sort((a: Apps, b: Apps) => a.order - b.order))
       })
     })
   },
 
   // 保存到本地
-  async saveLocal(apps: App[]): Promise<void> {
+  async saveLocal(apps: Apps[]): Promise<void> {
     return new Promise((resolve) => {
       chrome.storage.local.set({ [STORAGE_KEY]: apps }, resolve)
     })
@@ -100,7 +100,7 @@ export default {
    * 获取应用列表
    * 优先从本地读取,如果已登录则从远程同步
    */
-  async getList(): Promise<App[]> {
+  async getList(): Promise<Apps[]> {
     // 1. 先从本地读取
     const localApps = await storageUtils.getLocal()
 
@@ -122,8 +122,8 @@ export default {
   /**
    * 添加应用
    */
-  async add(params: AddAppParams): Promise<App> {
-    const newApp: App = {
+  async add(params: AddAppParams): Promise<Apps> {
+    const newApp: Apps = {
       ...params,
       id: storageUtils.generateId(),
       order: await storageUtils.getNextOrder(),
@@ -147,7 +147,7 @@ export default {
   /**
    * 更新应用
    */
-  async update(id: string, params: UpdateAppParams): Promise<App> {
+  async update(id: string, params: UpdateAppParams): Promise<Apps> {
     const apps = await storageUtils.getLocal()
     const index = apps.findIndex((app) => app.id === id)
 
@@ -155,7 +155,7 @@ export default {
       throw new Error('应用不存在')
     }
 
-    const updatedApp: App = {
+    const updatedApp: Apps = {
       ...apps[index],
       ...params,
       updatedAt: new Date().toISOString(),
@@ -192,7 +192,7 @@ export default {
   /**
    * 更新应用顺序
    */
-  async updateOrder(apps: App[]): Promise<void> {
+  async updateOrder(apps: Apps[]): Promise<void> {
     // 更新 order 字段
     const updatedApps = apps.map((app, index) => ({
       ...app,

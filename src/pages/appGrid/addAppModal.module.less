@@ -1,0 +1,315 @@
+.addAppModalRoot {
+  :global {
+    .ant-modal-mask {
+      background: rgba(0, 0, 0, 0.25) !important;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .ant-modal-content {
+      background: rgba(0, 0, 0, 0.05) !important;
+      backdrop-filter: blur(30px) saturate(180%);
+      -webkit-backdrop-filter: blur(30px) saturate(180%);
+      box-shadow: 0 16px 20px rgba(0, 0, 0, 0.35);
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    .ant-modal-header {
+      background: transparent !important;
+      border-bottom: 0;
+      padding: 16px 24px 8px;
+    }
+
+    .ant-modal-title {
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .ant-modal-body {
+      background: transparent !important;
+    }
+  }
+}
+
+.addAppModal {
+  display: flex;
+  height: 100%;
+}
+
+.addAppSidebar {
+  width: 150px;
+  padding-right: 16px;
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.addAppSidebarItem {
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.65);
+
+  &.active {
+    background: rgba(24, 144, 255, 0.12);
+    color: #1890ff;
+  }
+}
+
+.addAppContent {
+  flex: 1;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.addAppHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.addAppSearchRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.addAppCategoryRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.addAppCategoryItem {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.04);
+  font-size: 12px;
+  cursor: pointer;
+
+  &.active {
+    background: rgba(24, 144, 255, 0.12);
+    color: #1890ff;
+  }
+}
+
+.addAppSubTabsRow {
+  margin-bottom: 8px;
+
+  :global {
+    .ant-tabs-nav {
+      margin: 0;
+    }
+
+    .ant-tabs-tab {
+      padding: 4px 8px;
+    }
+  }
+}
+
+.addAppGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.addAppCard {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.addAppCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.addAppCardIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.addAppCardTitle {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.addAppCardDesc {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+  margin-bottom: 6px;
+}
+
+.addAppCardFooter {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.widgetGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.widgetCard {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  min-height: 140px;
+}
+
+.widgetCardMain {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.widgetCardIconArea {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #1890ff, #40a9ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(24, 144, 255, 0.35);
+  font-size: 36px;
+  color: #fff;
+}
+
+.widgetCardText {
+  flex: 1;
+}
+
+.widgetCardTitle {
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.widgetCardSubtitle {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.widgetCardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.widgetCardHot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.widgetCard:hover {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+  transition: all 0.2s ease;
+}
+
+.addAppForm {
+  margin-top: 12px;
+}
+
+.customIconRow {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.customIconColors {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.customIconColorDot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+
+  &.active {
+    border-color: #1890ff;
+  }
+}
+
+.customIconPreviewRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.customIconCard {
+  width: 80px;
+  height: 80px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  position: relative;
+}
+
+.customIconUploadCard {
+  width: 80px;
+  height: 80px;
+  border-radius: 18px;
+  border: 1px dashed rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.customIconTypeLabel {
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.customIconActions {
+  margin-top: 16px;
+  display: flex;
+  gap: 8px;
+}

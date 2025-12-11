@@ -8,7 +8,7 @@ import {
   DeleteOutlined
 } from '@ant-design/icons'
 import cn from 'classnames'
-import styles from './appGrid.module.less'
+import styles from './contextMenu.module.less'
 
 interface ContextMenuProps {
   visible: boolean

@@ -1,10 +1,10 @@
-import type { App } from './types/appGrid'
+import type { Apps } from './types/appGrid'
 
 /**
  * 初始化默认应用数据
  * 用于首次使用时填充一些常用应用
  */
-export const defaultApps: Omit<App, 'id' | 'order'>[] = [
+export const defaultApps: Omit<Apps, 'id' | 'order'>[] = [
   { name: 'Google', icon: '🔍', url: 'https://www.google.com', syncStatus: 'synced' },
   { name: 'GitHub', icon: '🐙', url: 'https://github.com', syncStatus: 'synced' },
   { name: 'ChatGPT', icon: '🤖', url: 'https://chat.openai.com', syncStatus: 'synced' },
@@ -32,7 +32,7 @@ export const initDefaultApps = async (): Promise<void> => {
       }
 
       // 生成完整的应用数据
-      const apps: App[] = defaultApps.map((app, index) => ({
+      const apps: Apps[] = defaultApps.map((app, index) => ({
         ...app,
         id: `app_init_${Date.now()}_${index}`,
         order: index,

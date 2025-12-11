@@ -14,7 +14,7 @@ import {
   sortableKeyboardCoordinates,
   rectSortingStrategy
 } from '@dnd-kit/sortable'
-import { Button, message, Modal } from 'antd'
+import { App, Button, Modal } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import cn from 'classnames'
 import styles from './appGrid.module.less'
@@ -23,9 +23,9 @@ import ContextMenu from './contextMenu'
 import AddAppModal from './addAppModal'
 import appGridService from './services/appGrid'
 import useAppGridStore from './stores/appGrid'
-import type { App, ContextMenuState } from './types/appGrid'
+import type { Apps, ContextMenuState } from './types/appGrid'
 import { initDefaultApps } from './initData'
-import { useToast, useNotification, useConfirm } from '@/common/ui'
+import { useNotification } from '@/common/ui'
 
 /**
  * 应用图标网格组件
@@ -34,11 +34,10 @@ import { useToast, useNotification, useConfirm } from '@/common/ui'
 const AppGrid: React.FC = () => {
   const { apps, isEditMode, setApps, setIsEditMode } = useAppGridStore()
   const [addModalOpen, setAddModalOpen] = useState(false)
-  const [editingApp, setEditingApp] = useState<App | null>(null)
+  const [editingApp, setEditingApp] = useState<Apps | null>(null)
   const [contextMenuData, setContextMenuData] = useState<ContextMenuState | null>(null)
-  const { showToast } = useToast()
+  const { message, modal, notification } = App.useApp()
   const { showNotification } = useNotification()
-  const { confirm } = useConfirm()
 
   // 拖拽传感器配置
   const sensors = useSensors(
@@ -54,6 +53,7 @@ const AppGrid: React.FC = () => {
 
   // 初始化加载数据
   useEffect(() => {
+    console.log('AppGrid useEffect fired', message)
     initAndLoadApps()
     message.success('成功弹出了')
   }, [])
@@ -77,7 +77,7 @@ const AppGrid: React.FC = () => {
       setApps(data)
     } catch (error) {
       console.error('加载应用列表失败:', error)
-      showToast('error', '加载应用列表失败')
+      message.error('加载应用列表失败')
     }
   }
 
@@ -97,7 +97,7 @@ const AppGrid: React.FC = () => {
         await appGridService.updateOrder(newApps)
       } catch (error) {
         console.error('保存顺序失败:', error)
-        showToast('error', '保存顺序失败')
+        message.error('拖放失败，请重试！')
       }
     }
   }
@@ -130,7 +130,7 @@ const AppGrid: React.FC = () => {
     }
   }
 
-  // 删除应用(由图标或右键菜单触发)
+  // 实际删除应用逻辑
   const handleDelete = async (id: string) => {
     console.log('待删除 id =', id)
     try {
@@ -140,11 +140,22 @@ const AppGrid: React.FC = () => {
         console.log('删除后 apps 长度:', next.length)
         return next
       })
-      showToast('success', '删除成功，应用已从首页移除')
+      message.success('删除成功，应用已从首页移除')
     } catch (error) {
       console.error('删除失败:', error)
-      showToast('error', '删除失败，请稍后重试')
+      message.error('删除失败，请稍后重试')
     }
+  }
+
+  // 使用 antd modal.confirm 进行删除确认
+  const confirmDelete = (id: string) => {
+    modal.confirm({
+      title: '确认删除',
+      content: '确定要删除这个应用吗?',
+      okText: '删除',
+      cancelText: '取消',
+      onOk: () => handleDelete(id)
+    })
   }
 
   // 右键菜单
@@ -214,7 +225,7 @@ const AppGrid: React.FC = () => {
         const normalizedUrl = normalizeUrl(app.url)
         console.log('规范化后的 URL:', normalizedUrl)
         if (!normalizedUrl) {
-          showToast('error', '无效的链接地址')
+          message.error('无效的链接地址')
           return
         }
         // 使用 Chrome API 创建新标签页
@@ -228,15 +239,15 @@ const AppGrid: React.FC = () => {
             console.log('标签页创建成功:', tab)
             if (chrome.runtime.lastError) {
               console.error('Chrome API 错误:', chrome.runtime.lastError)
-              showToast('error', '打开失败')
+              message.error('打开失败')
             } else {
-              showToast('success', `已在新标签页打开 ${app.name}`)
+              message.success(`已在新标签页打开 ${app.name}`)
             }
           }
         )
       } catch (error) {
         console.error('打开失败:', error)
-        showToast('error', '打开失败')
+        message.error('打开失败')
       }
     } else {
       console.log('未找到应用, contextMenuData:', contextMenuData)
@@ -253,12 +264,12 @@ const AppGrid: React.FC = () => {
     closeContextMenu()
   }
 
-  // 右键菜单 - 删除(复用同一删除逻辑, 不再使用 Modal 确认)
-  const handleContextDelete = async () => {
+  // 右键菜单 - 删除(使用 antd modal.confirm)
+  const handleContextDelete = () => {
     console.log('右键菜单删除点击, contextMenuData =', contextMenuData)
 
     const appId = contextMenuData?.appId
-    console.log('准备弹出自定义 Confirm, appId =', appId)
+    console.log('准备弹出 antd modal.confirm, appId =', appId)
 
     if (!appId) {
       console.warn('右键删除时未找到 appId')
@@ -268,16 +279,7 @@ const AppGrid: React.FC = () => {
     // 先关闭右键菜单,避免遮挡弹窗
     closeContextMenu()
 
-    const ok = await confirm({
-      title: '确认删除',
-      content: '确定要删除这个应用吗?',
-      okText: '删除',
-      cancelText: '取消'
-    })
-
-    if (ok) {
-      await handleDelete(appId)
-    }
+    confirmDelete(appId)
   }
 
   // 添加应用
@@ -303,6 +305,7 @@ const AppGrid: React.FC = () => {
         <Button type='primary' icon={<PlusOutlined />} onClick={handleAddApp} size='small'>
           添加应用
         </Button>
+
         {isEditMode && (
           <Button onClick={exitEditMode} size='small' className={cn(styles.doneBtn)}>
             完成
@@ -322,7 +325,7 @@ const AppGrid: React.FC = () => {
                 icon={app.icon}
                 url={app.url}
                 isEditMode={isEditMode}
-                onDelete={handleDelete}
+                onDelete={confirmDelete}
                 onContextMenu={handleContextMenu}
                 onLongPress={handleLongPress}
               />

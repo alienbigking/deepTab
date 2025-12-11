@@ -1,16 +1,16 @@
 import { create } from 'zustand'
-import type { App, ContextMenuState } from '../types/appGrid'
+import type { Apps, ContextMenuState } from '../types/appGrid'
 
 interface AppGridStore {
   // 状态
-  apps: App[]
+  apps: Apps[]
   isEditMode: boolean
   contextMenu: ContextMenuState | null
   isLoading: boolean
   syncStatus: 'idle' | 'syncing' | 'error'
 
   // Actions
-  setApps: (apps: App[] | ((prevApps: App[]) => App[])) => void
+  setApps: (apps: Apps[] | ((prevApps: Apps[]) => Apps[])) => void
   setIsEditMode: (isEditMode: boolean) => void
   setContextMenu: (contextMenu: ContextMenuState | null) => void
   setIsLoading: (isLoading: boolean) => void

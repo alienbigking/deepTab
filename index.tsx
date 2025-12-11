@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next'
 
 const { Title, Paragraph } = Typography
 
-const App: React.FC = () => {
+const Index: React.FC = () => {
   const { i18n } = useTranslation()
   const locale = i18n.language === 'zh' ? zhCN : enUS
 
@@ -29,4 +29,4 @@ const App: React.FC = () => {
 }
 
 const root = createRoot(document.getElementById('root') as HTMLElement)
-root.render(<App />)
+root.render(<Index />)

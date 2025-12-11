@@ -4,7 +4,6 @@ import { CSS } from '@dnd-kit/utilities'
 import { CloseCircleFilled } from '@ant-design/icons'
 import cn from 'classnames'
 import styles from './appGrid.module.less'
-import { Popconfirm } from '@/common/ui'
 
 interface AppIconProps {
   id: string
@@ -123,27 +122,19 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
       {...attributes}
       {...listeners}
     >
-      {/* 删除按钮 - 使用自定义 Popconfirm 二次确认 */}
+      {/* 删除按钮 - 直接触发父组件的删除确认逻辑 */}
       {isEditMode && (
         <div className={styles.deleteBtnWrapper}>
-          <Popconfirm
-            title='确认删除'
-            description='确定要删除这个应用吗?'
-            okText='删除'
-            cancelText='取消'
-            onConfirm={() => onDelete(id)}
-            placement='bottom'
+          <div
+            className={styles.deleteBtn}
+            onClick={(e) => {
+              // 阻止冒泡,避免触发图标点击/拖拽
+              e.stopPropagation()
+              onDelete(id)
+            }}
           >
-            <div
-              className={styles.deleteBtn}
-              onClick={(e) => {
-                // 阻止冒泡,避免触发图标点击/拖拽
-                e.stopPropagation()
-              }}
-            >
-              <CloseCircleFilled />
-            </div>
-          </Popconfirm>
+            <CloseCircleFilled />
+          </div>
         </div>
       )}
 

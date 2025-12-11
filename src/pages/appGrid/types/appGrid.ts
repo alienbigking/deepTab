@@ -1,8 +1,8 @@
 /**
  * 应用图标数据模型
  */
-export interface App {
-  id: string // 唯一标识
+export interface Apps {
+  id: string // 唯一标识s
   name: string // 应用名称
   icon: string // 图标(emoji 或 URL)
   url: string // 应用链接
