@@ -26,6 +26,7 @@ import useAppGridStore from './stores/appGrid'
 import type { App, ContextMenuState } from './types/appGrid'
 import { initDefaultApps } from './initData'
 import { useToast, useNotification, useConfirm } from '@/common/ui'
+import { getPortalRoot } from '@/common/ui/portalRoot'
 
 /**
  * 应用图标网格组件
@@ -36,6 +37,7 @@ const AppGrid: React.FC = () => {
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [editingApp, setEditingApp] = useState<App | null>(null)
   const [contextMenuData, setContextMenuData] = useState<ContextMenuState | null>(null)
+  const [testModalOpen, setTestModalOpen] = useState(false)
   const { showToast } = useToast()
   const { showNotification } = useNotification()
   const { confirm } = useConfirm()
@@ -282,8 +284,8 @@ const AppGrid: React.FC = () => {
 
   // 添加应用
   const handleAddApp = () => {
-    setEditingApp(null)
-    setAddModalOpen(true)
+    console.log('添加应用了')
+    setTestModalOpen(true)
   }
 
   // Modal 成功回调
@@ -298,6 +300,23 @@ const AppGrid: React.FC = () => {
       })}
       onClick={handleContainerClick}
     >
+      {/* 临时调试用 antd Modal, 验证在 Shadow DOM 内能否正常工作 */}
+      <Modal
+        open={testModalOpen}
+        getContainer={getPortalRoot() || undefined}
+        title='测试 Modal'
+        onOk={() => {
+          console.log('测试 Modal OK')
+          setTestModalOpen(false)
+        }}
+        onCancel={() => {
+          console.log('测试 Modal Cancel')
+          setTestModalOpen(false)
+        }}
+      >
+        这是一个用于验证 Shadow DOM 中 antd Modal 是否正常工作的测试弹框。
+      </Modal>
+
       {/* 添加按钮 */}
       <div className={styles.addBtnWrapper}>
         <Button type='primary' icon={<PlusOutlined />} onClick={handleAddApp} size='small'>

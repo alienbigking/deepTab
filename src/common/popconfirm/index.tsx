@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import cn from 'classnames'
 import styles from './popconfirm.module.less'
+import { getPortalRoot } from '@/common/ui/portalRoot'
 
 export interface PopconfirmProps {
   title: React.ReactNode
@@ -137,7 +138,8 @@ const Popconfirm: React.FC<PopconfirmProps> = ({
               </button>
             </div>
           </div>,
-          document.body
+          // 优先挂载到 Shadow DOM 内共享的 portalRoot, 回退到 document.body
+          getPortalRoot() || document.body
         )}
     </div>
   )
