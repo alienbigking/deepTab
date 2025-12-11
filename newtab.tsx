@@ -28,10 +28,10 @@ const App: React.FC = () => {
     </AppUIProvider>
   )
 }
-
+// 获取 Shadow DOM 宿主
 const host = document.getElementById('root') as HTMLElement
 
-// 创建 Shadow DOM 宿主
+// 创建影子根
 const shadowRoot = host.attachShadow({ mode: 'open' })
 
 // 在 Shadow DOM 内创建应用挂载点和弹层挂载点
