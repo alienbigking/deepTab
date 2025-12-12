@@ -32,7 +32,7 @@ import { useNotification } from '@/common/ui'
  * 支持拖拽排序、编辑模式、右键菜单
  */
 const AppGrid: React.FC = () => {
-  const { apps, isEditMode, setApps, setIsEditMode } = useAppGridStore()
+  const { apps, isEditMode, iconSettings, setApps, setIsEditMode } = useAppGridStore()
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [editingApp, setEditingApp] = useState<Apps | null>(null)
   const [contextMenuData, setContextMenuData] = useState<ContextMenuState | null>(null)
@@ -316,7 +316,7 @@ const AppGrid: React.FC = () => {
       {/* 应用网格 */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={apps.map((app) => app.id)} strategy={rectSortingStrategy}>
-          <div className={styles.appGrid}>
+          <div className={styles.appGrid} style={{ gap: `${iconSettings.spacing}px` }}>
             {apps.map((app) => (
               <AppIcon
                 key={app.id}
@@ -325,6 +325,7 @@ const AppGrid: React.FC = () => {
                 icon={app.icon}
                 url={app.url}
                 isEditMode={isEditMode}
+                iconSettings={iconSettings}
                 onDelete={confirmDelete}
                 onContextMenu={handleContextMenu}
                 onLongPress={handleLongPress}

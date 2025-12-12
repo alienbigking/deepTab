@@ -4,6 +4,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { CloseCircleFilled } from '@ant-design/icons'
 import cn from 'classnames'
 import styles from './appGrid.module.less'
+import type { IconSettings } from './stores/appGrid'
 
 interface AppIconProps {
   id: string
@@ -11,6 +12,7 @@ interface AppIconProps {
   icon: string
   url: string
   isEditMode: boolean
+  iconSettings: IconSettings
   onDelete: (id: string) => void
   onContextMenu: (e: React.MouseEvent, id: string) => void
   onLongPress: () => void
@@ -21,7 +23,17 @@ interface AppIconProps {
  * 支持拖拽、长按进入编辑模式、右键菜单
  */
 const AppIcon: React.FC<AppIconProps> = (props) => {
-  const { id, name, icon, url, isEditMode = false, onDelete, onContextMenu, onLongPress } = props
+  const {
+    id,
+    name,
+    icon,
+    url,
+    isEditMode = false,
+    iconSettings,
+    onDelete,
+    onContextMenu,
+    onLongPress
+  } = props
 
   const longPressTimer = useRef<NodeJS.Timeout | null>(null)
   const longPressTriggered = useRef(false)
@@ -35,6 +47,18 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1
+  }
+
+  const iconWrapperStyle: React.CSSProperties = {
+    width: iconSettings.size,
+    height: iconSettings.size,
+    borderRadius: iconSettings.radius,
+    opacity: iconSettings.opacity / 100
+  }
+
+  const appNameStyle: React.CSSProperties = {
+    fontSize: iconSettings.fontSize,
+    color: iconSettings.fontColor === 'light' ? '#ffffff' : 'rgba(0,0,0,0.85)'
   }
 
   // URL 规范化 - 确保 URL 以 http:// 或 https:// 开头
@@ -139,12 +163,14 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
       )}
 
       {/* 图标 */}
-      <div className={styles.iconWrapper}>
+      <div className={styles.iconWrapper} style={iconWrapperStyle}>
         <span className={styles.iconEmoji}>{icon}</span>
       </div>
 
       {/* 应用名称 */}
-      <div className={styles.appName}>{name}</div>
+      <div className={styles.appName} style={appNameStyle}>
+        {name}
+      </div>
     </div>
   )
 }

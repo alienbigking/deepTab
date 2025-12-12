@@ -1,6 +1,7 @@
 import { http } from '@/utils'
 import { env } from '@/config/env'
 import type { Apps, AddAppParams, UpdateAppParams } from '../types/appGrid'
+import { defaultApps } from '../initData'
 
 // ========== 本地存储工具 ==========
 const STORAGE_KEY = 'app_grid_data'
@@ -209,5 +210,22 @@ export default {
     //   const orderData = updatedApps.map(a => ({ id: a.id, order: a.order }))
     //   apiService.updateOrder(orderData).catch(console.error)
     // }
+  },
+
+  /**
+   * 重置为默认推荐应用
+   */
+  async resetToDefault(): Promise<Apps[]> {
+    const apps: Apps[] = defaultApps.map((app, index) => ({
+      ...app,
+      id: storageUtils.generateId(),
+      order: index,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      syncStatus: 'synced'
+    }))
+
+    await storageUtils.saveLocal(apps)
+    return apps
   }
 }
