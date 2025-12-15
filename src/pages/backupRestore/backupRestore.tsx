@@ -1,8 +1,117 @@
-import React from 'react'
-import { Button } from 'antd'
+import React, { useRef } from 'react'
+import { App, Button } from 'antd'
 import styles from './backupRestore.module.less'
+import appGridService from '@/pages/appGrid/services/appGrid'
+import useAppGridStore from '@/pages/appGrid/stores/appGrid'
+import type { Apps } from '@/pages/appGrid/types/appGrid'
+import type { IconSettings } from '@/pages/appGrid/stores/appGrid'
+
+interface BackupPayload {
+  version: number
+  exportedAt: string
+  apps: Apps[]
+  iconSettings: IconSettings
+}
 
 const BackupRestore: React.FC = () => {
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const { apps, setApps, iconSettings, setIconSettings } = useAppGridStore()
+  const { message } = App.useApp()
+
+  const handleQuickBackup = async () => {
+    console.log('正在备份')
+    try {
+      await appGridService.saveAll(apps)
+      await appGridService.saveIconSettings(iconSettings)
+      message.success('已保存到本地存储')
+    } catch (error) {
+      console.error('备份失败:', error)
+      message.error('备份失败，请稍后重试')
+    }
+  }
+
+  const handleSyncLocal = async () => {
+    try {
+      const localApps = await appGridService.getList()
+      const localIconSettings = await appGridService.getIconSettings()
+      setApps(localApps)
+      if (localIconSettings) {
+        setIconSettings(localIconSettings)
+      }
+      message.success('已与本地存储同步')
+    } catch (error) {
+      console.error('同步失败:', error)
+      message.error('同步失败，请稍后重试')
+    }
+  }
+
+  const handleExport = async () => {
+    try {
+      const apps = await appGridService.getList()
+      const payload: BackupPayload = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        apps,
+        iconSettings
+      }
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: 'application/json'
+      })
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = `deeptab-backup-${Date.now()}.json`
+      anchor.click()
+      URL.revokeObjectURL(url)
+
+      message.success('备份文件已导出')
+    } catch (error) {
+      console.error('导出失败:', error)
+      message.error('导出失败，请稍后重试')
+    }
+  }
+
+  const triggerImport = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleImport: React.ChangeEventHandler<HTMLInputElement> = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      const text = await file.text()
+      const data = JSON.parse(text) as Partial<BackupPayload>
+
+      if (!data || !Array.isArray(data.apps)) {
+        throw new Error('invalid backup file')
+      }
+
+      const normalizedApps = data.apps
+        .map((app, index) => ({
+          ...app,
+          order: typeof app.order === 'number' ? app.order : index
+        }))
+        .sort((a, b) => a.order - b.order)
+
+      await appGridService.saveAll(normalizedApps)
+      setApps(normalizedApps)
+
+      if (data.iconSettings) {
+        await appGridService.saveIconSettings(data.iconSettings)
+        setIconSettings(data.iconSettings)
+      }
+
+      message.success(`导入成功，共 ${normalizedApps.length} 个应用`)
+    } catch (error) {
+      console.error('导入失败:', error)
+      message.error('导入失败，文件格式不正确')
+    } finally {
+      event.target.value = ''
+    }
+  }
+
   return (
     <div className={styles.container}>
       <h2 className={styles.title}>备份与恢复</h2>
@@ -12,8 +121,10 @@ const BackupRestore: React.FC = () => {
         <div className={styles.sectionTitle}>本地数据</div>
         <div className={styles.sectionDesc}>手动将当前设置保存到本地浏览器存储中。</div>
         <div className={styles.actions}>
-          <Button type='primary'>立即备份</Button>
-          <Button>同步到本地</Button>
+          <Button type='primary' onClick={handleQuickBackup}>
+            立即备份
+          </Button>
+          <Button onClick={handleSyncLocal}>同步到本地</Button>
         </div>
       </div>
 
@@ -23,10 +134,18 @@ const BackupRestore: React.FC = () => {
           导出一份 JSON 备份文件，或从已有备份中恢复当前配置。
         </div>
         <div className={styles.actions}>
-          <Button>导出本地数据</Button>
-          <Button>导入备份数据</Button>
+          <Button onClick={handleExport}>导出本地数据</Button>
+          <Button onClick={triggerImport}>导入备份数据</Button>
         </div>
       </div>
+
+      <input
+        ref={fileInputRef}
+        type='file'
+        accept='application/json'
+        style={{ display: 'none' }}
+        onChange={handleImport}
+      />
     </div>
   )
 }

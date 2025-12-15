@@ -1,10 +1,12 @@
 import { http } from '@/utils'
 import { env } from '@/config/env'
 import type { Apps, AddAppParams, UpdateAppParams } from '../types/appGrid'
+import type { IconSettings } from '../stores/appGrid'
 import { defaultApps } from '../initData'
 
 // ========== 本地存储工具 ==========
 const STORAGE_KEY = 'app_grid_data'
+const ICON_SETTINGS_KEY = 'app_grid_icon_settings'
 
 const storageUtils = {
   // 获取本地应用列表
@@ -33,6 +35,21 @@ const storageUtils = {
   async getNextOrder(): Promise<number> {
     const apps = await this.getLocal()
     return apps.length > 0 ? Math.max(...apps.map((a) => a.order)) + 1 : 0
+  },
+
+  // 图标设置
+  async getIconSettings(): Promise<IconSettings | null> {
+    return new Promise((resolve) => {
+      chrome.storage.local.get([ICON_SETTINGS_KEY], (result) => {
+        resolve(result[ICON_SETTINGS_KEY] || null)
+      })
+    })
+  },
+
+  async saveIconSettings(settings: IconSettings): Promise<void> {
+    return new Promise((resolve) => {
+      chrome.storage.local.set({ [ICON_SETTINGS_KEY]: settings }, resolve)
+    })
   }
 }
 
@@ -210,6 +227,21 @@ export default {
     //   const orderData = updatedApps.map(a => ({ id: a.id, order: a.order }))
     //   apiService.updateOrder(orderData).catch(console.error)
     // }
+  },
+
+  /**
+   * 覆盖保存整份应用数据
+   */
+  async saveAll(apps: Apps[]): Promise<void> {
+    await storageUtils.saveLocal(apps)
+  },
+
+  async saveIconSettings(settings: IconSettings): Promise<void> {
+    await storageUtils.saveIconSettings(settings)
+  },
+
+  async getIconSettings(): Promise<IconSettings | null> {
+    return storageUtils.getIconSettings()
   },
 
   /**

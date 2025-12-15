@@ -50,7 +50,9 @@
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition-property: transform;
+  transition-duration: 0.15s;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   user-select: none;
 
@@ -123,7 +125,9 @@
     align-items: center;
     justify-content: center;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease;
+    transition:
+      box-shadow 0.2s ease,
+      transform 0.2s ease;
 
     .iconEmoji {
       font-size: 36px;

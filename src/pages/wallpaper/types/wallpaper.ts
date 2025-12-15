@@ -20,6 +20,7 @@ interface IImageWallpaper {
   type: 'image'
   url: string
   thumbnail: string
+  category: string
   author?: string
   source?: string
 }
@@ -37,12 +38,8 @@ interface IWallpaperConfig {
   currentWallpaper: IGradientWallpaper | IImageWallpaper | IDynamicWallpaper
   brightness: number
   blur: number
+  featuredCategory?: string
+  gradientAngle?: number
 }
 
-export {
-  WallpaperType,
-  IGradientWallpaper,
-  IImageWallpaper,
-  IDynamicWallpaper,
-  IWallpaperConfig
-}
+export { WallpaperType, IGradientWallpaper, IImageWallpaper, IDynamicWallpaper, IWallpaperConfig }
