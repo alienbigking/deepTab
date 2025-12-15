@@ -40,6 +40,9 @@ interface IWallpaperConfig {
   blur: number
   featuredCategory?: string
   gradientAngle?: number
+  saturation?: number
+  dynamicMuted?: boolean
+  dynamicPaused?: boolean
 }
 
 export { WallpaperType, IGradientWallpaper, IImageWallpaper, IDynamicWallpaper, IWallpaperConfig }

@@ -6,6 +6,7 @@ import WidgetsContainer from './widgetsContainer/widgetsContainer'
 import AppGrid from './appGrid/appGrid'
 import SettingsSidebar from './settingsSidebar/settingsSidebar'
 import { SettingOutlined } from '@ant-design/icons'
+import WallpaperBackground from './wallpaper/WallpaperBackground'
 
 /**
  * 新标签页主组件
@@ -51,22 +52,25 @@ const Main: React.FC = () => {
 
   return (
     <div className={cn(styles.container)}>
-      {/* 设置按钮 */}
-      <div className={cn(styles.settingsButton)} onClick={() => onOpenSet()}>
-        <SettingOutlined style={{ fontSize: 24, color: '#fff' }} />
+      <WallpaperBackground />
+      <div className={cn(styles.content)}>
+        {/* 设置按钮 */}
+        <div className={cn(styles.settingsButton)} onClick={() => onOpenSet()}>
+          <SettingOutlined style={{ fontSize: 24, color: '#fff' }} />
+        </div>
+
+        {/* 搜索框 */}
+        <SearchBar />
+
+        {/* 小部件区域 */}
+        <WidgetsContainer />
+
+        {/* 应用图标网格 */}
+        <AppGrid />
+
+        {/* 设置侧边栏 */}
+        <SettingsSidebar open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       </div>
-
-      {/* 搜索框 */}
-      <SearchBar />
-
-      {/* 小部件区域 */}
-      <WidgetsContainer />
-
-      {/* 应用图标网格 */}
-      <AppGrid />
-
-      {/* 设置侧边栏 */}
-      <SettingsSidebar open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   )
 }

@@ -5,12 +5,14 @@ import appGridService from '@/pages/appGrid/services/appGrid'
 import useAppGridStore from '@/pages/appGrid/stores/appGrid'
 import type { Apps } from '@/pages/appGrid/types/appGrid'
 import type { IconSettings } from '@/pages/appGrid/stores/appGrid'
+import type { IWallpaperConfig } from '@/pages/wallpaper/types/wallpaper'
 
 interface BackupPayload {
   version: number
   exportedAt: string
   apps: Apps[]
   iconSettings: IconSettings
+  wallpaperConfig?: IWallpaperConfig | null
 }
 
 const BackupRestore: React.FC = () => {
@@ -48,11 +50,13 @@ const BackupRestore: React.FC = () => {
   const handleExport = async () => {
     try {
       const apps = await appGridService.getList()
+      const storage = await chrome.storage.local.get(['wallpaperConfig'])
       const payload: BackupPayload = {
-        version: 1,
+        version: 2,
         exportedAt: new Date().toISOString(),
         apps,
-        iconSettings
+        iconSettings,
+        wallpaperConfig: (storage.wallpaperConfig as IWallpaperConfig) || null
       }
 
       const blob = new Blob([JSON.stringify(payload, null, 2)], {
@@ -101,6 +105,14 @@ const BackupRestore: React.FC = () => {
       if (data.iconSettings) {
         await appGridService.saveIconSettings(data.iconSettings)
         setIconSettings(data.iconSettings)
+      }
+
+      if (data.wallpaperConfig) {
+        const wc = data.wallpaperConfig as IWallpaperConfig
+        const t = wc.currentWallpaper?.type
+        if (t === 'gradient' || t === 'image' || t === 'dynamic') {
+          await chrome.storage.local.set({ wallpaperConfig: wc })
+        }
       }
 
       message.success(`导入成功，共 ${normalizedApps.length} 个应用`)

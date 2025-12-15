@@ -13,6 +13,12 @@ import {
 export default {
   // 获取渐变壁纸列表
   async getGradientWallpapers(): Promise<IGradientWallpaper[]> {
+    const extractHexColors = (gradient: string) => {
+      const matches = gradient.match(/#[0-9a-fA-F]{3,8}/g)
+      if (!matches) return []
+      return matches.map((c) => c.toLowerCase())
+    }
+
     const presets = [
       'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
@@ -33,7 +39,7 @@ export default {
       type: 'gradient',
       gradient,
       angle: 135,
-      colors: []
+      colors: extractHexColors(gradient)
     }))
   },
 
@@ -41,10 +47,117 @@ export default {
   async getImageWallpapers(): Promise<IImageWallpaper[]> {
     try {
       const response = await http(`${env.HOST_API_URL}wallpapers/images`)
-      return response.data
+      const data: unknown = response.data
+      if (!Array.isArray(data)) return []
+      return (data as IImageWallpaper[]).map((item) => ({
+        ...item,
+        category: item.category || '其他'
+      }))
     } catch (error) {
       console.error('获取图片壁纸失败:', error)
-      return []
+      const mocks: IImageWallpaper[] = [
+        {
+          id: 'featured-animal-1',
+          type: 'image',
+          url: 'https://images.unsplash.com/photo-1546182990-dffeafbe841d?auto=format&fit=crop&w=1920&q=80',
+          thumbnail:
+            'https://images.unsplash.com/photo-1546182990-dffeafbe841d?auto=format&fit=crop&w=600&q=80',
+          category: '动物',
+          author: 'Unsplash',
+          source: 'unsplash'
+        },
+        {
+          id: 'featured-animal-2',
+          type: 'image',
+          url: 'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=1920&q=80',
+          thumbnail:
+            'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=600&q=80',
+          category: '动物',
+          author: 'Unsplash',
+          source: 'unsplash'
+        },
+        {
+          id: 'featured-plant-1',
+          type: 'image',
+          url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1920&q=80',
+          thumbnail:
+            'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=600&q=80',
+          category: '植物',
+          author: 'Unsplash',
+          source: 'unsplash'
+        },
+        {
+          id: 'featured-plant-2',
+          type: 'image',
+          url: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=1920&q=80',
+          thumbnail:
+            'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=600&q=80',
+          category: '植物',
+          author: 'Unsplash',
+          source: 'unsplash'
+        },
+        {
+          id: 'featured-anime-1',
+          type: 'image',
+          url: 'https://images.unsplash.com/photo-1520975916090-3105956dac38?auto=format&fit=crop&w=1920&q=80',
+          thumbnail:
+            'https://images.unsplash.com/photo-1520975916090-3105956dac38?auto=format&fit=crop&w=600&q=80',
+          category: '动漫',
+          author: 'Unsplash',
+          source: 'unsplash'
+        },
+        {
+          id: 'featured-anime-2',
+          type: 'image',
+          url: 'https://images.unsplash.com/photo-1518443895914-7d8b0f1b5cdb?auto=format&fit=crop&w=1920&q=80',
+          thumbnail:
+            'https://images.unsplash.com/photo-1518443895914-7d8b0f1b5cdb?auto=format&fit=crop&w=600&q=80',
+          category: '动漫',
+          author: 'Unsplash',
+          source: 'unsplash'
+        },
+        {
+          id: 'featured-street-1',
+          type: 'image',
+          url: 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=1920&q=80',
+          thumbnail:
+            'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=600&q=80',
+          category: '街头',
+          author: 'Unsplash',
+          source: 'unsplash'
+        },
+        {
+          id: 'featured-street-2',
+          type: 'image',
+          url: 'https://images.unsplash.com/photo-1520975682031-ae460d545300?auto=format&fit=crop&w=1920&q=80',
+          thumbnail:
+            'https://images.unsplash.com/photo-1520975682031-ae460d545300?auto=format&fit=crop&w=600&q=80',
+          category: '街头',
+          author: 'Unsplash',
+          source: 'unsplash'
+        },
+        {
+          id: 'featured-nature-1',
+          type: 'image',
+          url: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1920&q=80',
+          thumbnail:
+            'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=600&q=80',
+          category: '自然',
+          author: 'Unsplash',
+          source: 'unsplash'
+        },
+        {
+          id: 'featured-nature-2',
+          type: 'image',
+          url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1920&q=80',
+          thumbnail:
+            'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=600&q=80',
+          category: '自然',
+          author: 'Unsplash',
+          source: 'unsplash'
+        }
+      ]
+      return mocks
     }
   },
 
@@ -55,7 +168,30 @@ export default {
       return response.data
     } catch (error) {
       console.error('获取动态壁纸失败:', error)
-      return []
+      const mocks: IDynamicWallpaper[] = [
+        {
+          id: 'dynamic-1',
+          type: 'dynamic',
+          videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+          thumbnail:
+            'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=600&q=80'
+        },
+        {
+          id: 'dynamic-2',
+          type: 'dynamic',
+          videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/forest.mp4',
+          thumbnail:
+            'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=600&q=80'
+        },
+        {
+          id: 'dynamic-3',
+          type: 'dynamic',
+          videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/river.mp4',
+          thumbnail:
+            'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=600&q=80'
+        }
+      ]
+      return mocks
     }
   },
 
