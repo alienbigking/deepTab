@@ -2,19 +2,19 @@
  * searchEngine 模块类型定义
  */
 
-type SearchEngineType = 'baidu' | 'google' | 'bing' | 'duckduckgo' | 'custom'
+type BuiltinSearchEngineId = 'baidu' | 'google' | 'bing' | 'duckduckgo'
+type SearchEngineId = BuiltinSearchEngineId | string
 
-interface ISearchEngine {
+interface ICustomSearchEngine {
   id: string
   name: string
-  type: SearchEngineType
   url: string
   icon?: string
 }
 
 interface ISearchEngineConfig {
-  defaultEngine: SearchEngineType
-  customEngines: ISearchEngine[]
+  defaultEngineId: SearchEngineId
+  customEngines: ICustomSearchEngine[]
 }
 
-export { SearchEngineType, ISearchEngine, ISearchEngineConfig }
+export { BuiltinSearchEngineId, SearchEngineId, ICustomSearchEngine, ISearchEngineConfig }

@@ -1,22 +1,37 @@
-import { IThemeConfig } from '../types/theme'
+import type { IThemeConfig } from '../types/theme'
 
 export default {
   async getThemeConfig(): Promise<IThemeConfig> {
     try {
       const result = await chrome.storage.local.get(['themeConfig'])
-      return (
-        result.themeConfig || {
-          mode: 'auto',
-          primaryColor: '#ff6b35',
-          borderRadius: 8
-        }
-      )
+
+      const raw = (result.themeConfig || {}) as {
+        mode?: unknown
+        primaryColor?: unknown
+        borderRadius?: unknown
+      }
+
+      const modeRaw = raw.mode
+
+      const mode =
+        modeRaw === 'auto'
+          ? 'system'
+          : modeRaw === 'default' ||
+              modeRaw === 'light' ||
+              modeRaw === 'dark' ||
+              modeRaw === 'system'
+            ? modeRaw
+            : 'default'
+
+      return {
+        mode,
+        primaryColor: typeof raw.primaryColor === 'string' ? raw.primaryColor : undefined,
+        borderRadius: typeof raw.borderRadius === 'number' ? raw.borderRadius : undefined
+      }
     } catch (error) {
       console.error('获取主题配置失败:', error)
       return {
-        mode: 'auto',
-        primaryColor: '#ff6b35',
-        borderRadius: 8
+        mode: 'default'
       }
     }
   },

@@ -1,19 +1,48 @@
-import { ISearchEngineConfig } from '../types/searchEngine'
+import type { ISearchEngineConfig } from '../types/searchEngine'
 
 export default {
   async getSearchEngineConfig(): Promise<ISearchEngineConfig> {
     try {
       const result = await chrome.storage.local.get(['searchEngineConfig'])
-      return (
-        result.searchEngineConfig || {
-          defaultEngine: 'baidu',
-          customEngines: []
-        }
-      )
+
+      const raw = (result.searchEngineConfig || {}) as {
+        defaultEngineId?: unknown
+        defaultEngine?: unknown
+        customEngines?: unknown
+      }
+
+      const defaultEngineIdRaw = raw.defaultEngineId ?? raw.defaultEngine
+
+      const customEngines = Array.isArray(raw.customEngines)
+        ? raw.customEngines
+            .filter((it) => it && typeof it === 'object')
+            .map((it: any) => ({
+              id: typeof it.id === 'string' ? it.id : '',
+              name: typeof it.name === 'string' ? it.name : '',
+              url: typeof it.url === 'string' ? it.url : '',
+              icon: typeof it.icon === 'string' ? it.icon : undefined
+            }))
+            .filter((it) => it.id && it.name && it.url)
+        : []
+
+      const defaultEngineIdCandidate =
+        typeof defaultEngineIdRaw === 'string' && defaultEngineIdRaw.trim()
+          ? defaultEngineIdRaw
+          : 'baidu'
+
+      const defaultEngineId =
+        defaultEngineIdCandidate === 'custom'
+          ? customEngines[0]?.id || 'baidu'
+          : defaultEngineIdCandidate
+
+      return {
+        defaultEngineId,
+        customEngines
+      }
     } catch (error) {
       console.error('获取搜索引擎配置失败:', error)
       return {
-        defaultEngine: 'baidu',
+        defaultEngineId: 'baidu',
         customEngines: []
       }
     }

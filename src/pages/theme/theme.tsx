@@ -1,15 +1,36 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import cn from 'classnames'
 import { Card, Radio, Space } from 'antd'
-import { SunOutlined, MoonOutlined, BulbOutlined } from '@ant-design/icons'
+import { SunOutlined, MoonOutlined, BulbOutlined, SkinOutlined } from '@ant-design/icons'
 import styles from './theme.module.less'
+import themeService from './services/theme'
+import useThemeStore from './stores/theme'
 
 const Theme: React.FC = () => {
+  const { config, setConfig, init } = useThemeStore()
+
+  useEffect(() => {
+    void init()
+  }, [init])
+
+  const handleChange = async (e: any) => {
+    const mode = e.target.value
+    const next = { ...config, mode }
+    setConfig(next)
+    await themeService.saveThemeConfig(next)
+  }
+
   return (
     <div className={cn(styles.container)}>
       <Card title='主题模式'>
-        <Radio.Group defaultValue='auto'>
+        <Radio.Group value={config.mode} onChange={handleChange}>
           <Space direction='vertical' size='large'>
+            <Radio value='default'>
+              <Space>
+                <SkinOutlined />
+                默认模式
+              </Space>
+            </Radio>
             <Radio value='light'>
               <Space>
                 <SunOutlined />
@@ -22,7 +43,7 @@ const Theme: React.FC = () => {
                 深色模式
               </Space>
             </Radio>
-            <Radio value='auto'>
+            <Radio value='system'>
               <Space>
                 <BulbOutlined />
                 跟随系统

@@ -1,5 +1,95 @@
 @import 'antd/dist/reset.css';
 
+:root {
+  --dt-search-bg: rgba(255, 255, 255, 0.95);
+  --dt-search-bg-focus: rgba(255, 255, 255, 1);
+  --dt-search-text: #333;
+  --dt-search-placeholder: #999;
+  --dt-search-icon: #999;
+  --dt-search-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  --dt-search-shadow-hover: 0 6px 24px rgba(0, 0, 0, 0.15);
+  --dt-search-shadow-focus: 0 6px 28px rgba(0, 0, 0, 0.2);
+
+  --dt-widget-bg: rgba(255, 255, 255, 0.95);
+  --dt-widget-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --dt-widget-shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.12);
+  --dt-widget-text: #333;
+  --dt-widget-text-2: #666;
+  --dt-widget-text-3: #999;
+  --dt-widget-divider: #f0f0f0;
+  --dt-widget-hover-bg: #f5f5f5;
+
+  --dt-drawer-mask: rgba(0, 0, 0, 0.3);
+  --dt-drawer-wrapper-bg: rgba(0, 0, 0, 0.1);
+  --dt-settings-left-bg: rgba(0, 0, 0, 0.15);
+  --dt-settings-right-bg: rgba(0, 0, 0, 0.05);
+  --dt-settings-border: rgba(255, 255, 255, 0.2);
+  --dt-settings-text: rgba(255, 255, 255, 0.9);
+  --dt-settings-text-2: rgba(255, 255, 255, 0.85);
+  --dt-settings-text-3: rgba(255, 255, 255, 0.7);
+  --dt-settings-hover-bg: rgba(255, 255, 255, 0.15);
+}
+
+html[data-theme='light'] {
+  --dt-search-bg: rgba(255, 255, 255, 1);
+  --dt-search-bg-focus: rgba(255, 255, 255, 1);
+  --dt-search-text: #111;
+  --dt-search-placeholder: rgba(0, 0, 0, 0.45);
+  --dt-search-icon: rgba(0, 0, 0, 0.45);
+  --dt-search-shadow: 0 6px 26px rgba(0, 0, 0, 0.08);
+  --dt-search-shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.12);
+  --dt-search-shadow-focus: 0 10px 38px rgba(0, 0, 0, 0.16);
+
+  --dt-widget-bg: rgba(255, 255, 255, 0.98);
+  --dt-widget-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  --dt-widget-shadow-hover: 0 14px 38px rgba(0, 0, 0, 0.12);
+  --dt-widget-text: #111;
+  --dt-widget-text-2: rgba(0, 0, 0, 0.65);
+  --dt-widget-text-3: rgba(0, 0, 0, 0.45);
+  --dt-widget-divider: rgba(0, 0, 0, 0.08);
+  --dt-widget-hover-bg: rgba(0, 0, 0, 0.04);
+
+  --dt-drawer-mask: rgba(0, 0, 0, 0.18);
+  --dt-drawer-wrapper-bg: rgba(255, 255, 255, 0.65);
+  --dt-settings-left-bg: rgba(255, 255, 255, 0.78);
+  --dt-settings-right-bg: rgba(255, 255, 255, 0.55);
+  --dt-settings-border: rgba(0, 0, 0, 0.08);
+  --dt-settings-text: rgba(0, 0, 0, 0.85);
+  --dt-settings-text-2: rgba(0, 0, 0, 0.65);
+  --dt-settings-text-3: rgba(0, 0, 0, 0.55);
+  --dt-settings-hover-bg: rgba(0, 0, 0, 0.06);
+}
+
+html[data-theme='dark'] {
+  --dt-search-bg: rgba(0, 0, 0, 0.55);
+  --dt-search-bg-focus: rgba(0, 0, 0, 0.65);
+  --dt-search-text: rgba(255, 255, 255, 0.9);
+  --dt-search-placeholder: rgba(255, 255, 255, 0.55);
+  --dt-search-icon: rgba(255, 255, 255, 0.6);
+  --dt-search-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  --dt-search-shadow-hover: 0 10px 38px rgba(0, 0, 0, 0.42);
+  --dt-search-shadow-focus: 0 12px 44px rgba(0, 0, 0, 0.5);
+
+  --dt-widget-bg: rgba(0, 0, 0, 0.45);
+  --dt-widget-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+  --dt-widget-shadow-hover: 0 14px 34px rgba(0, 0, 0, 0.55);
+  --dt-widget-text: rgba(255, 255, 255, 0.92);
+  --dt-widget-text-2: rgba(255, 255, 255, 0.7);
+  --dt-widget-text-3: rgba(255, 255, 255, 0.55);
+  --dt-widget-divider: rgba(255, 255, 255, 0.12);
+  --dt-widget-hover-bg: rgba(255, 255, 255, 0.08);
+
+  --dt-drawer-mask: rgba(0, 0, 0, 0.45);
+  --dt-drawer-wrapper-bg: rgba(0, 0, 0, 0.2);
+  --dt-settings-left-bg: rgba(0, 0, 0, 0.35);
+  --dt-settings-right-bg: rgba(0, 0, 0, 0.15);
+  --dt-settings-border: rgba(255, 255, 255, 0.12);
+  --dt-settings-text: rgba(255, 255, 255, 0.9);
+  --dt-settings-text-2: rgba(255, 255, 255, 0.75);
+  --dt-settings-text-3: rgba(255, 255, 255, 0.65);
+  --dt-settings-hover-bg: rgba(255, 255, 255, 0.12);
+}
+
 /* 全局字体基础样式 */
 //html,
 //body,
