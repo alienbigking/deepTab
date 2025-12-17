@@ -159,7 +159,8 @@ module.exports = [
               options: {
                 sourceMap: true,
                 modules: {
-                  namedExport: false
+                  namedExport: false,
+                  localIdentName: '[name]__[hash:base64:6]'
                 } // 启用 CSS Modules
               }
             },
