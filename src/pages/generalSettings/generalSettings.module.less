@@ -1,4 +1,44 @@
 .container {
   padding: 20px;
-  max-width: 600px;
+  max-width: 680px;
+
+  .section {
+    margin-bottom: 18px;
+
+    .sectionTitle {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 6px 0 12px;
+      color: rgba(255, 255, 255, 0.95);
+    }
+
+    .rows {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 14px;
+      overflow: hidden;
+
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 14px;
+
+        &:not(:last-child) {
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .rowLabel {
+          color: rgba(255, 255, 255, 0.82);
+          font-size: 14px;
+        }
+
+        .rowControl {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+        }
+      }
+    }
+  }
 }

@@ -1,20 +1,6 @@
-import React, { useEffect, useState } from 'react'
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent
-} from '@dnd-kit/core'
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  rectSortingStrategy
-} from '@dnd-kit/sortable'
-import { App, Button, Modal } from 'antd'
+import React, { useEffect, useMemo, useState } from 'react'
+import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
+import { App, Button } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import cn from 'classnames'
 import styles from './appGrid.module.less'
@@ -31,31 +17,26 @@ import { useNotification } from '@/common/ui'
  * 应用图标网格组件
  * 支持拖拽排序、编辑模式、右键菜单
  */
-const AppGrid: React.FC = () => {
+interface AppGridProps {
+  activeCategoryId?: string
+}
+
+const AppGrid: React.FC<AppGridProps> = (props) => {
+  const { activeCategoryId = 'home' } = props
   const { apps, isEditMode, iconSettings, setApps, setIsEditMode } = useAppGridStore()
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [editingApp, setEditingApp] = useState<Apps | null>(null)
   const [contextMenuData, setContextMenuData] = useState<ContextMenuState | null>(null)
-  const { message, modal, notification } = App.useApp()
+  const { message, modal } = App.useApp()
   const { showNotification } = useNotification()
 
-  // 拖拽传感器配置
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8 // 移动 8px 后才开始拖拽,避免与点击冲突
-      }
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates
-    })
-  )
+  const visibleApps = useMemo(() => {
+    return apps.filter((app) => (app.categoryId || 'home') === activeCategoryId)
+  }, [apps, activeCategoryId])
 
   // 初始化加载数据
   useEffect(() => {
-    console.log('AppGrid useEffect fired', message)
     initAndLoadApps()
-    message.success('成功弹出了')
   }, [])
 
   // 初始化并加载应用列表
@@ -78,27 +59,6 @@ const AppGrid: React.FC = () => {
     } catch (error) {
       console.error('加载应用列表失败:', error)
       message.error('加载应用列表失败')
-    }
-  }
-
-  // 拖拽结束处理
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event
-
-    if (over && active.id !== over.id) {
-      const oldIndex = apps.findIndex((app) => app.id === active.id)
-      const newIndex = apps.findIndex((app) => app.id === over.id)
-
-      const newApps = arrayMove(apps, oldIndex, newIndex)
-      setApps(newApps)
-
-      // 保存新顺序
-      try {
-        await appGridService.updateOrder(newApps)
-      } catch (error) {
-        console.error('保存顺序失败:', error)
-        message.error('拖放失败，请重试！')
-      }
     }
   }
 
@@ -314,26 +274,24 @@ const AppGrid: React.FC = () => {
       </div>
 
       {/* 应用网格 */}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={apps.map((app) => app.id)} strategy={rectSortingStrategy}>
-          <div className={styles.appGrid} style={{ gap: `${iconSettings.spacing}px` }}>
-            {apps.map((app) => (
-              <AppIcon
-                key={app.id}
-                id={app.id}
-                name={app.name}
-                icon={app.icon}
-                url={app.url}
-                isEditMode={isEditMode}
-                iconSettings={iconSettings}
-                onDelete={confirmDelete}
-                onContextMenu={handleContextMenu}
-                onLongPress={handleLongPress}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+      <SortableContext items={visibleApps.map((app) => app.id)} strategy={rectSortingStrategy}>
+        <div className={styles.appGrid} style={{ gap: `${iconSettings.spacing}px` }}>
+          {visibleApps.map((app) => (
+            <AppIcon
+              key={app.id}
+              id={app.id}
+              name={app.name}
+              icon={app.icon}
+              url={app.url}
+              isEditMode={isEditMode}
+              iconSettings={iconSettings}
+              onDelete={confirmDelete}
+              onContextMenu={handleContextMenu}
+              onLongPress={handleLongPress}
+            />
+          ))}
+        </div>
+      </SortableContext>
 
       {/* 右键菜单 */}
       {contextMenuData && (

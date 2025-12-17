@@ -1,29 +1,21 @@
+import { defaultGeneralSettings } from '../stores/generalSettings'
 import { IGeneralSettings } from '../types/generalSettings'
 
 export default {
   async getGeneralSettings(): Promise<IGeneralSettings> {
     try {
       const result = await chrome.storage.local.get(['generalSettings'])
-      return (
-        result.generalSettings || {
-          language: 'zh',
-          timeFormat: '24',
-          showWeather: true,
-          showClock: true,
-          autoSave: true,
-          animations: true
-        }
-      )
+      const raw = (result.generalSettings || {}) as Partial<IGeneralSettings>
+      return {
+        ...defaultGeneralSettings,
+        ...raw,
+        controlBar: { ...defaultGeneralSettings.controlBar, ...(raw as any).controlBar },
+        search: { ...defaultGeneralSettings.search, ...(raw as any).search },
+        other: { ...defaultGeneralSettings.other, ...(raw as any).other }
+      }
     } catch (error) {
       console.error('获取常规设置失败:', error)
-      return {
-        language: 'zh',
-        timeFormat: '24',
-        showWeather: true,
-        showClock: true,
-        autoSave: true,
-        animations: true
-      }
+      return defaultGeneralSettings
     }
   },
 

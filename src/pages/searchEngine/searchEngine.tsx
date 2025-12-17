@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import cn from 'classnames'
-import { Button, Card, Checkbox, Form, Input, Modal, Tag } from 'antd'
+import { Button, Card, Checkbox, Form, Image, Input, Modal, Tag, Upload } from 'antd'
 import {
   DeleteOutlined,
   EditOutlined,
@@ -17,7 +17,71 @@ const SearchEngine: React.FC = () => {
     useSearchEngineStore()
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [lastAutoIcon, setLastAutoIcon] = useState<string>('')
   const [form] = Form.useForm()
+  const iconPreview = Form.useWatch('icon', form)
+
+  function toFaviconUrl(template: string) {
+    const v = String(template || '').trim()
+    if (!v) return ''
+    try {
+      const sample = v.includes('{q}') ? v.replaceAll('{q}', 'test') : v.replace('%s', 'test')
+      const url = new URL(sample)
+      return `${url.origin}/favicon.ico`
+    } catch {
+      return ''
+    }
+  }
+
+  function toLocalBuiltinIconUrls(engineId: string) {
+    try {
+      const getURL = chrome?.runtime?.getURL
+      if (!getURL) return []
+      return [
+        getURL(`src/assets/images/searchEngines/${engineId}.svg`),
+        getURL(`src/assets/images/searchEngines/${engineId}.png`),
+        getURL(`src/assets/images/searchEngines/${engineId}.ico`)
+      ]
+    } catch {
+      return []
+    }
+  }
+
+  const BuiltinIcon: React.FC<{
+    engineId: string
+    template: string
+    name: string
+    fallback: React.ReactNode
+  }> = ({ engineId, template, name, fallback }) => {
+    const [tryIndex, setTryIndex] = useState(0)
+
+    const iconUrls = useMemo(() => {
+      const urls: string[] = []
+      urls.push(...toLocalBuiltinIconUrls(engineId))
+      const favicon = toFaviconUrl(template)
+      if (favicon) urls.push(favicon)
+      return urls
+    }, [engineId, template])
+
+    useEffect(() => {
+      setTryIndex(0)
+    }, [engineId, iconUrls.join('|')])
+
+    const active = iconUrls[tryIndex]
+
+    if (active) {
+      return (
+        <img
+          className={styles.engineIconImg}
+          src={active}
+          alt={name}
+          onError={() => setTryIndex((v) => v + 1)}
+        />
+      )
+    }
+
+    return <>{fallback}</>
+  }
 
   useEffect(() => {
     void init()
@@ -67,6 +131,7 @@ const SearchEngine: React.FC = () => {
     setEditingId(null)
     form.resetFields()
     form.setFieldsValue({ setAsDefault: true })
+    setLastAutoIcon('')
     setModalOpen(true)
   }
 
@@ -76,6 +141,10 @@ const SearchEngine: React.FC = () => {
 
     setEditingId(id)
     form.resetFields()
+
+    const auto = toFaviconUrl(engine.url)
+    setLastAutoIcon(auto)
+
     form.setFieldsValue({
       name: engine.name,
       url: engine.url,
@@ -88,6 +157,7 @@ const SearchEngine: React.FC = () => {
   const closeModal = () => {
     setModalOpen(false)
     setEditingId(null)
+    setLastAutoIcon('')
     form.resetFields()
   }
 
@@ -125,6 +195,33 @@ const SearchEngine: React.FC = () => {
     closeModal()
   }
 
+  const onFormValuesChange = (changed: any, all: any) => {
+    if (!('url' in changed)) return
+
+    const nextAuto = toFaviconUrl(all.url)
+    setLastAutoIcon(nextAuto)
+
+    const currentIcon = String(all.icon || '').trim()
+    if (!currentIcon || currentIcon === lastAutoIcon) {
+      if (nextAuto) {
+        form.setFieldValue('icon', nextAuto)
+      } else {
+        form.setFieldValue('icon', undefined)
+      }
+    }
+  }
+
+  const handleUploadBefore = (file: File) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '')
+      form.setFieldValue('icon', dataUrl)
+      setLastAutoIcon('')
+    }
+    reader.readAsDataURL(file)
+    return false
+  }
+
   return (
     <div className={cn(styles.container)}>
       <Card
@@ -145,7 +242,9 @@ const SearchEngine: React.FC = () => {
               role='button'
               tabIndex={0}
             >
-              <div className={styles.engineIcon}>{it.icon}</div>
+              <div className={styles.engineIcon}>
+                <BuiltinIcon engineId={it.id} template={it.url} name={it.name} fallback={it.icon} />
+              </div>
               <div className={styles.engineMeta}>
                 <div className={styles.engineName}>{it.name}</div>
                 <div className={styles.engineUrl}>{it.url}</div>
@@ -218,7 +317,7 @@ const SearchEngine: React.FC = () => {
         onCancel={closeModal}
         destroyOnClose
       >
-        <Form form={form} layout='vertical'>
+        <Form form={form} layout='vertical' onValuesChange={onFormValuesChange}>
           <Form.Item
             name='name'
             label='名称'
@@ -230,8 +329,56 @@ const SearchEngine: React.FC = () => {
           <Form.Item name='url' label='搜索 URL' rules={[{ validator: validateUrlTemplate }]}>
             <Input placeholder='例如：https://www.google.com/search?q={q}' />
           </Form.Item>
-          <Form.Item name='icon' label='图标（可选）'>
-            <Input placeholder='可填写图片 URL（后续可扩展）' />
+          <Form.Item label='图标'>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Form.Item name='icon' noStyle>
+                <Input placeholder='可填写图片 URL / favicon / dataURL' />
+              </Form.Item>
+              <Upload accept='image/*' showUploadList={false} beforeUpload={handleUploadBefore}>
+                <Button>上传</Button>
+              </Upload>
+              <Button
+                onClick={() => {
+                  const url = String(form.getFieldValue('url') || '')
+                  const auto = toFaviconUrl(url)
+                  if (auto) {
+                    form.setFieldValue('icon', auto)
+                    setLastAutoIcon(auto)
+                  }
+                }}
+              >
+                使用网站图标
+              </Button>
+              <Button
+                onClick={() => {
+                  form.setFieldValue('icon', undefined)
+                  setLastAutoIcon('')
+                }}
+              >
+                清空
+              </Button>
+            </div>
+            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ color: 'rgba(255,255,255,0.7)' }}>预览：</span>
+              {String(iconPreview || '').trim() ? (
+                <Image
+                  preview={false}
+                  width={28}
+                  height={28}
+                  src={String(iconPreview || '')}
+                  style={{ borderRadius: 8, objectFit: 'cover' }}
+                />
+              ) : (
+                <span
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 8,
+                    background: 'rgba(22,119,255,0.15)'
+                  }}
+                />
+              )}
+            </div>
           </Form.Item>
           <Form.Item name='setAsDefault' valuePropName='checked'>
             <Checkbox>设为默认搜索引擎</Checkbox>

@@ -1,9 +1,33 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import cn from 'classnames'
 import { Card, Descriptions, Alert } from 'antd'
 import styles from './about.module.less'
+import generalSettingsService from '../generalSettings/services/generalSettings'
+import { defaultGeneralSettings } from '../generalSettings/stores/generalSettings'
 
 const About: React.FC = () => {
+  const [showIcp, setShowIcp] = useState(defaultGeneralSettings.other.showIcp)
+
+  useEffect(() => {
+    const load = async () => {
+      const data = await generalSettingsService.getGeneralSettings()
+      setShowIcp(Boolean(data.other.showIcp))
+    }
+
+    void load()
+
+    const onChanged = (changes: any, areaName: string) => {
+      if (areaName !== 'local') return
+      if (!changes?.generalSettings) return
+      void load()
+    }
+
+    chrome.storage.onChanged.addListener(onChanged)
+    return () => {
+      chrome.storage.onChanged.removeListener(onChanged)
+    }
+  }, [])
+
   return (
     <div className={cn(styles.container)}>
       <Alert
@@ -20,6 +44,18 @@ const About: React.FC = () => {
           <Descriptions.Item label='作者'>deepTab Team</Descriptions.Item>
           <Descriptions.Item label='邮箱'>1260213657@qq.com</Descriptions.Item>
           <Descriptions.Item label='官网'>https://deeptab.com</Descriptions.Item>
+          {showIcp && (
+            <Descriptions.Item label='备案号'>
+              <a
+                href='https://beian.miit.gov.cn/'
+                target='_blank'
+                rel='noreferrer'
+                className={styles.icpLink}
+              >
+                湘ICP备2021011742号
+              </a>
+            </Descriptions.Item>
+          )}
           <Descriptions.Item label='描述'>一款漂亮的新标签页插件</Descriptions.Item>
         </Descriptions>
       </Card>

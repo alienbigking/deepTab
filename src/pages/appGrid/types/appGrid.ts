@@ -7,6 +7,7 @@ export interface Apps {
   icon: string // 图标(emoji 或 URL)
   url: string // 应用链接
   order: number // 排序序号
+  categoryId?: string // 分类/分页 ID
   userId?: string // 用户 ID(接入后端后使用)
   createdAt?: string // 创建时间
   updatedAt?: string // 更新时间

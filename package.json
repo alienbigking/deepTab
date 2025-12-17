@@ -9,6 +9,7 @@
     "dev": "webpack --mode=development --watch",
     "start": "webpack serve --config webpack.config.js --mode=development",
     "build": "webpack --mode=production",
+    "download:search-icons": "node scripts/download-search-engine-icons.mjs",
     "lint": "eslint 'src/**/*.{ts,tsx,js,jsx}'",
     "format": "prettier --write 'src/**/*.{ts,tsx,js,jsx,json,css,scss,md}'",
     "lint:fix": "eslint 'src/**/*.{ts,tsx,js,jsx}' --fix"

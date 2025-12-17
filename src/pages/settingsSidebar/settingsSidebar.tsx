@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import cn from 'classnames'
 import { Drawer, Avatar, Badge } from 'antd'
 import {
@@ -35,6 +35,7 @@ import IconControl from '@/pages/iconControl/iconControl'
 interface SettingsSidebarProps {
   open: boolean
   onClose: () => void
+  openToMenu?: string
 }
 
 type MenuKey =
@@ -57,8 +58,33 @@ type MenuKey =
  * 完整的设置面板，包含多个功能模块
  */
 const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
-  const { open = false, onClose } = props
+  const { open = false, onClose, openToMenu } = props
   const [activeMenu, setActiveMenu] = useState<MenuKey>('wallpaper')
+
+  useEffect(() => {
+    if (!open) return
+    if (!openToMenu) return
+
+    const keys = new Set<MenuKey>([
+      'subscription',
+      'invitation',
+      'settings',
+      'wallpaper',
+      'theme',
+      'search',
+      'notification',
+      'about',
+      'apps',
+      'feedback',
+      'reset',
+      'backup',
+      'iconControl'
+    ])
+
+    if (keys.has(openToMenu as MenuKey)) {
+      setActiveMenu(openToMenu as MenuKey)
+    }
+  }, [open, openToMenu])
 
   // 菜单项
   const menuItems = [
