@@ -53,6 +53,7 @@ const Main: React.FC = () => {
   const activeCategoryId = useAppCategoryStore((s) => s.activeCategoryId)
   const apps = useAppGridStore((s) => s.apps)
   const setApps = useAppGridStore((s) => s.setApps)
+  const pinnedAppIds = useBottomBarStore((s) => s.pinnedAppIds)
   const setPinnedAppIds = useBottomBarStore((s) => s.setPinnedAppIds)
 
   const draggingApp = useMemo(() => {
@@ -154,27 +155,50 @@ const Main: React.FC = () => {
   }
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveDragId(String(event.active.id))
+    setActiveDragId(String(event.active?.data?.current?.appId || event.active.id))
   }
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
 
-    const activeId = String(active.id)
+    const activeAppId = String(active?.data?.current?.appId || active.id)
     setActiveDragId(null)
 
     if (!over) return
 
-    const overId = String(over.id)
+    const overAppId = String(over?.data?.current?.appId || over.id)
 
-    if (overId === BOTTOM_BAR_DROPPABLE_ID) {
+    const fromContainer = String(active?.data?.current?.container || '')
+    const toContainer = String(over?.data?.current?.container || '')
+
+    const isOverDock = toContainer === 'dock' || String(over.id) === BOTTOM_BAR_DROPPABLE_ID
+
+    if (fromContainer === 'dock' && toContainer === 'dock') {
+      if (activeAppId === overAppId) return
+
+      const oldIndex = pinnedAppIds.findIndex((id) => id === activeAppId)
+      const newIndex = pinnedAppIds.findIndex((id) => id === overAppId)
+      if (oldIndex === -1 || newIndex === -1) return
+
+      const nextPinned = arrayMove(pinnedAppIds, oldIndex, newIndex)
+      setPinnedAppIds(nextPinned)
+      try {
+        await bottomBarService.savePins(nextPinned)
+      } catch (error) {
+        console.error('保存 Dock 顺序失败:', error)
+        message.error('保存 Dock 顺序失败，请重试')
+      }
+      return
+    }
+
+    if (isOverDock) {
       let nextPinned: string[] | null = null
       setPinnedAppIds((prev) => {
-        if (prev.includes(activeId)) {
+        if (prev.includes(activeAppId)) {
           nextPinned = null
           return prev
         }
-        nextPinned = [...prev, activeId]
+        nextPinned = [...prev, activeAppId]
         return nextPinned
       })
 
@@ -190,11 +214,13 @@ const Main: React.FC = () => {
       return
     }
 
-    if (activeId === overId) return
+    if (fromContainer === 'dock') return
+
+    if (activeAppId === overAppId) return
 
     const visibleApps = apps.filter((app) => (app.categoryId || 'home') === activeCategoryId)
-    const oldIndex = visibleApps.findIndex((app) => app.id === activeId)
-    const newIndex = visibleApps.findIndex((app) => app.id === overId)
+    const oldIndex = visibleApps.findIndex((app) => app.id === activeAppId)
+    const newIndex = visibleApps.findIndex((app) => app.id === overAppId)
     if (oldIndex === -1 || newIndex === -1) return
 
     const movedVisible = arrayMove(visibleApps, oldIndex, newIndex)

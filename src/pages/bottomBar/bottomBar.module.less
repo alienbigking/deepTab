@@ -15,6 +15,9 @@
     display: flex;
     align-items: center;
     gap: 18px;
+    max-width: calc(100vw - 80px);
+    overflow-x: auto;
+    overflow-y: hidden;
   }
 
   .dockOver {
@@ -55,5 +58,9 @@
       height: 38px;
       object-fit: contain;
     }
+  }
+
+  .dragging {
+    opacity: 0.6;
   }
 }

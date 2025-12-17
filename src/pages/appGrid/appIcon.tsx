@@ -40,7 +40,11 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
 
   // 拖拽相关
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id
+    id,
+    data: {
+      container: 'grid',
+      appId: id
+    }
   })
 
   const style = {
