@@ -160,7 +160,7 @@ module.exports = [
                 sourceMap: true,
                 modules: {
                   namedExport: false,
-                  localIdentName: '[name]__[hash:base64:6]'
+                  localIdentName: '[name]__[local]__[hash:base64:6]'
                 } // 启用 CSS Modules
               }
             },
