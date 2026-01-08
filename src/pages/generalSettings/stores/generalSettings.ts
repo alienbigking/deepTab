@@ -9,6 +9,8 @@ export const defaultGeneralSettings: IGeneralSettings = {
   },
   search: {
     searchBarStyle: 'default',
+    searchBarWidth: 60,
+    searchBarOpacity: 95,
     openMethod: 'newTab',
     searchSuggestions: true,
     searchHistory: true,
@@ -31,7 +33,13 @@ export const useGeneralSettingsStore = create<GeneralSettingsStore>((set) => ({
   settings: defaultGeneralSettings,
   setSettings: (settings) =>
     set((state) => ({
-      settings: { ...state.settings, ...settings }
+      settings: {
+        ...state.settings,
+        ...settings,
+        controlBar: { ...state.settings.controlBar, ...(settings as any).controlBar },
+        search: { ...state.settings.search, ...(settings as any).search },
+        other: { ...state.settings.other, ...(settings as any).other }
+      }
     }))
 }))
 

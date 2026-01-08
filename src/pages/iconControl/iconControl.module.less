@@ -1,43 +1,64 @@
 .container {
-  padding: 32px 40px;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .title {
   font-size: 20px;
   font-weight: 600;
-  margin-bottom: 8px;
-  color: #ffffff;
+  color: var(--dt-settings-card-text);
 }
 
 .subTitle {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.6);
-  margin-bottom: 24px;
+  color: var(--dt-settings-card-muted);
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px 32px;
+  gap: 28px;
+}
+
+.group {
+  padding: 18px 22px;
+  border-radius: 16px;
+  border: 1px solid var(--dt-settings-card-border);
+  background: var(--dt-settings-hover-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .groupTitle {
   font-size: 14px;
-  font-weight: 500;
-  margin-bottom: 12px;
-  color: #ffffff;
+  font-weight: 600;
+  color: var(--dt-settings-card-text);
 }
 
 .fieldRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  gap: 16px;
 }
 
 .label {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--dt-settings-card-text);
 }
 
 .control {

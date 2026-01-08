@@ -3,14 +3,13 @@
  */
 
 // 搜索引擎类型
-type SearchEngine = 'baidu' | 'google' | 'bing' | 'duckduckgo'
+type SearchEngine = string
 
 // 搜索历史项
 interface ISearchHistoryItem {
-  id: string
   keyword: string
   timestamp: number
-  engine: SearchEngine
+  engineId: SearchEngine
 }
 
 // 搜索设置

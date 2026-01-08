@@ -2,18 +2,10 @@ import { create } from 'zustand'
 import type {
   ICustomSearchEngine,
   ISearchEngineConfig,
-  SearchEngineId
+  SearchEngineId,
+  SearchEngineStore
 } from '../types/searchEngine'
 import searchEngineService from '../services/searchEngine'
-
-interface SearchEngineStore {
-  config: ISearchEngineConfig
-  setConfig: (config: ISearchEngineConfig) => void
-  init: () => Promise<void>
-  setDefaultEngineId: (id: SearchEngineId) => Promise<void>
-  upsertCustomEngine: (engine: ICustomSearchEngine) => Promise<void>
-  removeCustomEngine: (id: string) => Promise<void>
-}
 
 export const useSearchEngineStore = create<SearchEngineStore>((set, get) => {
   let inited = false
@@ -45,8 +37,12 @@ export const useSearchEngineStore = create<SearchEngineStore>((set, get) => {
       chrome.storage.onChanged.addListener((changes, areaName) => {
         if (areaName !== 'local') return
         const change = changes.searchEngineConfig
-        if (!change?.newValue) return
-        applyConfig(change.newValue as ISearchEngineConfig)
+        if (!change) return
+        const next = (change.newValue as ISearchEngineConfig) || {
+          defaultEngineId: 'baidu',
+          customEngines: []
+        }
+        applyConfig(next)
       })
     },
     setDefaultEngineId: async (id) => {

@@ -12,9 +12,9 @@ const Subscription: React.FC = () => {
     <div className={cn(styles.container)}>
       <div className={cn(styles.currentPlan)}>
         <Badge.Ribbon text='FREE' color='gray'>
-          <Card>
+          <Card className='dtSettingsCard' bordered={false}>
             <div className={cn(styles.planInfo)}>
-              <CrownOutlined style={{ fontSize: 32, color: '#999' }} />
+              <CrownOutlined className={styles.planIcon} />
               <h3>免费版</h3>
               <p>基础功能，永久免费</p>
             </div>

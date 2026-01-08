@@ -6,7 +6,7 @@ import styles from './feedback.module.less'
 const Feedback: React.FC = () => {
   return (
     <div className={cn(styles.container)}>
-      <Card title='投诉与反馈'>
+      <Card title='投诉与反馈' className='dtSettingsCard' bordered={false}>
         <Form layout='vertical'>
           <Form.Item label='反馈类型' name='type' required>
             <Select placeholder='请选择反馈类型'>

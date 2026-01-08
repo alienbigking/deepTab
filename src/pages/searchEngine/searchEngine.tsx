@@ -225,6 +225,7 @@ const SearchEngine: React.FC = () => {
   return (
     <div className={cn(styles.container)}>
       <Card
+        className='dtSettingsCard'
         title='默认搜索引擎'
         extra={
           <div className={styles.currentDefault}>
@@ -256,6 +257,7 @@ const SearchEngine: React.FC = () => {
       </Card>
 
       <Card
+        className='dtSettingsCard'
         title='自定义搜索引擎'
         extra={
           <Button type='primary' icon={<PlusOutlined />} onClick={openCreate}>

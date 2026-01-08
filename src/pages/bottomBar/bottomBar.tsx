@@ -10,7 +10,7 @@ import bottomBarService from './services/bottomBar'
 import { Dropdown } from 'antd'
 import AddAppModal from '@/pages/appGrid/addAppModal'
 import appGridService from '@/pages/appGrid/services/appGrid'
-import type { Apps } from '@/pages/appGrid/types/appGrid'
+import type { AppNode, AppItem } from '@/pages/appGrid/types/appGrid'
 
 interface BottomBarProps {
   activeCategoryId?: string
@@ -25,14 +25,17 @@ const getDockSortableId = (appId: string) => {
 const MAX_FALLBACK_ITEMS = 5
 
 interface DockItemProps {
-  app: Apps
+  app: AppItem
   onOpen: (url: string) => void
   onRemove: (id: string) => void
-  onEdit: (app: Apps) => void
+  onEdit: (app: AppItem) => void
 }
 
 const DockSortableItem: React.FC<DockItemProps> = (props) => {
   const { app, onOpen, onRemove, onEdit } = props
+
+  // 只允许普通图标在底部栏，文件夹不支持
+  if (app.type !== 'item') return null
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: getDockSortableId(app.id),
@@ -96,7 +99,7 @@ const BottomBar: React.FC<BottomBarProps> = (props) => {
   const pinnedAppIds = useBottomBarStore((s) => s.pinnedAppIds)
   const setPinnedAppIds = useBottomBarStore((s) => s.setPinnedAppIds)
   const [editOpen, setEditOpen] = useState(false)
-  const [editingApp, setEditingApp] = useState<Apps | null>(null)
+  const [editingApp, setEditingApp] = useState<AppItem | null>(null)
 
   const { setNodeRef, isOver } = useDroppable({
     id: BOTTOM_BAR_DROPPABLE_ID,
@@ -108,13 +111,13 @@ const BottomBar: React.FC<BottomBarProps> = (props) => {
   const pinnedApps = useMemo(() => {
     return pinnedAppIds
       .map((id) => apps.find((a) => a.id === id) || null)
-      .filter(Boolean) as typeof apps
+      .filter(Boolean) as AppItem[]
   }, [apps, pinnedAppIds])
 
-  const fallbackApps = useMemo(() => {
-    const filtered = apps.filter((app) => (app.categoryId || 'home') === activeCategoryId)
-    return filtered
-      .slice()
+  const dockApps = useMemo(() => {
+    return apps
+      .filter((node): node is AppItem => node.type === 'item')
+      .filter((app) => (app.categoryId || 'home') === activeCategoryId)
       .sort((a, b) => a.order - b.order)
       .slice(0, MAX_FALLBACK_ITEMS)
   }, [apps, activeCategoryId])
@@ -144,10 +147,12 @@ const BottomBar: React.FC<BottomBarProps> = (props) => {
     await bottomBarService.savePins(next)
   }
 
-  const onEdit = (app: Apps) => {
+  const onEdit = (app: AppItem) => {
     setEditingApp(app)
     setEditOpen(true)
   }
+
+  const fallbackApps = dockApps
 
   return (
     <div className={cn(styles.bottomBarWrap)}>

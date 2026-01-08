@@ -1,16 +1,15 @@
 import React, { useRef } from 'react'
-import { App, Button } from 'antd'
+import { App, Button, Card } from 'antd'
 import styles from './backupRestore.module.less'
 import appGridService from '@/pages/appGrid/services/appGrid'
 import useAppGridStore from '@/pages/appGrid/stores/appGrid'
-import type { Apps } from '@/pages/appGrid/types/appGrid'
-import type { IconSettings } from '@/pages/appGrid/stores/appGrid'
+import type { AppNode, IconSettings } from '@/pages/appGrid/types/appGrid'
 import type { IWallpaperConfig } from '@/pages/wallpaper/types/wallpaper'
 
 interface BackupPayload {
   version: number
   exportedAt: string
-  apps: Apps[]
+  apps: AppNode[]
   iconSettings: IconSettings
   wallpaperConfig?: IWallpaperConfig | null
 }
@@ -93,6 +92,13 @@ const BackupRestore: React.FC = () => {
       }
 
       const normalizedApps = data.apps
+        .map((app: any, index: number) => {
+          // 兼容旧数据：如果没有 type 字段，则转为 AppItem
+          if (!app.type) {
+            return { ...app, type: 'item' as const, url: app.url || '' }
+          }
+          return app
+        })
         .map((app, index) => ({
           ...app,
           order: typeof app.order === 'number' ? app.order : index
@@ -126,38 +132,46 @@ const BackupRestore: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <h2 className={styles.title}>备份与恢复</h2>
-      <p className={styles.subTitle}>备份你的个性化配置，在设备之间快速同步或恢复。</p>
+      <Card className='dtSettingsCard' bordered={false}>
+        <div className={styles.content}>
+          <div className={styles.header}>
+            <h2 className={styles.title}>备份与恢复</h2>
+            <p className={styles.subTitle}>备份你的个性化配置，在设备之间快速同步或恢复。</p>
+          </div>
 
-      <div className={styles.section}>
-        <div className={styles.sectionTitle}>本地数据</div>
-        <div className={styles.sectionDesc}>手动将当前设置保存到本地浏览器存储中。</div>
-        <div className={styles.actions}>
-          <Button type='primary' onClick={handleQuickBackup}>
-            立即备份
-          </Button>
-          <Button onClick={handleSyncLocal}>同步到本地</Button>
-        </div>
-      </div>
+          <div className={styles.sections}>
+            <div className={styles.section}>
+              <div className={styles.sectionTitle}>本地数据</div>
+              <div className={styles.sectionDesc}>手动将当前设置保存到本地浏览器存储中。</div>
+              <div className={styles.actions}>
+                <Button type='primary' onClick={handleQuickBackup}>
+                  立即备份
+                </Button>
+                <Button onClick={handleSyncLocal}>同步到本地</Button>
+              </div>
+            </div>
 
-      <div className={styles.section}>
-        <div className={styles.sectionTitle}>导出 / 导入</div>
-        <div className={styles.sectionDesc}>
-          导出一份 JSON 备份文件，或从已有备份中恢复当前配置。
-        </div>
-        <div className={styles.actions}>
-          <Button onClick={handleExport}>导出本地数据</Button>
-          <Button onClick={triggerImport}>导入备份数据</Button>
-        </div>
-      </div>
+            <div className={styles.section}>
+              <div className={styles.sectionTitle}>导出 / 导入</div>
+              <div className={styles.sectionDesc}>
+                导出一份 JSON 备份文件，或从已有备份中恢复当前配置。
+              </div>
+              <div className={styles.actions}>
+                <Button onClick={handleExport}>导出本地数据</Button>
+                <Button onClick={triggerImport}>导入备份数据</Button>
+              </div>
+            </div>
+          </div>
 
-      <input
-        ref={fileInputRef}
-        type='file'
-        accept='application/json'
-        style={{ display: 'none' }}
-        onChange={handleImport}
-      />
+          <input
+            ref={fileInputRef}
+            type='file'
+            accept='application/json'
+            style={{ display: 'none' }}
+            onChange={handleImport}
+          />
+        </div>
+      </Card>
     </div>
   )
 }

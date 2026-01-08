@@ -16,6 +16,8 @@ interface IGeneralSettings {
 
   search: {
     searchBarStyle: SearchBarStyle
+    searchBarWidth: number
+    searchBarOpacity: number
     openMethod: SearchOpenMethod
     searchSuggestions: boolean
     searchHistory: boolean

@@ -7,15 +7,15 @@ import styles from './invitation.module.less'
 const Invitation: React.FC = () => {
   return (
     <div className={cn(styles.container)}>
-      <Card>
-        <Space direction='vertical' size='large' style={{ width: '100%' }}>
+      <Card className='dtSettingsCard' bordered={false}>
+        <Space direction='vertical' size='large' className={cn(styles.cardContent)}>
           <div className={cn(styles.header)}>
-            <GiftOutlined style={{ fontSize: 48, color: '#ff6b35' }} />
+            <GiftOutlined className={styles.headerIcon} />
             <h2>邀请好友，获得奖励</h2>
           </div>
           <div className={cn(styles.inviteCode)}>
             <span>我的邀请码：</span>
-            <Input value='DEEPXXX' readOnly style={{ width: 200 }} />
+            <Input value='DEEPXXX' readOnly className={styles.inviteInput} />
             <Button type='primary'>复制</Button>
           </div>
           <div className={cn(styles.stats)}>

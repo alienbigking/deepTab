@@ -1,0 +1,203 @@
+.folderModal {
+  :global {
+    .ant-modal-mask {
+      background: rgba(0, 0, 0, 0.25) !important;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .ant-modal-content {
+      background: rgba(0, 0, 0, 0.05) !important;
+      backdrop-filter: blur(30px) saturate(180%);
+      -webkit-backdrop-filter: blur(30px) saturate(180%);
+      box-shadow: 0 16px 20px rgba(0, 0, 0, 0.35);
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    .ant-modal-header {
+      background: transparent !important;
+      border-bottom: 0;
+      padding: 16px 24px 8px;
+    }
+
+    .ant-modal-title {
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .ant-modal-body {
+      padding: 0 24px 16px;
+    }
+
+    .ant-modal-footer {
+      display: none;
+    }
+  }
+}
+
+.modalTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .folderIcon {
+    font-size: 20px;
+  }
+
+  .folderBadge {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: auto;
+  }
+}
+
+.folderContent {
+  .folderHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 16px;
+
+    .folderName {
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: color 0.2s;
+
+      &:hover {
+        color: rgba(255, 255, 255, 0.8);
+      }
+    }
+
+    .editName {
+      :global {
+        .ant-input {
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          color: #ffffff;
+
+          &::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+          }
+
+          &:focus {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #1677ff;
+          }
+        }
+      }
+    }
+
+    .folderActions {
+      :global {
+        .ant-btn {
+          color: rgba(255, 255, 255, 0.6);
+          border: none;
+          background: transparent;
+
+          &:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.1);
+          }
+        }
+      }
+    }
+  }
+
+  .iconGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 4px;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 3px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+    }
+
+    .iconWrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 8px;
+      transition: background 0.2s;
+      cursor: pointer;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.05);
+
+        .moveOutBtn {
+          opacity: 1;
+        }
+      }
+
+      .moveOutBtn {
+        opacity: 0;
+        transition: opacity 0.2s;
+        font-size: 10px;
+        height: 24px;
+        padding: 0 8px;
+        background: rgba(255, 77, 79, 0.1);
+        border: 1px solid rgba(255, 77, 79, 0.3);
+        color: #ff4d4f;
+        border-radius: 4px;
+
+        &:hover {
+          background: rgba(255, 77, 79, 0.2);
+          border-color: #ff4d4f;
+        }
+      }
+    }
+  }
+}
+
+.emptyFolder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+
+  .emptyIcon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .emptyText {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+
+  .emptyHint {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 14px;
+  }
+}

@@ -1,33 +1,17 @@
 import { create } from 'zustand'
-import type { Apps, ContextMenuState } from '../types/appGrid'
-
-export interface IconSettings {
-  size: number
-  radius: number
-  opacity: number
-  spacing: number
-  fontSize: number
-  fontColor: 'light' | 'dark'
-}
-
-interface AppGridStore {
-  // 状态
-  apps: Apps[]
-  isEditMode: boolean
-  contextMenu: ContextMenuState | null
-  isLoading: boolean
-  syncStatus: 'idle' | 'syncing' | 'error'
-  iconSettings: IconSettings
-
-  // Actions
-  setApps: (apps: Apps[] | ((prevApps: Apps[]) => Apps[])) => void
-  setIsEditMode: (isEditMode: boolean) => void
-  setContextMenu: (contextMenu: ContextMenuState | null) => void
-  setIsLoading: (isLoading: boolean) => void
-  setSyncStatus: (syncStatus: 'idle' | 'syncing' | 'error') => void
-  setIconSettings: (settings: Partial<IconSettings>) => void
-  resetIconSettings: () => void
-}
+import type {
+  AppNode,
+  AppItem,
+  AppFolder,
+  ContextMenuState,
+  CreateFolderParams,
+  MoveToFolderParams,
+  MoveFromFolderParams,
+  DeleteFolderParams,
+  UpdateAppParams,
+  IconSettings,
+  AppGridStore
+} from '../types/appGrid'
 
 /**
  * AppGrid 状态管理 Store
@@ -41,7 +25,7 @@ export const defaultIconSettings: IconSettings = {
   fontColor: 'light'
 }
 
-export const useAppGridStore = create<AppGridStore>((set) => ({
+export const useAppGridStore = create<AppGridStore>((set, get) => ({
   // 初始状态
   apps: [],
   isEditMode: false,
@@ -49,6 +33,7 @@ export const useAppGridStore = create<AppGridStore>((set) => ({
   isLoading: false,
   syncStatus: 'idle',
   iconSettings: defaultIconSettings,
+  openedFolderId: null,
 
   // Actions
   setApps: (apps) =>
@@ -63,7 +48,114 @@ export const useAppGridStore = create<AppGridStore>((set) => ({
     set((state) => ({
       iconSettings: { ...state.iconSettings, ...settings }
     })),
-  resetIconSettings: () => set({ iconSettings: defaultIconSettings })
+  resetIconSettings: () => set({ iconSettings: defaultIconSettings }),
+  setOpenedFolderId: (folderId) => set({ openedFolderId: folderId }),
+
+  // 加载应用列表
+  loadApps: async () => {
+    const { setApps, setIsLoading } = get()
+    setIsLoading(true)
+    try {
+      const appGridService = (await import('../services/appGrid')).default
+      const apps = await appGridService.getList()
+      setApps(apps)
+    } catch (error) {
+      console.error('加载应用列表失败:', error)
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  },
+
+  // 文件夹相关 actions
+  createFolder: async (params) => {
+    const { setApps, setIsLoading } = get()
+    setIsLoading(true)
+    try {
+      const appGridService = (await import('../services/appGrid')).default
+      const newFolder = await appGridService.createFolder(params)
+      setApps((prev) => [...prev, newFolder])
+      return newFolder
+    } catch (error) {
+      console.error('创建文件夹失败:', error)
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  },
+
+  moveToFolder: async (params) => {
+    const { setApps, setIsLoading } = get()
+    setIsLoading(true)
+    try {
+      const appGridService = (await import('../services/appGrid')).default
+      await appGridService.moveToFolder(params)
+      // 重新加载列表以反映最新状态
+      const updated = await appGridService.getList()
+      setApps(updated)
+    } catch (error) {
+      console.error('移入文件夹失败:', error)
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  },
+
+  moveFromFolder: async (params) => {
+    const { setApps, setIsLoading } = get()
+    setIsLoading(true)
+    try {
+      const appGridService = (await import('../services/appGrid')).default
+      await appGridService.moveFromFolder(params)
+
+      // 检查文件夹是否为空，如果为空则自动删除
+      const currentList = await appGridService.getList()
+      const folder = currentList.find((item) => item.id === params.folderId)
+      if (folder && folder.type === 'folder' && folder.children.length === 0) {
+        console.log('文件夹为空，自动删除:', params.folderId)
+        await appGridService.delete(params.folderId)
+      }
+
+      const updated = await appGridService.getList()
+      setApps(updated)
+    } catch (error) {
+      console.error('从文件夹移出失败:', error)
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  },
+
+  deleteFolder: async (params) => {
+    const { setApps, setIsLoading } = get()
+    setIsLoading(true)
+    try {
+      const appGridService = (await import('../services/appGrid')).default
+      await appGridService.deleteFolder(params)
+      const updated = await appGridService.getList()
+      setApps(updated)
+    } catch (error) {
+      console.error('删除文件夹失败:', error)
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  },
+
+  updateFolder: async (id, params) => {
+    const { setApps, setIsLoading } = get()
+    setIsLoading(true)
+    try {
+      const appGridService = (await import('../services/appGrid')).default
+      const updatedFolder = await appGridService.updateFolder(id, params)
+      setApps((prev) => prev.map((node) => (node.id === id ? updatedFolder : node)))
+    } catch (error) {
+      console.error('更新文件夹失败:', error)
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }
 }))
 
 export default useAppGridStore

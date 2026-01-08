@@ -1,7 +1,18 @@
 import { http } from '@/utils'
 import { env } from '@/config/env'
-import type { Apps, AddAppParams, UpdateAppParams } from '../types/appGrid'
-import type { IconSettings } from '../stores/appGrid'
+import type {
+  Apps,
+  AddAppParams,
+  UpdateAppParams,
+  AppNode,
+  AppItem,
+  AppFolder,
+  CreateFolderParams,
+  MoveToFolderParams,
+  MoveFromFolderParams,
+  DeleteFolderParams,
+  IconSettings
+} from '../types/appGrid'
 import { defaultApps } from '../initData'
 
 // ========== 本地存储工具 ==========
@@ -9,20 +20,34 @@ const STORAGE_KEY = 'app_grid_data'
 const ICON_SETTINGS_KEY = 'app_grid_icon_settings'
 
 const storageUtils = {
-  // 获取本地应用列表
-  async getLocal(): Promise<Apps[]> {
+  // 获取本地应用列表（兼容旧数据）
+  async getLocal(): Promise<AppNode[]> {
     return new Promise((resolve) => {
       chrome.storage.local.get([STORAGE_KEY], (result) => {
         const apps = result[STORAGE_KEY] || []
-        resolve(apps.sort((a: Apps, b: Apps) => a.order - b.order))
+        // 兼容旧数据：如果没有 type 字段，则转为 AppItem
+        const migrated = apps.map((app: any) => {
+          if (!app.type) {
+            return { ...app, type: 'item' as const, url: app.url || '' }
+          }
+          return app
+        })
+        resolve(migrated.sort((a: AppNode, b: AppNode) => a.order - b.order))
       })
     })
   },
 
   // 保存到本地
-  async saveLocal(apps: Apps[]): Promise<void> {
-    return new Promise((resolve) => {
-      chrome.storage.local.set({ [STORAGE_KEY]: apps }, resolve)
+  async saveLocal(nodes: AppNode[]): Promise<void> {
+    return new Promise((resolve, reject) => {
+      chrome.storage.local.set({ [STORAGE_KEY]: nodes }, () => {
+        const err = chrome.runtime.lastError
+        if (err) {
+          reject(err)
+          return
+        }
+        resolve()
+      })
     })
   },
 
@@ -33,8 +58,8 @@ const storageUtils = {
 
   // 获取下一个排序号
   async getNextOrder(): Promise<number> {
-    const apps = await this.getLocal()
-    return apps.length > 0 ? Math.max(...apps.map((a) => a.order)) + 1 : 0
+    const nodes = await this.getLocal()
+    return nodes.length > 0 ? Math.max(...nodes.map((a) => a.order)) + 1 : 0
   },
 
   // 图标设置
@@ -47,8 +72,15 @@ const storageUtils = {
   },
 
   async saveIconSettings(settings: IconSettings): Promise<void> {
-    return new Promise((resolve) => {
-      chrome.storage.local.set({ [ICON_SETTINGS_KEY]: settings }, resolve)
+    return new Promise((resolve, reject) => {
+      chrome.storage.local.set({ [ICON_SETTINGS_KEY]: settings }, () => {
+        const err = chrome.runtime.lastError
+        if (err) {
+          reject(err)
+          return
+        }
+        resolve()
+      })
     })
   }
 }
@@ -115,49 +147,29 @@ const apiService = {
 // ========== 业务逻辑层(本地 + 远程同步) ==========
 export default {
   /**
-   * 获取应用列表
-   * 优先从本地读取,如果已登录则从远程同步
+   * 获取应用列表（支持文件夹）
    */
-  async getList(): Promise<Apps[]> {
-    // 1. 先从本地读取
-    const localApps = await storageUtils.getLocal()
-
-    // 2. TODO: 如果已登录,尝试从远程同步
-    // if (isLoggedIn()) {
-    //   try {
-    //     const response = await apiService.getList()
-    //     const remoteApps = response.data
-    //     await storageUtils.saveLocal(remoteApps)
-    //     return remoteApps
-    //   } catch (error) {
-    //     console.warn('远程同步失败,使用本地数据', error)
-    //   }
-    // }
-
-    return localApps
+  async getList(): Promise<AppNode[]> {
+    const localNodes = await storageUtils.getLocal()
+    return localNodes
   },
 
   /**
    * 添加应用
    */
-  async add(params: AddAppParams): Promise<Apps> {
-    const newApp: Apps = {
+  async add(params: AddAppParams): Promise<AppItem> {
+    const newApp: AppItem = {
       ...params,
+      type: 'item',
       id: storageUtils.generateId(),
       order: await storageUtils.getNextOrder(),
       createdAt: new Date().toISOString(),
       syncStatus: 'pending'
     }
 
-    // 1. 保存到本地
-    const apps = await storageUtils.getLocal()
-    apps.push(newApp)
-    await storageUtils.saveLocal(apps)
-
-    // 2. TODO: 如果已登录,同步到远程
-    // if (isLoggedIn()) {
-    //   apiService.add(params).catch(console.error)
-    // }
+    const nodes = await storageUtils.getLocal()
+    nodes.push(newApp)
+    await storageUtils.saveLocal(nodes)
 
     return newApp
   },
@@ -165,75 +177,79 @@ export default {
   /**
    * 更新应用
    */
-  async update(id: string, params: UpdateAppParams): Promise<Apps> {
-    const apps = await storageUtils.getLocal()
-    const index = apps.findIndex((app) => app.id === id)
+  async update(id: string, params: UpdateAppParams): Promise<AppNode> {
+    const nodes = await storageUtils.getLocal()
+    const index = nodes.findIndex((node) => node.id === id)
 
     if (index === -1) {
       throw new Error('应用不存在')
     }
 
-    const updatedApp: Apps = {
-      ...apps[index],
+    const updatedNode: AppNode = {
+      ...nodes[index],
       ...params,
       updatedAt: new Date().toISOString(),
       syncStatus: 'pending'
     }
 
-    apps[index] = updatedApp
-    await storageUtils.saveLocal(apps)
+    nodes[index] = updatedNode
+    await storageUtils.saveLocal(nodes)
 
-    // TODO: 如果已登录,同步到远程
-    // if (isLoggedIn()) {
-    //   apiService.update(id, params).catch(console.error)
-    // }
-
-    return updatedApp
+    return updatedNode
   },
 
   /**
    * 删除应用
    */
   async delete(id: string): Promise<void> {
-    const apps = await storageUtils.getLocal()
-    const filteredApps = apps.filter((app) => app.id !== id)
-
-    // 1. 从本地删除
-    await storageUtils.saveLocal(filteredApps)
-
-    // 2. TODO: 如果已登录,同步到远程
-    // if (isLoggedIn()) {
-    //   apiService.delete(id).catch(console.error)
-    // }
+    const nodes = await storageUtils.getLocal()
+    const filteredNodes = nodes.filter((node) => node.id !== id)
+    await storageUtils.saveLocal(filteredNodes)
   },
 
   /**
    * 更新应用顺序
    */
-  async updateOrder(apps: Apps[]): Promise<void> {
-    // 更新 order 字段
-    const updatedApps = apps.map((app, index) => ({
-      ...app,
+  async updateOrder(nodes: AppNode[]): Promise<void> {
+    const updatedNodes = nodes.map((node, index) => ({
+      ...node,
       order: index,
       updatedAt: new Date().toISOString(),
       syncStatus: 'pending' as const
     }))
+    await storageUtils.saveLocal(updatedNodes)
+  },
 
-    // 1. 更新本地
-    await storageUtils.saveLocal(updatedApps)
+  /**
+   * 重新排序应用（只更新 order 字段）
+   */
+  async reorder(orderList: { id: string; order: number }[]): Promise<void> {
+    const nodes = await storageUtils.getLocal()
+    const orderMap = new Map(orderList.map((item) => [item.id, item.order]))
 
-    // 2. TODO: 如果已登录,同步到远程
-    // if (isLoggedIn()) {
-    //   const orderData = updatedApps.map(a => ({ id: a.id, order: a.order }))
-    //   apiService.updateOrder(orderData).catch(console.error)
-    // }
+    const updatedNodes = nodes.map((node) => {
+      const newOrder = orderMap.get(node.id)
+      if (newOrder !== undefined) {
+        return {
+          ...node,
+          order: newOrder,
+          updatedAt: new Date().toISOString(),
+          syncStatus: 'pending' as const
+        }
+      }
+      return node
+    })
+
+    // 按新顺序排序后保存
+    updatedNodes.sort((a, b) => a.order - b.order)
+    await storageUtils.saveLocal(updatedNodes)
   },
 
   /**
    * 覆盖保存整份应用数据
    */
-  async saveAll(apps: Apps[]): Promise<void> {
-    await storageUtils.saveLocal(apps)
+  async saveAll(nodes: AppNode[]): Promise<void> {
+    await storageUtils.saveLocal(nodes)
   },
 
   async saveIconSettings(settings: IconSettings): Promise<void> {
@@ -247,17 +263,143 @@ export default {
   /**
    * 重置为默认推荐应用
    */
-  async resetToDefault(): Promise<Apps[]> {
-    const apps: Apps[] = defaultApps.map((app, index) => ({
+  async resetToDefault(): Promise<AppNode[]> {
+    const nodes: AppNode[] = defaultApps.map((app, index) => ({
       ...app,
+      type: 'item' as const,
       id: storageUtils.generateId(),
+      url: app.url || '',
       order: index,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       syncStatus: 'synced'
     }))
 
-    await storageUtils.saveLocal(apps)
-    return apps
+    await storageUtils.saveLocal(nodes)
+    return nodes
+  },
+
+  // ========== 文件夹相关方法 ==========
+
+  /**
+   * 创建文件夹
+   */
+  async createFolder(params: CreateFolderParams): Promise<AppFolder> {
+    const newFolder: AppFolder = {
+      type: 'folder',
+      id: storageUtils.generateId(),
+      name: params.name,
+      icon: params.icon || '📁',
+      order: await storageUtils.getNextOrder(),
+      children: params.children || [],
+      createdAt: new Date().toISOString(),
+      syncStatus: 'pending'
+    }
+
+    const nodes = await storageUtils.getLocal()
+    nodes.push(newFolder)
+    await storageUtils.saveLocal(nodes)
+
+    return newFolder
+  },
+
+  /**
+   * 将图标移动到文件夹
+   */
+  async moveToFolder(params: MoveToFolderParams): Promise<void> {
+    const nodes = await storageUtils.getLocal()
+    const folderIndex = nodes.findIndex(
+      (node) => node.id === params.folderId && node.type === 'folder'
+    )
+    if (folderIndex === -1) throw new Error('文件夹不存在')
+
+    const folder = nodes[folderIndex] as AppFolder
+    if (folder.children.length >= 50) throw new Error('文件夹已满（最多 50 个图标）')
+
+    const itemIndex = nodes.findIndex((node) => node.id === params.itemId && node.type === 'item')
+    if (itemIndex === -1) throw new Error('图标不存在')
+
+    const item = nodes[itemIndex] as AppItem
+    // 从主网格移除
+    nodes.splice(itemIndex, 1)
+    // 插入到文件夹
+    const insertIndex =
+      params.insertIndex !== undefined ? params.insertIndex : folder.children.length
+    folder.children.splice(insertIndex, 0, item)
+
+    await storageUtils.saveLocal(nodes)
+  },
+
+  /**
+   * 从文件夹移出图标
+   */
+  async moveFromFolder(params: MoveFromFolderParams): Promise<void> {
+    const nodes = await storageUtils.getLocal()
+    const folderIndex = nodes.findIndex(
+      (node) => node.id === params.folderId && node.type === 'folder'
+    )
+    if (folderIndex === -1) throw new Error('文件夹不存在')
+
+    const folder = nodes[folderIndex] as AppFolder
+    const childIndex = folder.children.findIndex((child) => child.id === params.itemId)
+    if (childIndex === -1) throw new Error('图标不在该文件夹中')
+
+    const item = folder.children[childIndex]
+    // 从文件夹移除
+    folder.children.splice(childIndex, 1)
+    // 插入到主网格
+    const targetOrder = params.targetOrder !== undefined ? params.targetOrder : nodes.length
+    const insertIndex = targetOrder
+    nodes.splice(insertIndex, 0, item)
+
+    await storageUtils.saveLocal(nodes)
+  },
+
+  /**
+   * 删除文件夹
+   */
+  async deleteFolder(params: DeleteFolderParams): Promise<void> {
+    const nodes = await storageUtils.getLocal()
+    const folderIndex = nodes.findIndex(
+      (node) => node.id === params.folderId && node.type === 'folder'
+    )
+    if (folderIndex === -1) throw new Error('文件夹不存在')
+
+    const folder = nodes[folderIndex] as AppFolder
+    // 从主网格移除文件夹
+    nodes.splice(folderIndex, 1)
+
+    // 如果不删除内部图标，则将它们移回主网格
+    if (!params.deleteChildren) {
+      const insertIndex = folderIndex // 在原位置插入
+      nodes.splice(insertIndex, 0, ...folder.children)
+    }
+
+    await storageUtils.saveLocal(nodes)
+  },
+
+  /**
+   * 更新文件夹名称或封面
+   */
+  async updateFolder(
+    id: string,
+    params: Pick<UpdateAppParams, 'name' | 'icon'>
+  ): Promise<AppFolder> {
+    const nodes = await storageUtils.getLocal()
+    const index = nodes.findIndex((node) => node.id === id && node.type === 'folder')
+    if (index === -1) throw new Error('文件夹不存在')
+
+    const folder = nodes[index] as AppFolder
+    const updatedFolder: AppFolder = {
+      ...folder,
+      ...params,
+      updatedAt: new Date().toISOString(),
+      syncStatus: 'pending'
+    }
+
+    nodes[index] = updatedFolder
+    await storageUtils.saveLocal(nodes)
+
+    return updatedFolder
   }
 }

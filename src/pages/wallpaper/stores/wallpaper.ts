@@ -1,16 +1,5 @@
 import { create } from 'zustand'
-import { IWallpaperConfig } from '../types/wallpaper'
-
-interface WallpaperStore {
-  config: IWallpaperConfig | null
-  activeTab: string
-  selectedColor: string
-  featuredCategory: string
-  setConfig: (config: IWallpaperConfig | null) => void
-  setActiveTab: (tab: string) => void
-  setSelectedColor: (color: string) => void
-  setFeaturedCategory: (category: string) => void
-}
+import type { IWallpaperConfig, WallpaperStore } from '../types/wallpaper'
 
 export const useWallpaperStore = create<WallpaperStore>((set) => ({
   config: null,

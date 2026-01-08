@@ -22,7 +22,7 @@ const Theme: React.FC = () => {
 
   return (
     <div className={cn(styles.container)}>
-      <Card title='主题模式'>
+      <Card title='主题模式' className='dtSettingsCard' bordered={false}>
         <Radio.Group value={config.mode} onChange={handleChange}>
           <Space direction='vertical' size='large'>
             <Radio value='default'>

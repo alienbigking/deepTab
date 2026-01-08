@@ -13,7 +13,7 @@ const RelatedApps: React.FC = () => {
         dataSource={apps}
         renderItem={(item) => (
           <List.Item>
-            <Card title={item.icon + ' ' + item.name}>
+            <Card title={item.icon + ' ' + item.name} className='dtSettingsCard' bordered={false}>
               <p>{item.description}</p>
             </Card>
           </List.Item>

@@ -1,9 +1,5 @@
 import { create } from 'zustand'
-
-interface BottomBarStore {
-  pinnedAppIds: string[]
-  setPinnedAppIds: (pinnedAppIds: string[] | ((prev: string[]) => string[])) => void
-}
+import type { BottomBarStore } from '../types/bottomBar'
 
 export const useBottomBarStore = create<BottomBarStore>((set) => ({
   pinnedAppIds: [],

@@ -1,21 +1,33 @@
 .container {
   padding: 20px;
+
+  :global {
+    .dtSettingsCard .ant-card-body {
+      padding: 32px;
+    }
+  }
 }
 
 .currentPlan {
   margin-bottom: 24px;
 }
 
+.planIcon {
+  font-size: 32px;
+  color: var(--dt-settings-card-text);
+}
+
 .planInfo {
   text-align: center;
-  padding: 20px;
+  padding: 10px 0;
 
   h3 {
     margin: 12px 0 8px;
+    color: var(--dt-settings-card-text);
   }
 
   p {
-    color: #999;
+    color: var(--dt-settings-card-muted);
     margin: 0;
   }
 }

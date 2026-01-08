@@ -36,9 +36,9 @@ const About: React.FC = () => {
         type='info'
         showIcon
         closable
-        style={{ marginBottom: 16 }}
+        className={styles.tipAlert}
       />
-      <Card title='关于 deepTab'>
+      <Card title='关于 deepTab' className='dtSettingsCard' bordered={false}>
         <Descriptions column={1}>
           <Descriptions.Item label='版本'>V2.2.22</Descriptions.Item>
           <Descriptions.Item label='作者'>deepTab Team</Descriptions.Item>

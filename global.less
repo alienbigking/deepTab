@@ -10,6 +10,9 @@
   --dt-search-shadow-hover: 0 6px 24px rgba(0, 0, 0, 0.15);
   --dt-search-shadow-focus: 0 6px 28px rgba(0, 0, 0, 0.2);
 
+  --dt-search-width: 60vw;
+  --dt-search-opacity: 0.95;
+
   --dt-widget-bg: rgba(255, 255, 255, 0.95);
   --dt-widget-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   --dt-widget-shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.12);
@@ -28,6 +31,12 @@
   --dt-settings-text-2: rgba(255, 255, 255, 0.85);
   --dt-settings-text-3: rgba(255, 255, 255, 0.7);
   --dt-settings-hover-bg: rgba(255, 255, 255, 0.15);
+  --dt-settings-card-bg: rgba(255, 255, 255, 0.12);
+  --dt-settings-card-border: rgba(255, 255, 255, 0.32);
+  --dt-settings-card-text: rgba(255, 255, 255, 0.95);
+  --dt-settings-card-muted: rgba(255, 255, 255, 0.78);
+  --dt-settings-card-shadow: 0 18px 46px rgba(15, 18, 34, 0.45);
+  --dt-settings-card-backdrop: blur(18px) saturate(140%);
 }
 
 html[data-theme='light'] {
@@ -58,6 +67,12 @@ html[data-theme='light'] {
   --dt-settings-text-2: rgba(0, 0, 0, 0.65);
   --dt-settings-text-3: rgba(0, 0, 0, 0.55);
   --dt-settings-hover-bg: rgba(0, 0, 0, 0.06);
+  --dt-settings-card-bg: rgba(255, 255, 255, 1);
+  --dt-settings-card-border: rgba(15, 18, 34, 0.08);
+  --dt-settings-card-text: rgba(15, 18, 34, 0.92);
+  --dt-settings-card-muted: rgba(15, 18, 34, 0.6);
+  --dt-settings-card-shadow: 0 20px 36px rgba(0, 0, 0, 0.08);
+  --dt-settings-card-backdrop: blur(0px);
 }
 
 html[data-theme='dark'] {
@@ -88,6 +103,49 @@ html[data-theme='dark'] {
   --dt-settings-text-2: rgba(255, 255, 255, 0.75);
   --dt-settings-text-3: rgba(255, 255, 255, 0.65);
   --dt-settings-hover-bg: rgba(255, 255, 255, 0.12);
+  --dt-settings-card-bg: rgba(10, 10, 10, 0.85);
+  --dt-settings-card-border: rgba(255, 255, 255, 0.08);
+  --dt-settings-card-text: rgba(255, 255, 255, 0.92);
+  --dt-settings-card-muted: rgba(255, 255, 255, 0.65);
+  --dt-settings-card-shadow: 0 18px 36px rgba(0, 0, 0, 0.55);
+  --dt-settings-card-backdrop: blur(18px) saturate(140%);
+}
+
+:global {
+  .dtSettingsCard {
+    background: var(--dt-settings-card-bg) !important;
+    border: 1px solid var(--dt-settings-card-border) !important;
+    border-radius: 16px !important;
+    color: var(--dt-settings-card-text) !important;
+    box-shadow: var(--dt-settings-card-shadow);
+    backdrop-filter: var(--dt-settings-card-backdrop);
+    -webkit-backdrop-filter: var(--dt-settings-card-backdrop);
+    transition:
+      background 0.3s ease,
+      border-color 0.3s ease,
+      color 0.3s ease,
+      box-shadow 0.3s ease;
+
+    .ant-card-head {
+      border-bottom: 1px solid var(--dt-settings-card-border);
+      color: var(--dt-settings-card-text);
+    }
+
+    .ant-card-head-title {
+      color: inherit;
+      font-weight: 600;
+    }
+
+    .ant-card-body {
+      color: var(--dt-settings-card-text);
+    }
+
+    p,
+    span,
+    label {
+      color: var(--dt-settings-card-muted);
+    }
+  }
 }
 
 /* 全局字体基础样式 */
@@ -104,4 +162,28 @@ html[data-theme='dark'] {
 .gMainButton {
   background-color: #33a596 !important;
   color: #fff;
+}
+
+html {
+  --dt-font-family:
+    system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+}
+
+html[data-font='default'] {
+  --dt-font-family:
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', system-ui,
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+html[data-font='system'] {
+  --dt-font-family:
+    system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+}
+
+html,
+body,
+#root {
+  font-family: var(--dt-font-family);
 }

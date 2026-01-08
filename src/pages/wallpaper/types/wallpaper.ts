@@ -3,10 +3,10 @@
  */
 
 // 壁纸类型
-type WallpaperType = 'gradient' | 'image' | 'dynamic'
+export type WallpaperType = 'gradient' | 'image' | 'dynamic'
 
 // 渐变壁纸
-interface IGradientWallpaper {
+export interface IGradientWallpaper {
   id: string
   type: 'gradient'
   gradient: string
@@ -15,7 +15,7 @@ interface IGradientWallpaper {
 }
 
 // 图片壁纸
-interface IImageWallpaper {
+export interface IImageWallpaper {
   id: string
   type: 'image'
   url: string
@@ -26,7 +26,7 @@ interface IImageWallpaper {
 }
 
 // 动态壁纸
-interface IDynamicWallpaper {
+export interface IDynamicWallpaper {
   id: string
   type: 'dynamic'
   videoUrl: string
@@ -34,7 +34,7 @@ interface IDynamicWallpaper {
 }
 
 // 壁纸配置
-interface IWallpaperConfig {
+export interface IWallpaperConfig {
   currentWallpaper: IGradientWallpaper | IImageWallpaper | IDynamicWallpaper
   brightness: number
   blur: number
@@ -45,4 +45,16 @@ interface IWallpaperConfig {
   dynamicPaused?: boolean
 }
 
-export { WallpaperType, IGradientWallpaper, IImageWallpaper, IDynamicWallpaper, IWallpaperConfig }
+/**
+ * Wallpaper Store 接口
+ */
+export interface WallpaperStore {
+  config: IWallpaperConfig | null
+  activeTab: string
+  selectedColor: string
+  featuredCategory: string
+  setConfig: (config: IWallpaperConfig | null) => void
+  setActiveTab: (tab: string) => void
+  setSelectedColor: (color: string) => void
+  setFeaturedCategory: (category: string) => void
+}

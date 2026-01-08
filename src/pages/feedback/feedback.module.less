@@ -1,4 +1,24 @@
 .container {
   padding: 20px;
   max-width: 800px;
+
+  .glassCard {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 16px;
+    backdrop-filter: blur(30px) saturate(180%);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+
+    :global {
+      .ant-card-head {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .ant-card-body {
+        color: rgba(255, 255, 255, 0.9);
+      }
+    }
+  }
 }

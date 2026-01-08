@@ -6,7 +6,7 @@ import styles from './notification.module.less'
 const Notification: React.FC = () => {
   return (
     <div className={cn(styles.container)}>
-      <Card title='通知设置'>
+      <Card title='通知设置' className='dtSettingsCard' bordered={false}>
         <Form layout='vertical'>
           <Form.Item label='浏览器通知' valuePropName='checked'>
             <Switch defaultChecked />
