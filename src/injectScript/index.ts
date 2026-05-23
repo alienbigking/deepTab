@@ -1,3 +1,0 @@
-const injectScript=()=>{}
-
-export {injectScript}

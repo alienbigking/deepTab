@@ -1,7 +1,7 @@
 {
   "name": "deepTab",
   "version": "1.0.0",
-  "description": "Automatically refreshes webpages at specified intervals. Keep your content up-to-date with a simple timer-based refresh system.",
+  "description": "A customizable Chrome new tab extension with search, shortcuts, wallpapers, widgets, and settings.",
   "main": "index.js",
   "scripts": {
     "plasmo:dev": "plasmo dev",

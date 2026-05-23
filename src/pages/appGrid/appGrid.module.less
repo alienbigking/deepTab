@@ -52,10 +52,17 @@
   cursor: pointer;
   position: relative;
   user-select: none;
+  transform-origin: center;
 
   &:hover {
     .iconWrapper {
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+      transform: translateY(-8px) scale(1.08);
+      box-shadow: 0 16px 30px rgba(0, 0, 0, 0.22);
+    }
+
+    .appName {
+      transform: translateY(-3px);
+      text-shadow: 0 5px 10px rgba(0, 0, 0, 0.26);
     }
   }
 
@@ -72,6 +79,11 @@
   &.dragging {
     opacity: 0.5;
     cursor: grabbing;
+
+    .iconWrapper,
+    .appName {
+      transform: none;
+    }
   }
 
   // 删除按钮
@@ -118,8 +130,9 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     transition:
       box-shadow 0.2s ease,
-      transform 0.2s ease;
+      transform 0.22s cubic-bezier(0.2, 0, 0, 1);
     position: relative;
+    will-change: transform, box-shadow;
 
     .iconEmoji {
       font-size: 36px;
@@ -172,6 +185,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition:
+      transform 0.22s cubic-bezier(0.2, 0, 0, 1),
+      text-shadow 0.22s ease;
+    will-change: transform;
   }
 }
 
@@ -246,7 +263,9 @@
 // 可拖拽图标容器
 .droppableIcon {
   position: relative;
-  transition: all 0.2s ease;
+  transition:
+    opacity 0.16s ease,
+    transform 0.24s cubic-bezier(0.2, 0, 0, 1);
   touch-action: none;
   cursor: grab;
 
@@ -255,13 +274,19 @@
   }
 
   &.iconDropOver {
-    // 移除绿色背景框，只保留轻微的缩放提示
-    transform: scale(1.02);
+    .iconWrapper {
+      box-shadow: 0 14px 28px rgba(24, 144, 255, 0.18);
+    }
   }
 
   &.isDragging {
     opacity: 0.3;
     cursor: grabbing;
+
+    .iconWrapper,
+    .appName {
+      transform: none;
+    }
   }
 }
 

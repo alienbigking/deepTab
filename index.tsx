@@ -10,18 +10,18 @@ import { useTranslation } from 'react-i18next'
 const { Title, Paragraph } = Typography
 
 const Index: React.FC = () => {
-  const { i18n } = useTranslation()
+  const { i18n, t } = useTranslation()
   const locale = i18n.language === 'zh' ? zhCN : enUS
 
   return (
     <ConfigProvider locale={locale}>
       <div style={{ width: 300, padding: 20, background: '#fff' }}>
         <Title level={4} style={{ margin: 0, marginBottom: 16 }}>
-          deepTab
+          {t('popupTitle')}
         </Title>
-        <Paragraph>欢迎使用 deepTab 浏览器扩展！</Paragraph>
+        <Paragraph>{t('popupWelcome')}</Paragraph>
         <Paragraph type='secondary' style={{ fontSize: 12 }}>
-          打开新标签页即可体验完整功能
+          {t('popupHint')}
         </Paragraph>
       </div>
     </ConfigProvider>

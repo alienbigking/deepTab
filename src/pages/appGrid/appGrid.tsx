@@ -4,7 +4,6 @@ import {
   closestCenter,
   DragEndEvent,
   DragOverEvent,
-  useDroppable,
   DragOverlay,
   PointerSensor,
   useSensor,
@@ -29,14 +28,8 @@ import type { AppNode, AppItem, AppFolder, ContextMenuState } from './types/appG
 import { initDefaultApps } from './initData'
 import { useNotification } from '@/common/ui'
 
-// 悬停操作类型
-type PendingAction = {
-  type: 'merge' | 'sort'
-  targetId: string
-  sourceId: string
-  oldIndex?: number
-  newIndex?: number
-} | null
+const GRID_CATEGORY_ID = 'home'
+const REORDER_HOVER_DELAY = 220
 
 /**
  * 应用图标网格组件
@@ -64,14 +57,16 @@ const AppGrid: React.FC = () => {
   )
 
   // 悬停检测相关
-  const hoverTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastOverIdRef = useRef<string | null>(null)
-  const pendingActionRef = useRef<PendingAction>(null)
-  const HOVER_DELAY = 500 // 悬停延迟时间（毫秒）
+  const latestAppsRef = useRef<AppNode[]>([])
+  const originalAppsRef = useRef<AppNode[] | null>(null)
+  const didPreviewReorderRef = useRef(false)
 
   // Store hooks
   const {
     apps,
+    setApps,
     loadApps,
     iconSettings,
     setIconSettings,
@@ -83,7 +78,11 @@ const AppGrid: React.FC = () => {
   } = useAppGridStore()
 
   const visibleApps = useMemo(() => {
-    return apps.filter((app) => (app.categoryId || 'home') === 'home')
+    return apps.filter((app) => (app.categoryId || 'home') === GRID_CATEGORY_ID)
+  }, [apps])
+
+  useEffect(() => {
+    latestAppsRef.current = apps
   }, [apps])
 
   // 初始化加载数据
@@ -349,37 +348,61 @@ const AppGrid: React.FC = () => {
     }
   }
 
-  // 主页拖拽接收组件
-  const MainGridDropZone: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { setNodeRef, isOver } = useDroppable({
-      id: 'main-grid',
-      data: {
-        type: 'main-grid'
-      }
+  const clearHoverTimer = () => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current)
+      hoverTimerRef.current = null
+    }
+  }
+
+  const reorderTopLevelApps = (list: AppNode[], draggedId: string, overId: string) => {
+    const categoryItems = list.filter((app) => (app.categoryId || 'home') === GRID_CATEGORY_ID)
+    const oldIndex = categoryItems.findIndex((app) => app.id === draggedId)
+    const newIndex = categoryItems.findIndex((app) => app.id === overId)
+
+    if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) {
+      return { nextApps: list, changed: false }
+    }
+
+    const movedCategoryItems = arrayMove(categoryItems, oldIndex, newIndex)
+    const categoryIndices = list
+      .map((app, index) => ({ app, index }))
+      .filter(({ app }) => (app.categoryId || 'home') === GRID_CATEGORY_ID)
+      .map(({ index }) => index)
+
+    const nextApps = [...list]
+    categoryIndices.forEach((idx, itemIndex) => {
+      nextApps[idx] = movedCategoryItems[itemIndex]
     })
 
-    return (
-      <div
-        ref={setNodeRef}
-        className={cn(styles.mainGridDropZone, {
-          [styles.mainGridDropOver]: isOver
-        })}
-      >
-        {children}
-      </div>
-    )
+    const ordered = nextApps.map((app, index) => ({
+      ...app,
+      order: index,
+      updatedAt: new Date().toISOString(),
+      syncStatus: 'pending' as const
+    }))
+
+    return { nextApps: ordered, changed: true }
+  }
+
+  const previewReorder = (draggedId: string, overId: string) => {
+    setApps((prev) => {
+      const { nextApps, changed } = reorderTopLevelApps(prev, draggedId, overId)
+      if (changed) {
+        didPreviewReorderRef.current = true
+        latestAppsRef.current = nextApps
+      }
+      return nextApps
+    })
   }
 
   // 拖拽开始处理
   const handleDragStart = (event: any) => {
     setActiveId(event.active.id as string)
-    // 清除之前的悬停状态
-    if (hoverTimerRef.current) {
-      clearTimeout(hoverTimerRef.current)
-      hoverTimerRef.current = null
-    }
+    clearHoverTimer()
     lastOverIdRef.current = null
-    pendingActionRef.current = null
+    originalAppsRef.current = latestAppsRef.current
+    didPreviewReorderRef.current = false
   }
 
   // 拖拽过程中处理（悬停检测）
@@ -393,12 +416,7 @@ const AppGrid: React.FC = () => {
     // 如果悬停目标没有变化，不做处理
     if (lastOverIdRef.current === overId) return
 
-    // 清除之前的计时器和待执行操作
-    if (hoverTimerRef.current) {
-      clearTimeout(hoverTimerRef.current)
-      hoverTimerRef.current = null
-    }
-    pendingActionRef.current = null
+    clearHoverTimer()
 
     // 更新当前悬停目标
     lastOverIdRef.current = overId
@@ -426,27 +444,29 @@ const AppGrid: React.FC = () => {
     // 如果是主页图标之间的拖拽，启动悬停计时器
     if (
       draggedNode &&
-      draggedNode.type === 'item' &&
+      (draggedNode.type === 'item' || draggedNode.type === 'folder') &&
       overNode &&
-      overNode.type === 'item' &&
+      (overNode.type === 'item' || overNode.type === 'folder') &&
       !parentFolder
     ) {
-      const oldIndex = visibleApps.findIndex((app) => app.id === draggedId)
-      const newIndex = visibleApps.findIndex((app) => app.id === overId)
-
-      // 启动悬停计时器 - 悬停一段时间后设置待执行操作为合并
       hoverTimerRef.current = setTimeout(() => {
-        // 再次检查当前悬停目标是否还是同一个
         if (lastOverIdRef.current === overId) {
-          pendingActionRef.current = {
-            type: 'merge',
-            targetId: overId,
-            sourceId: draggedId,
-            oldIndex,
-            newIndex
-          }
+          previewReorder(draggedId, overId)
         }
-      }, HOVER_DELAY)
+      }, REORDER_HOVER_DELAY)
+    }
+  }
+
+  const handleDragCancel = () => {
+    clearHoverTimer()
+    setActiveId(null)
+    lastOverIdRef.current = null
+    didPreviewReorderRef.current = false
+
+    if (originalAppsRef.current) {
+      setApps(originalAppsRef.current)
+      latestAppsRef.current = originalAppsRef.current
+      originalAppsRef.current = null
     }
   }
 
@@ -454,20 +474,28 @@ const AppGrid: React.FC = () => {
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
 
-    // 清除计时器
-    if (hoverTimerRef.current) {
-      clearTimeout(hoverTimerRef.current)
-      hoverTimerRef.current = null
-    }
+    clearHoverTimer()
 
     // 获取待执行操作和最后悬停目标（在重置之前保存）
-    const pendingAction = pendingActionRef.current
     const lastOverId = lastOverIdRef.current
+    const didPreviewReorder = didPreviewReorderRef.current
 
     // 重置状态
     setActiveId(null)
     lastOverIdRef.current = null
-    pendingActionRef.current = null
+    didPreviewReorderRef.current = false
+    originalAppsRef.current = null
+
+    if (didPreviewReorder) {
+      try {
+        await appGridService.updateOrder(latestAppsRef.current)
+      } catch (error) {
+        console.error('保存排序失败:', error)
+        message.error('排序保存失败，请重试')
+        await loadApps()
+      }
+      return
+    }
 
     if (!over) {
       return
@@ -532,31 +560,15 @@ const AppGrid: React.FC = () => {
       droppedOnNode.type === 'item' &&
       !parentFolder
     ) {
-      // 如果有待执行的合并操作（悬停时间够长）
-      if (
-        pendingAction &&
-        pendingAction.type === 'merge' &&
-        pendingAction.targetId === droppedOnId
-      ) {
-        try {
-          await handleMergeToFolder(draggedId, droppedOnId)
-          message.success('已合并到文件夹')
-        } catch (error) {
-          console.error('合并失败:', error)
-          message.error('合并失败')
-        }
-      } else {
-        // 否则执行排序（快速拖放）
-        const oldIndex = visibleApps.findIndex((app) => app.id === draggedId)
-        const newIndex = visibleApps.findIndex((app) => app.id === droppedOnId)
+      const oldIndex = visibleApps.findIndex((app) => app.id === draggedId)
+      const newIndex = visibleApps.findIndex((app) => app.id === droppedOnId)
 
-        if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
-          try {
-            await handleReorder(oldIndex, newIndex)
-          } catch (error) {
-            console.error('排序失败:', error)
-            message.error('排序失败')
-          }
+      if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+        try {
+          await handleReorder(oldIndex, newIndex)
+        } catch (error) {
+          console.error('排序失败:', error)
+          message.error('排序失败')
         }
       }
       return
@@ -604,24 +616,6 @@ const AppGrid: React.FC = () => {
       console.error('排序保存失败:', error)
       throw error
     }
-  }
-
-  // 图标合并到文件夹
-  const handleMergeToFolder = async (icon1Id: string, icon2Id: string): Promise<void> => {
-    const icon1 = apps.find((app) => app.id === icon1Id) as AppItem
-    const icon2 = apps.find((app) => app.id === icon2Id) as AppItem
-
-    if (!icon1 || !icon2) return
-
-    // 创建新文件夹（默认命名）
-    const newFolder = await createFolder({
-      name: '新文件夹',
-      icon: icon1.icon // 使用第一个图标作为封面
-    })
-
-    // 将两个图标都移入文件夹
-    await moveToFolder({ itemId: icon1Id, folderId: newFolder.id })
-    await moveToFolder({ itemId: icon2Id, folderId: newFolder.id })
   }
 
   // 添加应用
@@ -684,6 +678,7 @@ const AppGrid: React.FC = () => {
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
+      onDragCancel={handleDragCancel}
       onDragEnd={handleDragEnd}
     >
       <div
@@ -794,7 +789,7 @@ const AppGrid: React.FC = () => {
               cursor: 'grabbing',
               pointerEvents: 'none',
               transition: 'transform 0.2s cubic-bezier(0.2, 0, 0, 1)',
-              filter: 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15)',
+              filter: 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15))',
               zIndex: 9999
             }}
           >

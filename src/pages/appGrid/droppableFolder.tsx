@@ -1,5 +1,5 @@
 import React, { useRef } from 'react'
-import { useSortable, defaultAnimateLayoutChanges } from '@dnd-kit/sortable'
+import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { AppFolder, IconSettings } from './types/appGrid'
 import AppIcon from './appIcon'
@@ -14,16 +14,6 @@ interface DroppableFolderProps {
   onContextMenu: (e: React.MouseEvent, id: string, nodeType: 'item' | 'folder') => void
   onLongPress: () => void
   onFolderClick?: (folder: AppFolder) => void // 点击文件夹打开弹层
-}
-
-// 禁用拖拽过程中的自动排序动画
-const animateLayoutChanges = (args: Parameters<typeof defaultAnimateLayoutChanges>[0]) => {
-  const { isSorting, wasDragging } = args
-  // 只在拖拽结束后才进行动画
-  if (isSorting || wasDragging) {
-    return false
-  }
-  return defaultAnimateLayoutChanges(args)
 }
 
 const DroppableFolder: React.FC<DroppableFolderProps> = ({
@@ -43,8 +33,7 @@ const DroppableFolder: React.FC<DroppableFolderProps> = ({
       data: {
         type: 'folder',
         folder: folder
-      },
-      animateLayoutChanges
+      }
     })
 
   // 更新拖拽状态

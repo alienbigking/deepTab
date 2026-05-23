@@ -2,11 +2,8 @@ const path = require('path')
 const CopyPlugin = require('copy-webpack-plugin')
 const NodePolyfillPlugin = require('node-polyfill-webpack-plugin')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
-const LiveReloadPlugin = require('webpack-livereload-plugin')
 
 const fs = require('fs')
-const exec = require('child_process').exec
-let timer
 
 class VersionPlugin {
   apply(compiler) {
@@ -52,47 +49,6 @@ class VersionPlugin {
   }
 }
 
-class ChromeExtensionReloader {
-  apply(compiler) {
-    compiler.hooks.done.tap('ChromeExtensionReloader', () => {
-      // 只在生产模式下自动打开浏览器
-      const isProduction = compiler.options.mode === 'production'
-
-      if (isProduction) {
-        console.log('✅ 扩展已自动刷新完成！')
-        clearTimeout(timer)
-        timer = setTimeout(() => {
-          const platform = process.platform
-          let command = ''
-
-          // 根据操作系统选择不同的命令
-          if (platform === 'darwin') {
-            // macOS
-            command = 'open -a "Google Chrome" "http://reload.extensions"'
-          } else if (platform === 'win32') {
-            // Windows
-            command = 'start chrome "http://reload.extensions"'
-          } else {
-            // Linux
-            command = 'google-chrome "http://reload.extensions"'
-          }
-
-          exec(command, (error) => {
-            if (error) {
-              console.log('⚠️ 无法自动打开浏览器，请手动刷新扩展')
-              console.log('   访问: chrome://extensions/ 然后点击刷新按钮')
-            } else {
-              console.log('🔄 扩展重新加载完成')
-            }
-          })
-        }, 800)
-      } else {
-        console.log('✅ 开发模式构建完成！请手动刷新扩展')
-      }
-    })
-  }
-}
-
 module.exports = [
   // **Popup 页面的 Webpack 配置**
   {
@@ -101,11 +57,16 @@ module.exports = [
     devtool: 'source-map',
     entry: {
       popup: path.resolve(__dirname, './index.tsx'),
-      newtab: path.resolve(__dirname, './newtab.tsx')
+      newtab: path.resolve(__dirname, './newtab.tsx'),
+      background: path.resolve(__dirname, './src/background/index.ts')
     },
     output: {
       path: path.resolve(__dirname, 'dist'),
-      filename: '[name].js'
+      filename: (pathData) =>
+        pathData.chunk && pathData.chunk.name === 'background'
+          ? 'extension/background/index.js'
+          : '[name].js',
+      clean: true
     },
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx'],
@@ -129,13 +90,17 @@ module.exports = [
         chunks: ['newtab'],
         inject: 'body'
       }),
-      // new LiveReloadPlugin({
-      //   appendScriptTag: true, // 会在页面中注入一个 WebSocket 脚本自动刷新
-      //   delay: 500, // 刷新延迟（毫秒）
-      //   port: 35729,
-      //   quiet: true
-      // })
-      new ChromeExtensionReloader()
+      // Live reload can be reintroduced later if the extension development
+      // workflow needs it. Production builds should not launch Chrome by default.
+      new CopyPlugin({
+        patterns: [
+          {
+            from: 'manifest.json',
+            to: '.'
+          },
+          { from: 'src/assets', to: 'src/assets' }
+        ]
+      })
     ],
     module: {
       rules: [
@@ -194,47 +159,6 @@ module.exports = [
       hot: false, // 启用热模块替换
       historyApiFallback: true, // 处理单页应用的 404 错误
       liveReload: true // 由 LiveReloadPlugin 负责刷新
-    }
-  },
-  // **后台脚本和其他脚本的 Webpack 配置**
-  {
-    context: __dirname,
-    target: 'web',
-    devtool: 'source-map',
-    entry: {
-      background: path.resolve(__dirname, './src/background/index.ts'),
-      'content-script': path.resolve(__dirname, './src/contentScript/index.ts'),
-      'inject-script': path.resolve(__dirname, './src/injectScript/index.ts')
-    },
-    output: {
-      path: path.resolve(__dirname, 'dist'),
-      filename: 'extension/[name]/index.js'
-    },
-    resolve: {
-      extensions: ['.js', '.jsx', '.ts', '.tsx'],
-      alias: {
-        '@': path.resolve(__dirname, 'src')
-      }
-    },
-    plugins: [
-      new CopyPlugin({
-        patterns: [
-          {
-            from: 'manifest.json',
-            to: '.'
-          },
-          { from: 'src/assets', to: 'src/assets' }
-        ]
-      })
-    ],
-    module: {
-      rules: [
-        {
-          test: /\.tsx?$/,
-          exclude: /node_modules/,
-          use: 'ts-loader'
-        }
-      ]
     }
   }
 ]

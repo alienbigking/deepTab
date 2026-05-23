@@ -106,9 +106,6 @@ const Main: React.FC = () => {
 
   // 页面加载时清空地址栏并聚焦
   useEffect(() => {
-    // 使用 history.replaceState 清空地址栏显示
-    window.history.replaceState({}, document.title, '/')
-
     // 确保窗口获得焦点
     window.focus()
 

@@ -1,5 +1,5 @@
 import React from 'react'
-import { useSortable, defaultAnimateLayoutChanges } from '@dnd-kit/sortable'
+import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { CloseCircleFilled } from '@ant-design/icons'
 import type { AppItem, IconSettings } from './types/appGrid'
@@ -13,16 +13,6 @@ interface DroppableIconProps {
   onDelete: (id: string) => void
   onContextMenu: (e: React.MouseEvent, id: string, nodeType: 'item' | 'folder') => void
   onLongPress: () => void
-}
-
-// 禁用拖拽过程中的自动排序动画
-const animateLayoutChanges = (args: Parameters<typeof defaultAnimateLayoutChanges>[0]) => {
-  const { isSorting, wasDragging } = args
-  // 只在拖拽结束后才进行动画
-  if (isSorting || wasDragging) {
-    return false
-  }
-  return defaultAnimateLayoutChanges(args)
 }
 
 const DroppableIcon: React.FC<DroppableIconProps> = ({
@@ -39,8 +29,7 @@ const DroppableIcon: React.FC<DroppableIconProps> = ({
       data: {
         type: 'item',
         item: icon
-      },
-      animateLayoutChanges
+      }
     })
 
   const style: React.CSSProperties = {
