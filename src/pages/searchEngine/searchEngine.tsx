@@ -317,7 +317,7 @@ const SearchEngine: React.FC = () => {
         cancelText='取消'
         onOk={handleSubmit}
         onCancel={closeModal}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout='vertical' onValuesChange={onFormValuesChange}>
           <Form.Item

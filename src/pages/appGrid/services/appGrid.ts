@@ -1,5 +1,3 @@
-import { http } from '@/utils'
-import { env } from '@/config/env'
 import type {
   Apps,
   AddAppParams,
@@ -85,66 +83,7 @@ const storageUtils = {
   }
 }
 
-// ========== 远程 API 接口(预留) ==========
-const apiService = {
-  // 获取应用列表
-  getList() {
-    // TODO: 接入后端 API
-    // return http(`${env.HOST_API_URL}apps`).then((response) => {
-    //   return response
-    // })
-    throw new Error('远程 API 未实现')
-  },
-
-  // 添加应用
-  add(params: AddAppParams) {
-    // TODO: 接入后端 API
-    // return http(`${env.HOST_API_URL}apps`, {
-    //   method: 'POST',
-    //   data: params
-    // }).then((response) => {
-    //   return response
-    // })
-    console.log('[API] 添加应用', params)
-  },
-
-  // 更新应用
-  update(id: string, params: UpdateAppParams) {
-    // TODO: 接入后端 API
-    // return http(`${env.HOST_API_URL}apps/${id}`, {
-    //   method: 'PUT',
-    //   data: params
-    // }).then((response) => {
-    //   return response
-    // })
-    console.log('[API] 更新应用', id, params)
-  },
-
-  // 删除应用
-  delete(id: string) {
-    // TODO: 接入后端 API
-    // return http(`${env.HOST_API_URL}apps/${id}`, {
-    //   method: 'DELETE'
-    // }).then((response) => {
-    //   return response
-    // })
-    console.log('[API] 删除应用', id)
-  },
-
-  // 批量更新顺序
-  updateOrder(apps: Array<{ id: string; order: number }>) {
-    // TODO: 接入后端 API
-    // return http(`${env.HOST_API_URL}apps/order`, {
-    //   method: 'PUT',
-    //   data: { apps }
-    // }).then((response) => {
-    //   return response
-    // })
-    console.log('[API] 更新顺序', apps.length)
-  }
-}
-
-// ========== 业务逻辑层(本地 + 远程同步) ==========
+// ========== 业务逻辑层(本地存储) ==========
 export default {
   /**
    * 获取应用列表（支持文件夹）

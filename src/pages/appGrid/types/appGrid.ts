@@ -65,6 +65,7 @@ export interface AddAppParams {
   name: string
   icon: string
   url: string
+  categoryId?: string
 }
 
 /**
@@ -75,6 +76,7 @@ export interface UpdateAppParams {
   name?: string
   icon?: string
   url?: string
+  categoryId?: string
 }
 
 /**

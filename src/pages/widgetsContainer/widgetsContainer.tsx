@@ -3,6 +3,7 @@ import styles from './widgetsContainer.module.less'
 import CalendarWidget from './calendarWidget'
 import WeatherWidget from './weatherWidget'
 import TodoWidget from './todoWidget'
+import HotSearchWidget from './hotSearchWidget'
 
 /**
  * 小部件容器组件
@@ -14,6 +15,7 @@ const WidgetsContainer: React.FC = () => {
       <CalendarWidget />
       <WeatherWidget />
       <TodoWidget />
+      <HotSearchWidget />
     </div>
   )
 }

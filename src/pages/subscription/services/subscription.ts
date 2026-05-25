@@ -2,6 +2,8 @@ import { http } from '@/utils'
 import { env } from '@/config/env'
 import { ISubscriptionStatus, ISubscriptionPackage, ISubscriptionHistory } from '../types/subscription'
 
+const buildUrl = (path: string) => `${env.HOST_API_URL.replace(/\/$/, '')}${path}`
+
 /**
  * subscription 服务层
  */
@@ -30,7 +32,7 @@ export default {
   // 获取订阅套餐列表
   async getSubscriptionPackages(): Promise<ISubscriptionPackage[]> {
     try {
-      const response = await http(`${env.HOST_API_URL}subscription/packages`)
+      const response = await http(buildUrl('/api/deepTab/subscription/packages'))
       return response.data
     } catch (error) {
       console.error('获取订阅套餐失败:', error)
@@ -71,7 +73,7 @@ export default {
   // 购买订阅
   async purchaseSubscription(packageId: string): Promise<void> {
     try {
-      await http(`${env.HOST_API_URL}subscription/purchase`, {
+      await http(buildUrl('/api/deepTab/subscription/purchase'), {
         method: 'POST',
         data: { packageId }
       })
@@ -84,7 +86,7 @@ export default {
   // 取消订阅
   async cancelSubscription(): Promise<void> {
     try {
-      await http(`${env.HOST_API_URL}subscription/cancel`, {
+      await http(buildUrl('/api/deepTab/subscription/cancel'), {
         method: 'POST'
       })
     } catch (error) {

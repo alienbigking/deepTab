@@ -42,7 +42,7 @@ const GeneralSettings: React.FC = () => {
 
   return (
     <div className={cn(styles.container)}>
-      <Card className={cn('dtSettingsCard', styles.card)} bordered={false}>
+      <Card className={cn('dtSettingsCard', styles.card)} variant='borderless'>
         <Form
           form={form}
           layout='vertical'

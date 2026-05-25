@@ -27,8 +27,8 @@ import useAppGridStore from './stores/appGrid'
 import type { AppNode, AppItem, AppFolder, ContextMenuState } from './types/appGrid'
 import { initDefaultApps } from './initData'
 import { useNotification } from '@/common/ui'
+import useAppCategoryStore from '@/pages/appCategory/stores/appCategory'
 
-const GRID_CATEGORY_ID = 'home'
 const REORDER_HOVER_DELAY = 220
 
 /**
@@ -76,10 +76,11 @@ const AppGrid: React.FC = () => {
     deleteFolder,
     updateFolder
   } = useAppGridStore()
+  const activeCategoryId = useAppCategoryStore((s) => s.activeCategoryId)
 
   const visibleApps = useMemo(() => {
-    return apps.filter((app) => (app.categoryId || 'home') === GRID_CATEGORY_ID)
-  }, [apps])
+    return apps.filter((app) => (app.categoryId || 'home') === activeCategoryId)
+  }, [activeCategoryId, apps])
 
   useEffect(() => {
     latestAppsRef.current = apps
@@ -356,7 +357,7 @@ const AppGrid: React.FC = () => {
   }
 
   const reorderTopLevelApps = (list: AppNode[], draggedId: string, overId: string) => {
-    const categoryItems = list.filter((app) => (app.categoryId || 'home') === GRID_CATEGORY_ID)
+    const categoryItems = list.filter((app) => (app.categoryId || 'home') === activeCategoryId)
     const oldIndex = categoryItems.findIndex((app) => app.id === draggedId)
     const newIndex = categoryItems.findIndex((app) => app.id === overId)
 
@@ -367,7 +368,7 @@ const AppGrid: React.FC = () => {
     const movedCategoryItems = arrayMove(categoryItems, oldIndex, newIndex)
     const categoryIndices = list
       .map((app, index) => ({ app, index }))
-      .filter(({ app }) => (app.categoryId || 'home') === GRID_CATEGORY_ID)
+      .filter(({ app }) => (app.categoryId || 'home') === activeCategoryId)
       .map(({ index }) => index)
 
     const nextApps = [...list]

@@ -2,8 +2,49 @@ const path = require('path')
 const CopyPlugin = require('copy-webpack-plugin')
 const NodePolyfillPlugin = require('node-polyfill-webpack-plugin')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
+const webpack = require('webpack')
 
 const fs = require('fs')
+
+const parseEnvFile = (filePath) => {
+  if (!fs.existsSync(filePath)) return {}
+
+  return fs
+    .readFileSync(filePath, 'utf-8')
+    .split(/\r?\n/)
+    .reduce((acc, line) => {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith('#')) return acc
+
+      const eqIndex = trimmed.indexOf('=')
+      if (eqIndex === -1) return acc
+
+      const key = trimmed.slice(0, eqIndex).trim()
+      const value = trimmed.slice(eqIndex + 1).trim()
+      if (key) acc[key] = value
+      return acc
+    }, {})
+}
+
+const normalizeAppEnv = (value) => {
+  if (value === 'development') return 'develop'
+  if (value === 'production') return 'production'
+  if (value === 'stage') return 'stage'
+  if (value === 'develop') return 'develop'
+  return 'develop'
+}
+
+const buildAppEnvVars = (webpackEnv = {}, argv = {}) => {
+  const appEnv = normalizeAppEnv(webpackEnv.APP_ENV || process.env.APP_ENV || argv.mode)
+  const envFile = path.resolve(__dirname, `.env.${appEnv}`)
+  const fileEnv = parseEnvFile(envFile)
+
+  return {
+    ...fileEnv,
+    APP_ENV: fileEnv.APP_ENV || appEnv,
+    NODE_ENV: argv.mode || (appEnv === 'production' ? 'production' : 'development')
+  }
+}
 
 class VersionPlugin {
   apply(compiler) {
@@ -49,7 +90,10 @@ class VersionPlugin {
   }
 }
 
-module.exports = [
+module.exports = (webpackEnv, argv) => {
+  const appEnvVars = buildAppEnvVars(webpackEnv, argv)
+
+  return [
   // **Popup 页面的 Webpack 配置**
   {
     context: __dirname,
@@ -77,6 +121,9 @@ module.exports = [
     },
     plugins: [
       // new VersionPlugin(), // 添加 VersionPlugin
+      new webpack.DefinePlugin({
+        'process.env': JSON.stringify(appEnvVars)
+      }),
       new NodePolyfillPlugin(),
       new HtmlWebpackPlugin({
         template: path.resolve(__dirname, 'popup.html'),
@@ -161,4 +208,5 @@ module.exports = [
       liveReload: true // 由 LiveReloadPlugin 负责刷新
     }
   }
-]
+  ]
+}

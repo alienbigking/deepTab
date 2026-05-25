@@ -13,6 +13,7 @@ interface RequestOptions {
 
 interface ResponseData<T = any> {
   code?: number
+  status?: number
   data?: T
   msg?: string
   message?: string
@@ -73,7 +74,7 @@ const http = async <T = any>(
   }
 
   if (token) {
-    requestHeaders['token'] = token
+    requestHeaders.Authorization = `Bearer ${token}`
   }
 
   // 构建请求配置
@@ -129,6 +130,14 @@ const http = async <T = any>(
         code: response.status,
         message: responseData.message || responseData.msg || '请求失败',
         data: responseData
+      })
+    }
+
+    if (responseData && typeof responseData.status === 'number' && responseData.status !== 0) {
+      return Promise.reject({
+        code: responseData.status,
+        message: responseData.message || responseData.msg || '请求失败',
+        data: responseData.data
       })
     }
 

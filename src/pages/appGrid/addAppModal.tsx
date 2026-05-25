@@ -8,6 +8,7 @@ import AddAppModalSidebar, { AddAppModalSidebarMode } from './addAppModalSidebar
 import AddAppModalCustom from './addAppModalCustom'
 import AddAppModalWidgets from './addAppModalWidgets'
 import AddAppModalNav from './addAppModalNav'
+import useAppCategoryStore from '@/pages/appCategory/stores/appCategory'
 
 interface AddAppModalProps {
   open: boolean
@@ -22,6 +23,14 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
   const [activeSidebar, setActiveSidebar] = useState<AddAppModalSidebarMode>('nav')
   const [activeSubTab, setActiveSubTab] = useState<'today' | 'recent' | 'popular'>('today')
   const [iconColor, setIconColor] = useState<string>('#1890ff')
+  const [searchKeyword, setSearchKeyword] = useState('')
+  const [targetCategoryId, setTargetCategoryId] = useState('home')
+  const categories = useAppCategoryStore((s) => s.categories)
+  const initCategories = useAppCategoryStore((s) => s.init)
+
+  useEffect(() => {
+    void initCategories()
+  }, [initCategories])
 
   // 编辑时填充表单
   useEffect(() => {
@@ -31,12 +40,15 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
         icon: editingApp.icon,
         url: editingApp.url
       })
+      setTargetCategoryId(editingApp.categoryId || 'home')
       setActiveSidebar('custom')
     } else if (open) {
       form.resetFields()
       setActiveSidebar('nav')
       setActiveSubTab('today')
       setIconColor('#1890ff')
+      setSearchKeyword('')
+      setTargetCategoryId('home')
     }
   }, [open, editingApp, form])
 
@@ -83,20 +95,103 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
         icon: '🐦',
         url: 'https://twitter.com',
         desc: '关注全球实时热点'
+      },
+      {
+        key: 'reddit',
+        name: 'Reddit',
+        icon: '🤖',
+        url: 'https://www.reddit.com',
+        desc: '全球社区与讨论'
+      },
+      {
+        key: 'zhihu',
+        name: '知乎',
+        icon: '💡',
+        url: 'https://www.zhihu.com',
+        desc: '中文问答社区'
+      },
+      {
+        key: 'taobao',
+        name: '淘宝',
+        icon: '🛒',
+        url: 'https://www.taobao.com',
+        desc: '综合购物平台'
       }
     ]
+
+  const categoryOptions = categories.map((category) => ({
+    value: category.id,
+    label: `添加到：${category.name}`
+  }))
+
+  const filteredRecommendedApps = recommendedApps.filter((app) => {
+    const keyword = searchKeyword.trim().toLowerCase()
+    if (!keyword) return true
+    return [app.name, app.url, app.desc].some((value) => value.toLowerCase().includes(keyword))
+  })
+
+  const normalizeUrl = (value: string) => {
+    const raw = String(value || '').trim()
+    if (!raw) return ''
+    if (/^https?:\/\//i.test(raw)) return raw
+    return `https://${raw}`
+  }
+
+  const faviconUrlFromInput = (value: string) => {
+    const normalized = normalizeUrl(value)
+    if (!normalized) return ''
+    try {
+      const url = new URL(normalized)
+      return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(url.hostname)}&sz=128`
+    } catch {
+      return ''
+    }
+  }
+
+  const handleFetchIcon = () => {
+    const url = form.getFieldValue('url')
+    const icon = faviconUrlFromInput(url)
+    if (!icon) {
+      message.warning('请先输入有效的网站地址')
+      return
+    }
+    form.setFieldValue('icon', icon)
+    message.success('已获取网站图标')
+  }
+
+  const addRecommendedApp = async (app: (typeof recommendedApps)[number]) => {
+    try {
+      await appGridService.add({
+        name: app.name,
+        icon: faviconUrlFromInput(app.url) || app.icon,
+        url: app.url,
+        categoryId: targetCategoryId
+      })
+      message.success(`已添加 ${app.name}`)
+      onSuccess()
+      onClose()
+    } catch (error) {
+      console.error('添加失败:', error)
+      message.error('添加失败，请稍后重试')
+    }
+  }
 
   const handleOk = async () => {
     try {
       const values = await form.validateFields()
+      const payload = {
+        ...values,
+        url: normalizeUrl(values.url),
+        categoryId: targetCategoryId
+      }
 
       if (editingApp) {
         // 更新应用
-        await appGridService.update(editingApp.id, values)
+        await appGridService.update(editingApp.id, payload)
         message.success('更新成功')
       } else {
         // 添加应用
-        await appGridService.add(values as AddAppParams)
+        await appGridService.add(payload as AddAppParams)
         message.success('添加成功')
       }
 
@@ -121,9 +216,9 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
       rootClassName={styles.addAppModalRoot}
       centered
       width={1000}
-      bodyStyle={{ minHeight: 600 }}
+      styles={{ body: { minHeight: 600 } }}
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       <div className={styles.addAppModal}>
         <AddAppModalSidebar active={activeSidebar} onChange={setActiveSidebar} />
@@ -135,14 +230,17 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
 
           {/* 第一块：搜索 + 添加到 */}
           <div className={styles.addAppSearchRow}>
-            <Input.Search placeholder='搜索站点或应用' allowClear />
+            <Input.Search
+              placeholder='搜索站点或应用'
+              allowClear
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+            />
             <Select
               style={{ width: 140 }}
-              defaultValue='home'
-              options={[
-                { value: 'home', label: '添加到：主页' },
-                { value: 'work', label: '添加到：工作区' }
-              ]}
+              value={targetCategoryId}
+              options={categoryOptions.length ? categoryOptions : [{ value: 'home', label: '添加到：主页' }]}
+              onChange={setTargetCategoryId}
             />
           </div>
           {activeSidebar === 'custom' ? (
@@ -150,6 +248,7 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
               form={form}
               iconColor={iconColor}
               onIconColorChange={setIconColor}
+              onFetchIcon={handleFetchIcon}
               onSave={handleOk}
               onSaveAndContinue={async () => {
                 await handleOk()
@@ -158,45 +257,17 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
             />
           ) : activeSidebar === 'widgets' ? (
             <AddAppModalWidgets
-              apps={recommendedApps}
+              apps={filteredRecommendedApps}
               activeSubTab={activeSubTab}
               onChangeSubTab={(key) => setActiveSubTab(key)}
-              onAddApp={async (app) => {
-                try {
-                  await appGridService.add({
-                    name: app.name,
-                    icon: app.icon,
-                    url: app.url
-                  })
-                  message.success(`已添加 ${app.name}`)
-                  onSuccess()
-                  onClose()
-                } catch (error) {
-                  console.error('添加失败:', error)
-                  message.error('添加失败，请稍后重试')
-                }
-              }}
+              onAddApp={addRecommendedApp}
             />
           ) : (
             <AddAppModalNav
-              apps={recommendedApps}
+              apps={filteredRecommendedApps}
               activeSubTab={activeSubTab}
               onChangeSubTab={(key) => setActiveSubTab(key)}
-              onAddApp={async (app) => {
-                try {
-                  await appGridService.add({
-                    name: app.name,
-                    icon: app.icon,
-                    url: app.url
-                  })
-                  message.success(`已添加 ${app.name}`)
-                  onSuccess()
-                  onClose()
-                } catch (error) {
-                  console.error('添加失败:', error)
-                  message.error('添加失败，请稍后重试')
-                }
-              }}
+              onAddApp={addRecommendedApp}
             />
           )}
         </div>

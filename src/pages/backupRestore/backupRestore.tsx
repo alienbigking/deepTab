@@ -3,6 +3,7 @@ import { App, Button, Card } from 'antd'
 import styles from './backupRestore.module.less'
 import appGridService from '@/pages/appGrid/services/appGrid'
 import useAppGridStore from '@/pages/appGrid/stores/appGrid'
+import deepTabSyncService from '@/pages/deepTabSync/services/deepTabSync'
 import type { AppNode, IconSettings } from '@/pages/appGrid/types/appGrid'
 import type { IWallpaperConfig } from '@/pages/wallpaper/types/wallpaper'
 
@@ -43,6 +44,39 @@ const BackupRestore: React.FC = () => {
     } catch (error) {
       console.error('同步失败:', error)
       message.error('同步失败，请稍后重试')
+    }
+  }
+
+  const handleUploadCloud = async () => {
+    try {
+      await appGridService.saveAll(apps)
+      await appGridService.saveIconSettings(iconSettings)
+      await deepTabSyncService.uploadLocalToCloud()
+      message.success('已同步到云端')
+    } catch (error: any) {
+      console.error('云端同步失败:', error)
+      message.error(error?.message || '云端同步失败，请确认已登录并检查后端服务')
+    }
+  }
+
+  const handleDownloadCloud = async () => {
+    try {
+      const syncData = await deepTabSyncService.downloadCloudToLocal()
+      if (!syncData?.payload) {
+        message.info('云端暂无可恢复的数据')
+        return
+      }
+
+      const localApps = await appGridService.getList()
+      const localIconSettings = await appGridService.getIconSettings()
+      setApps(localApps)
+      if (localIconSettings) {
+        setIconSettings(localIconSettings)
+      }
+      message.success('已从云端恢复')
+    } catch (error: any) {
+      console.error('云端恢复失败:', error)
+      message.error(error?.message || '云端恢复失败，请确认已登录并检查后端服务')
     }
   }
 
@@ -132,7 +166,7 @@ const BackupRestore: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <Card className='dtSettingsCard' bordered={false}>
+      <Card className='dtSettingsCard' variant='borderless'>
         <div className={styles.content}>
           <div className={styles.header}>
             <h2 className={styles.title}>备份与恢复</h2>
@@ -148,6 +182,17 @@ const BackupRestore: React.FC = () => {
                   立即备份
                 </Button>
                 <Button onClick={handleSyncLocal}>同步到本地</Button>
+              </div>
+            </div>
+
+            <div className={styles.section}>
+              <div className={styles.sectionTitle}>云端同步</div>
+              <div className={styles.sectionDesc}>登录后可将当前配置同步到后端，或从后端恢复到本机。</div>
+              <div className={styles.actions}>
+                <Button type='primary' onClick={handleUploadCloud}>
+                  上传到云端
+                </Button>
+                <Button onClick={handleDownloadCloud}>从云端恢复</Button>
               </div>
             </div>
 

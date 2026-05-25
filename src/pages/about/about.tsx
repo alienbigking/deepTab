@@ -38,7 +38,7 @@ const About: React.FC = () => {
         closable
         className={styles.tipAlert}
       />
-      <Card title='关于 deepTab' className='dtSettingsCard' bordered={false}>
+      <Card title='关于 deepTab' className='dtSettingsCard' variant='borderless'>
         <Descriptions column={1}>
           <Descriptions.Item label='版本'>V2.2.22</Descriptions.Item>
           <Descriptions.Item label='作者'>deepTab Team</Descriptions.Item>

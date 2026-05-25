@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import cn from 'classnames'
-import { Drawer, Avatar, Badge } from 'antd'
+import { App, Button, Drawer, Avatar, Badge, Dropdown } from 'antd'
 import {
   UserOutlined,
   CrownOutlined,
@@ -31,6 +31,8 @@ import Feedback from '@/pages/feedback/feedback'
 import ResetSettings from '@/pages/resetSettings/resetSettings'
 import BackupRestore from '@/pages/backupRestore/backupRestore'
 import IconControl from '@/pages/iconControl/iconControl'
+import AuthModal from '@/pages/auth/authModal'
+import useAuthStore from '@/pages/auth/stores/auth'
 
 interface SettingsSidebarProps {
   open: boolean
@@ -59,7 +61,36 @@ type MenuKey =
  */
 const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
   const { open = false, onClose, openToMenu } = props
+  const { message } = App.useApp()
   const [activeMenu, setActiveMenu] = useState<MenuKey>('wallpaper')
+  const [authOpen, setAuthOpen] = useState(false)
+  const session = useAuthStore((s) => s.session)
+  const initAuth = useAuthStore((s) => s.init)
+  const logout = useAuthStore((s) => s.logout)
+  const uploadAvatar = useAuthStore((s) => s.uploadAvatar)
+  const isAuthLoading = useAuthStore((s) => s.isLoading)
+  const user = session?.user
+  const avatarInputRef = useRef<HTMLInputElement | null>(null)
+  const userName = user?.nickname || user?.username || user?.userIdentifier || 'Deep Tab 用户'
+  const userSubText = user?.email || user?.mobile || user?.userIdentifier || '已登录'
+
+  const handleAvatarChange: React.ChangeEventHandler<HTMLInputElement> = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    if (!file.type.startsWith('image/')) return
+    try {
+      await uploadAvatar(file)
+      message.success('头像已更新')
+    } catch (error) {
+      console.error('上传头像失败:', error)
+      message.error('头像上传失败，请稍后再试')
+    }
+  }
+
+  useEffect(() => {
+    void initAuth()
+  }, [initAuth])
 
   useEffect(() => {
     if (!open) return
@@ -158,8 +189,39 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
         <div className={cn(styles.leftMenu)}>
           {/* 用户信息 */}
           <div className={cn(styles.userInfo)}>
-            <Avatar size={48} icon={<UserOutlined />} />
-            <span className={cn(styles.userEmail)}>1260213657@qq.com</span>
+            {session ? (
+              <Dropdown
+                trigger={['click']}
+                menu={{
+                  items: [
+                    { key: 'avatar', label: isAuthLoading ? '上传中...' : '更换头像' },
+                    { key: 'logout', label: '退出登录' }
+                  ],
+                  onClick: async ({ key }) => {
+                    if (key === 'avatar') {
+                      avatarInputRef.current?.click()
+                    }
+                    if (key === 'logout') {
+                      await logout()
+                    }
+                  }
+                }}
+              >
+                <div className={cn(styles.userProfile)}>
+                  <Avatar size={48} src={user?.avatar} icon={<UserOutlined />} />
+                  <span className={cn(styles.userName)}>{userName}</span>
+                  <span className={cn(styles.userEmail)}>{userSubText}</span>
+                </div>
+              </Dropdown>
+            ) : (
+              <div className={cn(styles.userProfile)}>
+                <Avatar size={48} icon={<UserOutlined />} />
+                <span className={cn(styles.userName)}>未登录</span>
+                <Button type='primary' size='small' onClick={() => setAuthOpen(true)}>
+                  登录 / 注册
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* 菜单列表 */}
@@ -190,6 +252,14 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
         {/* 右侧内容 */}
         <div className={cn(styles.rightContent)}>{renderContent()}</div>
       </div>
+      <input
+        ref={avatarInputRef}
+        type='file'
+        accept='image/*'
+        className={styles.avatarInput}
+        onChange={handleAvatarChange}
+      />
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </Drawer>
   )
 }

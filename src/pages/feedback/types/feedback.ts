@@ -14,4 +14,10 @@ interface IFeedback {
   timestamp?: string
 }
 
-export { FeedbackType, IFeedback }
+interface IFeedbackAttachment {
+  uid: string
+  name: string
+  url: string
+}
+
+export { FeedbackType, IFeedback, IFeedbackAttachment }

@@ -1,13 +1,23 @@
+import type { IRelatedApp } from '../types/relatedApps'
+
 export default {
-  async getRelatedApps() {
+  async getRelatedApps(): Promise<IRelatedApp[]> {
     return [
       {
-        id: '1',
-        name: 'deepTab Pro',
-        description: '专业版扩展',
-        icon: '🎨',
-        url: 'https://deeptab.com/pro',
-        category: '工具'
+        id: 'deep-tab',
+        name: 'Deep Tab',
+        description: '当前正在使用的新标签页插件，支持快捷入口、壁纸、组件和云同步。',
+        icon: 'DT',
+        url: 'https://deeptab.com',
+        category: '效率'
+      },
+      {
+        id: 'unbounded-social',
+        name: 'Unbounded Social',
+        description: 'Deep Tab 后端账号与云同步服务所属项目。',
+        icon: 'US',
+        url: 'https://unbounded.social',
+        category: '服务'
       }
     ]
   }

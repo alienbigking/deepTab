@@ -166,7 +166,7 @@ const AppCategorySidebar: React.FC<AppCategorySidebarProps> = (props) => {
       <Form form={editorForm} layout='vertical'>
         <div className={cn(styles.addPopoverTitle)}>
           <Form.Item name='name' rules={[{ required: true, message: '请输入分类名称' }]} noStyle>
-            <Input className={cn(styles.nameInput)} maxLength={12} bordered={false} />
+            <Input className={cn(styles.nameInput)} maxLength={12} variant='borderless' />
           </Form.Item>
         </div>
 

@@ -7,6 +7,8 @@ import {
   IWallpaperConfig
 } from '../types/wallpaper'
 
+const buildUrl = (path: string) => `${env.HOST_API_URL.replace(/\/$/, '')}${path}`
+
 /**
  * wallpaper 服务层
  */
@@ -46,7 +48,7 @@ export default {
   // 获取图片壁纸列表
   async getImageWallpapers(): Promise<IImageWallpaper[]> {
     try {
-      const response = await http(`${env.HOST_API_URL}wallpapers/images`)
+      const response = await http(buildUrl('/api/deepTab/wallpapers/images'))
       const data: unknown = response.data
       if (!Array.isArray(data)) return []
       return (data as IImageWallpaper[]).map((item) => ({
@@ -164,7 +166,7 @@ export default {
   // 获取动态壁纸列表
   async getDynamicWallpapers(): Promise<IDynamicWallpaper[]> {
     try {
-      const response = await http(`${env.HOST_API_URL}wallpapers/dynamic`)
+      const response = await http(buildUrl('/api/deepTab/wallpapers/dynamic'))
       return response.data
     } catch (error) {
       console.error('获取动态壁纸失败:', error)
