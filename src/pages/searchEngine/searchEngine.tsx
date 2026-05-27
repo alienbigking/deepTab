@@ -11,6 +11,7 @@ import {
 } from '@ant-design/icons'
 import styles from './searchEngine.module.less'
 import useSearchEngineStore from './stores/searchEngine'
+import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 
 const SearchEngine: React.FC = () => {
   const { config, init, setDefaultEngineId, upsertCustomEngine, removeCustomEngine } =
@@ -295,6 +296,8 @@ const SearchEngine: React.FC = () => {
                         okText: '删除',
                         cancelText: '取消',
                         okButtonProps: { danger: true },
+                        maskTransitionName: modalMaskTransitionName,
+                        maskStyle: modalMaskStyle,
                         onOk: async () => {
                           await removeCustomEngine(it.id)
                         }
@@ -317,6 +320,8 @@ const SearchEngine: React.FC = () => {
         cancelText='取消'
         onOk={handleSubmit}
         onCancel={closeModal}
+        maskTransitionName={modalMaskTransitionName}
+        maskStyle={modalMaskStyle}
         destroyOnHidden
       >
         <Form form={form} layout='vertical' onValuesChange={onFormValuesChange}>

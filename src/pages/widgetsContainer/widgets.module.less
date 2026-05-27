@@ -1,5 +1,12 @@
 // Widget card
+@widget-card-height: 220px;
+
 .widgetCard {
+  position: relative;
+  height: @widget-card-height;
+  min-height: @widget-card-height;
+  max-height: @widget-card-height;
+  box-sizing: border-box;
   background: var(--dt-widget-bg);
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.36);
@@ -32,7 +39,14 @@
     .ant-card-body {
       position: relative;
       z-index: 1;
+      height: 100%;
+      box-sizing: border-box;
       padding: 16px;
+    }
+
+    .ant-spin-nested-loading,
+    .ant-spin-container {
+      height: 100%;
     }
   }
 }
@@ -58,8 +72,12 @@
 
 .calendarWidget {
   width: 180px;
+  height: 100%;
   color: var(--dt-widget-text);
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .calendarCompactTop {
@@ -153,9 +171,9 @@
 .widgetModalRoot {
   :global {
     .ant-modal-mask {
-      opacity: 1 !important;
-      backdrop-filter: blur(12px) saturate(140%);
-      -webkit-backdrop-filter: blur(12px) saturate(140%);
+      background: rgba(0, 0, 0, 0.25) !important;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
     }
 
     .ant-modal-content {
@@ -386,14 +404,19 @@
 }
 .weatherWidget {
   width: 260px;
+  height: 100%;
   color: var(--dt-widget-text);
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
 }
 
 .weatherCompact {
+  height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .weatherCompactMain {
@@ -444,6 +467,7 @@
 }
 
 .weatherCompactForecast {
+  min-height: 50px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
@@ -686,8 +710,11 @@
 
 .todoWidget {
   width: 260px;
+  height: 100%;
   color: var(--dt-widget-text);
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
 }
 
 .todoCompactHeader {
@@ -726,6 +753,8 @@
 }
 
 .todoCompactList {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -756,6 +785,9 @@
 }
 
 .todoCompactEmpty {
+  flex: 1;
+  display: grid;
+  place-items: center;
   padding: 14px;
   border-radius: 12px;
   background: rgba(112, 83, 255, 0.07);
@@ -913,6 +945,10 @@
 
 .hotSearchCard {
   width: 700px;
+  height: @widget-card-height;
+  min-height: @widget-card-height;
+  max-height: @widget-card-height;
+  box-sizing: border-box;
   border-radius: 30px;
   overflow: hidden;
   background:
@@ -936,12 +972,22 @@
 
   :global {
     .ant-card-body {
-      padding: 16px 28px 18px;
+      height: 100%;
+      box-sizing: border-box;
+      padding: 14px 28px;
+    }
+
+    .ant-spin-nested-loading,
+    .ant-spin-container {
+      height: 100%;
     }
   }
 }
 
 .hotSearchCompact {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   color: var(--dt-widget-text);
 }
 
@@ -949,11 +995,12 @@
   display: grid;
   grid-template-columns: 32px 1fr 32px;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
 
   strong {
     text-align: center;
-    font-size: 20px;
+    font-size: 18px;
+    line-height: 1.2;
     font-weight: 700;
     color: var(--dt-widget-text);
   }
@@ -968,9 +1015,13 @@
 }
 
 .hotSearchCompactList {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 4px;
+  overflow: hidden;
 }
 
 .hotSearchCompactItem {
@@ -980,7 +1031,8 @@
   gap: 6px;
 
   span {
-    font-size: 18px;
+    font-size: 16px;
+    line-height: 1.2;
     font-weight: 800;
     color: var(--dt-widget-text-3);
   }
@@ -1004,7 +1056,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 18px;
+    font-size: 16px;
+    line-height: 1.2;
     font-weight: 400;
     color: var(--dt-widget-text);
   }
@@ -1012,7 +1065,8 @@
   em {
     text-align: right;
     font-style: normal;
-    font-size: 18px;
+    font-size: 16px;
+    line-height: 1.2;
     color: rgba(255, 93, 83, 0.72);
   }
 }

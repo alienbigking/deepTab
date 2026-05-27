@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { Button, Card, Modal, Select, Tooltip } from 'antd'
 import { LeftOutlined, ReloadOutlined, RightOutlined } from '@ant-design/icons'
 import addAppModalStyles from '@/pages/appGrid/addAppModal.module.less'
+import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 import styles from './widgets.module.less'
 import DayJS from 'dayjs'
 import 'dayjs/locale/zh-cn'
@@ -101,7 +102,8 @@ const CalendarWidget: React.FC = () => {
         centered
         width={1000}
         transitionName=''
-        maskTransitionName=''
+        maskTransitionName={modalMaskTransitionName}
+        maskStyle={modalMaskStyle}
         styles={{ body: { overflow: 'hidden' } }}
         footer={null}
         destroyOnHidden

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Card, Modal, Spin, Tooltip } from 'antd'
 import { LeftOutlined, ReloadOutlined, RightOutlined, SettingFilled } from '@ant-design/icons'
 import addAppModalStyles from '@/pages/appGrid/addAppModal.module.less'
+import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 import styles from './widgets.module.less'
 import widgetsContainerService from './services/widgetsContainer'
 import type { IHotSearchData } from './types/widgetsContainer'
@@ -201,7 +202,8 @@ const HotSearchWidget: React.FC = () => {
         centered
         width={1000}
         transitionName=''
-        maskTransitionName=''
+        maskTransitionName={modalMaskTransitionName}
+        maskStyle={modalMaskStyle}
         styles={{ body: { overflow: 'hidden' } }}
         footer={null}
         destroyOnHidden

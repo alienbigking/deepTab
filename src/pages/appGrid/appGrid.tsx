@@ -3,6 +3,7 @@ import {
   DndContext,
   closestCenter,
   DragEndEvent,
+  DragMoveEvent,
   DragOverEvent,
   DragOverlay,
   PointerSensor,
@@ -22,6 +23,7 @@ import AddAppModal from './addAppModal'
 import AppFolderPopover from './appFolderPopover'
 import CreateFolderModal from './createFolderModal'
 import DraggableFolderIcon from './draggableFolderIcon'
+import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 import appGridService from './services/appGrid'
 import useAppGridStore from './stores/appGrid'
 import type { AppNode, AppItem, AppFolder, ContextMenuState } from './types/appGrid'
@@ -30,7 +32,9 @@ import { useNotification } from '@/common/ui'
 import useAppCategoryStore from '@/pages/appCategory/stores/appCategory'
 
 const REORDER_HOVER_DELAY = 500
+const MERGE_HOVER_DELAY = 1000
 const delayedReorderStrategy = () => null
+type DragHoverMode = 'merge' | 'reorder'
 
 const isImageIcon = (icon?: string) => /^(https?:\/\/|data:image\/)/i.test(String(icon || ''))
 
@@ -82,6 +86,47 @@ const animateGridReorder = (previousRects: Map<string, DOMRect>, activeId: strin
   })
 }
 
+const getGridItemElement = (id: string) => {
+  const items = document.querySelectorAll<HTMLElement>('[data-app-grid-id]')
+  return Array.from(items).find((element) => element.dataset.appGridId === id) || null
+}
+
+const getTargetIconRect = (id: string) => {
+  const element = getGridItemElement(id)
+  const iconElement = element?.querySelector<HTMLElement>(`.${styles.iconWrapper}`)
+  return iconElement?.getBoundingClientRect() || element?.getBoundingClientRect() || null
+}
+
+const getActiveRectCenter = (event: DragOverEvent | DragMoveEvent) => {
+  const rect = event.active.rect.current.translated || event.active.rect.current.initial
+  if (!rect) return null
+
+  return {
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2
+  }
+}
+
+const isInsideMergeZone = (event: DragOverEvent | DragMoveEvent) => {
+  if (!event.over) return false
+
+  const center = getActiveRectCenter(event)
+  if (!center) return false
+
+  const rect = getTargetIconRect(String(event.over.id))
+  if (!rect) return false
+
+  const horizontalInset = rect.width * 0.08
+  const verticalInset = rect.height * 0.08
+
+  return (
+    center.x >= rect.left + horizontalInset &&
+    center.x <= rect.right - horizontalInset &&
+    center.y >= rect.top + verticalInset &&
+    center.y <= rect.bottom - verticalInset
+  )
+}
+
 /**
  * 应用图标网格组件
  * 支持拖拽排序、编辑模式、右键菜单
@@ -109,10 +154,14 @@ const AppGrid: React.FC = () => {
 
   // 悬停检测相关
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const mergeHoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const mergeHoverTargetRef = useRef<string | null>(null)
   const lastOverIdRef = useRef<string | null>(null)
+  const lastHoverModeRef = useRef<DragHoverMode | null>(null)
   const latestAppsRef = useRef<AppNode[]>([])
   const originalAppsRef = useRef<AppNode[] | null>(null)
   const didPreviewReorderRef = useRef(false)
+  const didMergeFolderRef = useRef(false)
 
   // Store hooks
   const {
@@ -229,6 +278,8 @@ const AppGrid: React.FC = () => {
       content: '确定要删除这个应用吗?',
       okText: '删除',
       cancelText: '取消',
+      maskTransitionName: modalMaskTransitionName,
+      maskStyle: modalMaskStyle,
       onOk: () => handleDelete(id)
     })
   }
@@ -347,6 +398,8 @@ const AppGrid: React.FC = () => {
         content: '删除文件夹时，内部图标将全部移出到主网格，确定删除吗？',
         okText: '删除',
         cancelText: '取消',
+        maskTransitionName: modalMaskTransitionName,
+        maskStyle: modalMaskStyle,
         onOk: async () => {
           try {
             await deleteFolder({ folderId: appId, deleteChildren: false })
@@ -407,6 +460,19 @@ const AppGrid: React.FC = () => {
     }
   }
 
+  const clearMergeHoverTimer = () => {
+    if (mergeHoverTimerRef.current) {
+      clearTimeout(mergeHoverTimerRef.current)
+      mergeHoverTimerRef.current = null
+    }
+    mergeHoverTargetRef.current = null
+  }
+
+  const clearDragHoverTimers = () => {
+    clearHoverTimer()
+    clearMergeHoverTimer()
+  }
+
   const reorderTopLevelApps = (list: AppNode[], draggedId: string, overId: string) => {
     const categoryItems = list.filter((app) => (app.categoryId || 'home') === activeCategoryId)
     const oldIndex = categoryItems.findIndex((app) => app.id === draggedId)
@@ -450,40 +516,116 @@ const AppGrid: React.FC = () => {
     })
   }
 
+  const mergeIntoFolder = async (draggedId: string, overId: string) => {
+    const currentList = latestAppsRef.current
+    const draggedNode = currentList.find((app) => app.id === draggedId)
+    const overNode = currentList.find((app) => app.id === overId)
+
+    if (!draggedNode || !overNode) return
+    if (draggedNode.type !== 'item' || overNode.type !== 'item') return
+    if ((draggedNode.categoryId || 'home') !== activeCategoryId) return
+    if ((overNode.categoryId || 'home') !== activeCategoryId) return
+
+    const previousRects = getGridItemRects()
+    const folderId = `folder_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+    const folder: AppFolder = {
+      type: 'folder',
+      id: folderId,
+      name: '文件夹',
+      icon: '📁',
+      iconBg: overNode.iconBg,
+      order: 0,
+      categoryId: overNode.categoryId || draggedNode.categoryId || activeCategoryId,
+      children: [
+        { ...overNode, order: 0 },
+        { ...draggedNode, order: 1 }
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      syncStatus: 'pending'
+    }
+
+    const nextApps = currentList
+      .reduce<AppNode[]>((next, node) => {
+        if (node.id === draggedId) return next
+        if (node.id === overId) {
+          next.push(folder)
+          return next
+        }
+        next.push(node)
+        return next
+      }, [])
+      .map((node, index) => ({
+        ...node,
+        order: index,
+        updatedAt: new Date().toISOString(),
+        syncStatus: 'pending' as const
+      }))
+
+    didMergeFolderRef.current = true
+    didPreviewReorderRef.current = false
+    setActiveId(null)
+    clearMergeHoverTimer()
+    lastOverIdRef.current = null
+    lastHoverModeRef.current = null
+    latestAppsRef.current = nextApps
+    setApps(nextApps)
+    animateGridReorder(previousRects, draggedId)
+
+    try {
+      await appGridService.saveAll(nextApps)
+      message.success('已合并为文件夹')
+    } catch (error) {
+      console.error('合并文件夹失败:', error)
+      message.error('合并失败，请重试')
+      await loadApps()
+    }
+  }
+
   // 拖拽开始处理
   const handleDragStart = (event: any) => {
     setActiveId(event.active.id as string)
-    clearHoverTimer()
+    clearDragHoverTimers()
     lastOverIdRef.current = null
+    lastHoverModeRef.current = null
     originalAppsRef.current = latestAppsRef.current
     didPreviewReorderRef.current = false
+    didMergeFolderRef.current = false
   }
 
-  // 拖拽过程中处理（悬停检测）
-  const handleDragOver = (event: DragOverEvent) => {
+  const handleDragHover = (event: DragOverEvent | DragMoveEvent) => {
     const { active, over } = event
-    if (!over || !active) return
+    if (!over || !active) {
+      clearDragHoverTimers()
+      lastOverIdRef.current = null
+      lastHoverModeRef.current = null
+      return
+    }
 
     const draggedId = active.id as string
     const overId = over.id as string
 
-    // 如果悬停目标没有变化，不做处理
-    if (lastOverIdRef.current === overId) return
+    const draggedNode = apps.find((app) => app.id === draggedId)
+    const overNode = apps.find((app) => app.id === overId)
+    const hoverMode: DragHoverMode =
+      draggedNode?.type === 'item' && overNode?.type === 'item' && isInsideMergeZone(event)
+        ? 'merge'
+        : 'reorder'
+
+    if (lastOverIdRef.current === overId && lastHoverModeRef.current === hoverMode) return
 
     clearHoverTimer()
+    clearMergeHoverTimer()
 
     // 更新当前悬停目标
     lastOverIdRef.current = overId
+    lastHoverModeRef.current = hoverMode
 
     // 忽略拖到自己身上
     if (draggedId === overId) return
 
     // 忽略拖到主网格区域（这个在 dragEnd 处理）
     if (overId === 'main-grid') return
-
-    // 查找节点
-    const draggedNode = apps.find((app) => app.id === draggedId)
-    const overNode = apps.find((app) => app.id === overId)
 
     // 检查是否是从文件夹内拖出的图标
     const parentFolder = apps.find(
@@ -503,19 +645,40 @@ const AppGrid: React.FC = () => {
       (overNode.type === 'item' || overNode.type === 'folder') &&
       !parentFolder
     ) {
+      if (hoverMode === 'merge') {
+        mergeHoverTargetRef.current = overId
+        mergeHoverTimerRef.current = setTimeout(() => {
+          if (mergeHoverTargetRef.current === overId && lastHoverModeRef.current === 'merge') {
+            void mergeIntoFolder(draggedId, overId)
+          }
+        }, MERGE_HOVER_DELAY)
+        return
+      }
+
       hoverTimerRef.current = setTimeout(() => {
-        if (lastOverIdRef.current === overId) {
+        if (lastOverIdRef.current === overId && lastHoverModeRef.current === 'reorder') {
           previewReorder(draggedId, overId)
         }
       }, REORDER_HOVER_DELAY)
     }
   }
 
+  const handleDragMove = (event: DragMoveEvent) => {
+    handleDragHover(event)
+  }
+
+  // 拖拽过程中处理（悬停检测）
+  const handleDragOver = (event: DragOverEvent) => {
+    handleDragHover(event)
+  }
+
   const handleDragCancel = () => {
-    clearHoverTimer()
+    clearDragHoverTimers()
     setActiveId(null)
     lastOverIdRef.current = null
+    lastHoverModeRef.current = null
     didPreviewReorderRef.current = false
+    didMergeFolderRef.current = false
 
     if (originalAppsRef.current) {
       setApps(originalAppsRef.current)
@@ -528,17 +691,24 @@ const AppGrid: React.FC = () => {
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
 
-    clearHoverTimer()
+    clearDragHoverTimers()
 
     // 获取待执行操作和最后悬停目标（在重置之前保存）
     const lastOverId = lastOverIdRef.current
     const didPreviewReorder = didPreviewReorderRef.current
+    const didMergeFolder = didMergeFolderRef.current
 
     // 重置状态
     setActiveId(null)
     lastOverIdRef.current = null
+    lastHoverModeRef.current = null
     didPreviewReorderRef.current = false
+    didMergeFolderRef.current = false
     originalAppsRef.current = null
+
+    if (didMergeFolder) {
+      return
+    }
 
     if (didPreviewReorder) {
       try {
@@ -731,6 +901,7 @@ const AppGrid: React.FC = () => {
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
+      onDragMove={handleDragMove}
       onDragOver={handleDragOver}
       onDragCancel={handleDragCancel}
       onDragEnd={handleDragEnd}

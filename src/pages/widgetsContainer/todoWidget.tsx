@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Button, Card, Checkbox, Empty, Input, Modal, Radio, Select, Tag } from 'antd'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import addAppModalStyles from '@/pages/appGrid/addAppModal.module.less'
+import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 import styles from './widgets.module.less'
 import widgetsContainerService from './services/widgetsContainer'
 import type { ITodoItem } from './types/widgetsContainer'
@@ -114,7 +115,8 @@ const TodoWidget: React.FC = () => {
         centered
         width={1000}
         transitionName=''
-        maskTransitionName=''
+        maskTransitionName={modalMaskTransitionName}
+        maskStyle={modalMaskStyle}
         styles={{ body: { overflow: 'hidden' } }}
         footer={null}
         destroyOnHidden

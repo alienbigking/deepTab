@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Button, Card, Modal, Select, Spin, Tooltip } from 'antd'
 import { EnvironmentOutlined, ReloadOutlined } from '@ant-design/icons'
 import addAppModalStyles from '@/pages/appGrid/addAppModal.module.less'
+import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 import styles from './widgets.module.less'
 import widgetsContainerService from './services/widgetsContainer'
 import type { IWeatherData } from './types/widgetsContainer'
@@ -106,7 +107,8 @@ const WeatherWidget: React.FC = () => {
         centered
         width={1000}
         transitionName=''
-        maskTransitionName=''
+        maskTransitionName={modalMaskTransitionName}
+        maskStyle={modalMaskStyle}
         styles={{ body: { overflow: 'hidden' } }}
         footer={null}
         destroyOnHidden

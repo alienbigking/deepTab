@@ -8,6 +8,7 @@ import AddAppModalCustom from './addAppModalCustom'
 import AddAppModalWidgets from './addAppModalWidgets'
 import AddAppModalNav from './addAppModalNav'
 import useAppCategoryStore from '@/pages/appCategory/stores/appCategory'
+import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 
 interface AddAppModalProps {
   open: boolean
@@ -587,7 +588,8 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
       centered
       width={1000}
       transitionName=''
-      maskTransitionName=''
+      maskTransitionName={modalMaskTransitionName}
+      maskStyle={modalMaskStyle}
       styles={{ body: { height: 'min(720px, calc(100vh - 160px))' } }}
       footer={null}
       destroyOnHidden

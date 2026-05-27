@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { App, Button, Form, Input, Modal, Tabs } from 'antd'
 import useAuthStore from './stores/auth'
 import styles from './authModal.module.less'
+import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 
 interface AuthModalProps {
   open: boolean
@@ -70,6 +71,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose }) => {
       centered
       width={420}
       className={styles.authModal}
+      maskTransitionName={modalMaskTransitionName}
+      maskStyle={modalMaskStyle}
       destroyOnHidden
     >
       <Tabs

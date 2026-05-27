@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Modal, Input, message } from 'antd'
+import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 
 interface CreateFolderModalProps {
   visible: boolean
@@ -39,6 +40,8 @@ const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
       okText='创建'
       cancelText='取消'
       centered
+      maskTransitionName={modalMaskTransitionName}
+      maskStyle={modalMaskStyle}
     >
       <Input
         placeholder='请输入文件夹名称'

@@ -3,6 +3,7 @@ import { Modal, Input, Button, message } from 'antd'
 import { CloseOutlined, EditOutlined } from '@ant-design/icons'
 import cn from 'classnames'
 import styles from './appFolderPopover.module.less'
+import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 import type { AppNode, AppItem, AppFolder, IconSettings } from './types/appGrid'
 import DraggableFolderIcon from './draggableFolderIcon'
 
@@ -136,7 +137,12 @@ const AppFolderPopover: React.FC<AppFolderPopoverProps> = ({
       footer={null}
       width={600}
       centered
+      rootClassName={styles.folderModalRoot}
       className={styles.folderModal}
+      transitionName=''
+      maskTransitionName={modalMaskTransitionName}
+      maskStyle={modalMaskStyle}
+      destroyOnHidden
     >
       {renderContent()}
     </Modal>

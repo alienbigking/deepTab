@@ -6,6 +6,7 @@ import { initDefaultApps } from '@/pages/appGrid/initData'
 import useAppGridStore from '@/pages/appGrid/stores/appGrid'
 import useBottomBarStore from '@/pages/bottomBar/stores/bottomBar'
 import useAppCategoryStore from '@/pages/appCategory/stores/appCategory'
+import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 
 const storageRemove = (keys: string[]) => {
   return new Promise<void>((resolve, reject) => {
@@ -114,6 +115,8 @@ const ResetSettings: React.FC = () => {
       okText: '重置图标',
       okButtonProps: { danger: true },
       cancelText: '取消',
+      maskTransitionName: modalMaskTransitionName,
+      maskStyle: modalMaskStyle,
       onOk: () => resetIcons(true, true)
     })
   }
@@ -125,6 +128,8 @@ const ResetSettings: React.FC = () => {
       okText: '重置所有设置',
       okButtonProps: { danger: true },
       cancelText: '取消',
+      maskTransitionName: modalMaskTransitionName,
+      maskStyle: modalMaskStyle,
       onOk: async () => {
         const hide = message.loading('正在恢复默认设置...', 0)
         try {

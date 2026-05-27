@@ -18,6 +18,7 @@ import {
 import styles from './appCategorySidebar.module.less'
 import useAppCategoryStore from './stores/appCategory'
 import type { CategoryIconKey } from './types/appCategory'
+import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 
 const iconMap: Record<CategoryIconKey, React.ReactNode> = {
   home: <HomeOutlined />,
@@ -150,6 +151,8 @@ const AppCategorySidebar: React.FC<AppCategorySidebarProps> = (props) => {
       okText: '删除',
       cancelText: '取消',
       okButtonProps: { danger: true },
+      maskTransitionName: modalMaskTransitionName,
+      maskStyle: modalMaskStyle,
       onOk: async () => {
         try {
           await deleteCategory(id)

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Modal, Slider } from 'antd'
 import cn from 'classnames'
 import styles from './searchStyleModal.module.less'
+import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 
 interface SearchStyleModalProps {
   open: boolean
@@ -34,6 +35,8 @@ const SearchStyleModal: React.FC<SearchStyleModalProps> = (props) => {
       rootClassName={cn(styles.searchStyleModalRoot)}
       getContainer={false}
       maskClosable={false}
+      maskTransitionName={modalMaskTransitionName}
+      maskStyle={modalMaskStyle}
     >
       <div className={cn(styles.searchStyleModal)}>
         <div className={cn(styles.header)}>搜索框样式</div>
