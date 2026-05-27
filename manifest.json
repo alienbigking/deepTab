@@ -11,12 +11,16 @@
     "bookmarks"
   ],
   "host_permissions": [
+    "http://*/*",
+    "https://*/*",
     "https://api.bing.com/*",
     "https://api-hot.imsyy.top/*",
     "https://dailyhot.aizhi.ink/*",
     "https://api.zxki.cn/*",
     "https://dailyhotapi.3yu3.top/*",
     "https://api.open-meteo.com/*",
+    "https://*/*",
+    "http://*/*",
     "http://localhost:3000/*",
     "http://101.33.234.107:3000/*"
   ],

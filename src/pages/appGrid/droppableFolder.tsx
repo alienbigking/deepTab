@@ -1,10 +1,17 @@
 import React, { useRef } from 'react'
-import { useSortable } from '@dnd-kit/sortable'
+import {
+  defaultAnimateLayoutChanges,
+  useSortable,
+  type AnimateLayoutChanges
+} from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { AppFolder, IconSettings } from './types/appGrid'
 import AppIcon from './appIcon'
 import cn from 'classnames'
 import styles from './appGrid.module.less'
+
+const animateLayoutChanges: AnimateLayoutChanges = (args) =>
+  defaultAnimateLayoutChanges({ ...args, wasDragging: true })
 
 interface DroppableFolderProps {
   folder: AppFolder
@@ -30,6 +37,7 @@ const DroppableFolder: React.FC<DroppableFolderProps> = ({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
     useSortable({
       id: folder.id,
+      animateLayoutChanges,
       data: {
         type: 'folder',
         folder: folder
@@ -43,8 +51,10 @@ const DroppableFolder: React.FC<DroppableFolderProps> = ({
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
+    transition: isDragging
+      ? undefined
+      : 'transform 380ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease',
+    opacity: isDragging ? 0 : 1,
     touchAction: 'none'
   }
 
@@ -68,6 +78,7 @@ const DroppableFolder: React.FC<DroppableFolderProps> = ({
   return (
     <div
       ref={setNodeRef}
+      data-app-grid-id={folder.id}
       style={style}
       className={cn(styles.droppableFolder, styles.appIcon, {
         [styles.folderDropOver]: isOver && !isDragging,

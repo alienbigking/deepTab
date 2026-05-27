@@ -9,7 +9,7 @@ import {
   useSensor,
   useSensors
 } from '@dnd-kit/core'
-import { SortableContext, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable'
+import { SortableContext, arrayMove } from '@dnd-kit/sortable'
 import { App, Button } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import cn from 'classnames'
@@ -29,7 +29,58 @@ import { initDefaultApps } from './initData'
 import { useNotification } from '@/common/ui'
 import useAppCategoryStore from '@/pages/appCategory/stores/appCategory'
 
-const REORDER_HOVER_DELAY = 220
+const REORDER_HOVER_DELAY = 500
+const delayedReorderStrategy = () => null
+
+const isImageIcon = (icon?: string) => /^(https?:\/\/|data:image\/)/i.test(String(icon || ''))
+
+const iconTextFromName = (value?: string) => {
+  const text = String(value || '').trim()
+  if (!text) return 'A'
+  const chinese = text.match(/[\u4e00-\u9fa5]/g)
+  if (chinese?.length) return chinese.slice(0, 2).join('')
+  const letters = text.replace(/[^a-z0-9]/gi, '').slice(0, 2)
+  return (letters || text.slice(0, 2)).toUpperCase()
+}
+
+const getGridItemRects = () => {
+  const rects = new Map<string, DOMRect>()
+  document.querySelectorAll<HTMLElement>('[data-app-grid-id]').forEach((element) => {
+    const id = element.dataset.appGridId
+    if (id) rects.set(id, element.getBoundingClientRect())
+  })
+  return rects
+}
+
+const animateGridReorder = (previousRects: Map<string, DOMRect>, activeId: string) => {
+  requestAnimationFrame(() => {
+    document.querySelectorAll<HTMLElement>('[data-app-grid-id]').forEach((element) => {
+      const id = element.dataset.appGridId
+      if (!id || id === activeId) return
+
+      const previous = previousRects.get(id)
+      if (!previous) return
+
+      const next = element.getBoundingClientRect()
+      const deltaX = previous.left - next.left
+      const deltaY = previous.top - next.top
+
+      if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) return
+
+      element.animate(
+        [
+          { transform: `translate3d(${deltaX}px, ${deltaY}px, 0)` },
+          { transform: 'translate3d(0, 0, 0)' }
+        ],
+        {
+          duration: 460,
+          easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+          fill: 'both'
+        }
+      )
+    })
+  })
+}
 
 /**
  * 应用图标网格组件
@@ -387,11 +438,13 @@ const AppGrid: React.FC = () => {
   }
 
   const previewReorder = (draggedId: string, overId: string) => {
+    const previousRects = getGridItemRects()
     setApps((prev) => {
       const { nextApps, changed } = reorderTopLevelApps(prev, draggedId, overId)
       if (changed) {
         didPreviewReorderRef.current = true
         latestAppsRef.current = nextApps
+        animateGridReorder(previousRects, draggedId)
       }
       return nextApps
     })
@@ -665,8 +718,8 @@ const AppGrid: React.FC = () => {
   }
 
   // Modal 成功回调
-  const handleModalSuccess = () => {
-    // 数据会通过 Zustand 自动更新
+  const handleModalSuccess = async () => {
+    await loadApps()
   }
 
   const openedFolder = openedFolderId
@@ -703,7 +756,7 @@ const AppGrid: React.FC = () => {
         </div>
 
         {/* 应用网格 */}
-        <SortableContext items={visibleApps.map((app) => app.id)} strategy={rectSortingStrategy}>
+        <SortableContext items={visibleApps.map((app) => app.id)} strategy={delayedReorderStrategy}>
           <div className={styles.appGrid} style={{ gap: `${iconSettings.spacing}px` }}>
             {visibleApps.map((node) =>
               node.type === 'folder' ? (
@@ -781,16 +834,16 @@ const AppGrid: React.FC = () => {
       </div>
 
       {/* 拖拽覆盖层 - 显示拖拽中的图标 */}
-      <DragOverlay>
+      <DragOverlay dropAnimation={null}>
         {activeId ? (
           <div
             style={{
               opacity: 0.9,
-              transform: 'rotate(5deg) scale(1.1)',
+              transform: 'scale(1.04)',
               cursor: 'grabbing',
               pointerEvents: 'none',
-              transition: 'transform 0.2s cubic-bezier(0.2, 0, 0, 1)',
-              filter: 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15))',
+              transition: 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)',
+              filter: 'drop-shadow(0 12px 24px rgba(0, 0, 0, 0.18))',
               zIndex: 9999
             }}
           >
@@ -807,11 +860,18 @@ const AppGrid: React.FC = () => {
                           height: iconSettings.size,
                           borderRadius: iconSettings.radius,
                           opacity: iconSettings.opacity / 100,
+                          background: isImageIcon(activeNode.icon) ? undefined : activeNode.iconBg || undefined,
                           transform: 'translateZ(0)',
                           willChange: 'transform'
                         }}
                       >
-                        <span className={styles.iconEmoji}>{activeNode.icon}</span>
+                        <span className={styles.iconEmoji}>
+                          {isImageIcon(activeNode.icon) ? (
+                            <img className={styles.iconImg} src={activeNode.icon} alt='' />
+                          ) : (
+                            activeNode.icon || iconTextFromName(activeNode.name)
+                          )}
+                        </span>
                       </div>
                       <div
                         className={styles.appName}

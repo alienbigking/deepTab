@@ -17,6 +17,7 @@ const DraggableFolderIcon: React.FC<DraggableFolderIconProps> = ({
   onDelete,
   onContextMenu
 }) => {
+  const [iconLoadFailed, setIconLoadFailed] = React.useState(false)
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: icon.id,
     data: {
@@ -38,6 +39,16 @@ const DraggableFolderIcon: React.FC<DraggableFolderIconProps> = ({
     color: iconSettings.fontColor === 'light' ? '#ffffff' : 'rgba(0,0,0,0.85)'
   }
 
+  const hasImageIcon = /^(https?:\/\/|data:image\/)/i.test(icon.icon)
+  const isImageIcon = hasImageIcon && !iconLoadFailed
+  const iconTextFromName = () => {
+    const text = String(icon.name || '').trim()
+    const chinese = text.match(/[\u4e00-\u9fa5]/g)
+    if (chinese?.length) return chinese.slice(0, 2).join('')
+    const letters = text.replace(/[^a-z0-9]/gi, '').slice(0, 2)
+    return (letters || text.slice(0, 2) || 'A').toUpperCase()
+  }
+
   return (
     <div
       ref={setNodeRef}
@@ -55,7 +66,18 @@ const DraggableFolderIcon: React.FC<DraggableFolderIconProps> = ({
       <div className={styles.appIcon}>
         {/* 图标 */}
         <div className={styles.iconWrapper} style={iconWrapperStyle}>
-          <span className={styles.iconEmoji}>{icon.icon}</span>
+          <span className={styles.iconEmoji}>
+            {isImageIcon ? (
+              <img
+                className={styles.iconImg}
+                src={icon.icon}
+                alt=''
+                onError={() => setIconLoadFailed(true)}
+              />
+            ) : (
+              hasImageIcon ? iconTextFromName() : icon.icon || iconTextFromName()
+            )}
+          </span>
         </div>
 
         {/* 应用名称 */}

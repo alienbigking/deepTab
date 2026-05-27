@@ -9,29 +9,43 @@ interface RecommendedApp {
   icon: string
   url: string
   desc: string
+  iconBg?: string
 }
 
 interface AddAppModalNavProps {
   apps: RecommendedApp[]
+  activeCategory: string
+  categories: { key: string; label: string }[]
   activeSubTab: 'today' | 'recent' | 'popular'
+  loading?: boolean
+  onChangeCategory: (key: any) => void
   onChangeSubTab: (key: 'today' | 'recent' | 'popular') => void
   onAddApp: (app: RecommendedApp) => void
 }
 
 const AddAppModalNav: React.FC<AddAppModalNavProps> = ({
   apps,
+  activeCategory,
+  categories,
   activeSubTab,
+  loading = false,
+  onChangeCategory,
   onChangeSubTab,
   onAddApp
 }) => {
   return (
     <div className={styles.container}>
       <div className={styles.categoryRow}>
-        <span className={cn(styles.categoryItem, styles.categoryItemActive)}>全部</span>
-        <span className={styles.categoryItem}>效率</span>
-        <span className={styles.categoryItem}>学习</span>
-        <span className={styles.categoryItem}>视频</span>
-        <span className={styles.categoryItem}>社交</span>
+        {categories.map((category) => (
+          <button
+            key={category.key}
+            type='button'
+            className={cn(styles.categoryItem, activeCategory === category.key && styles.categoryItemActive)}
+            onClick={() => onChangeCategory(category.key)}
+          >
+            {category.label}
+          </button>
+        ))}
       </div>
 
       <div className={styles.subTabsRow}>
@@ -52,7 +66,9 @@ const AddAppModalNav: React.FC<AddAppModalNavProps> = ({
           <div key={app.key} className={styles.card}>
             <div>
               <div className={styles.cardHeader}>
-                <div className={styles.cardIcon}>{app.icon}</div>
+                <div className={styles.cardIcon} style={{ backgroundColor: app.iconBg || '#fff' }}>
+                  {app.icon}
+                </div>
                 <div className={styles.cardTitle}>{app.name}</div>
               </div>
               <div className={styles.cardDesc}>{app.desc}</div>
@@ -61,6 +77,7 @@ const AddAppModalNav: React.FC<AddAppModalNavProps> = ({
               <Button
                 type='primary'
                 size='small'
+                loading={loading}
                 onClick={() => {
                   onAddApp(app)
                 }}

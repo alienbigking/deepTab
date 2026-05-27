@@ -9,29 +9,44 @@ interface RecommendedApp {
   icon: string
   url: string
   desc: string
+  iconBg?: string
+  popularity?: number
 }
 
 interface AddAppModalWidgetsProps {
   apps: RecommendedApp[]
+  activeCategory: string
+  categories: { key: string; label: string }[]
   activeSubTab: 'today' | 'recent' | 'popular'
+  loading?: boolean
+  onChangeCategory: (key: any) => void
   onChangeSubTab: (key: 'today' | 'recent' | 'popular') => void
   onAddApp: (app: RecommendedApp) => void
 }
 
 const AddAppModalWidgets: React.FC<AddAppModalWidgetsProps> = ({
   apps,
+  activeCategory,
+  categories,
   activeSubTab,
+  loading = false,
+  onChangeCategory,
   onChangeSubTab,
   onAddApp
 }) => {
   return (
     <div className={styles.container}>
       <div className={styles.categoryRow}>
-        <span className={cn(styles.categoryItem, styles.categoryItemActive)}>全部</span>
-        <span className={styles.categoryItem}>效率</span>
-        <span className={styles.categoryItem}>学习</span>
-        <span className={styles.categoryItem}>视频</span>
-        <span className={styles.categoryItem}>社交</span>
+        {categories.map((category) => (
+          <button
+            key={category.key}
+            type='button'
+            className={cn(styles.categoryItem, activeCategory === category.key && styles.categoryItemActive)}
+            onClick={() => onChangeCategory(category.key)}
+          >
+            {category.label}
+          </button>
+        ))}
       </div>
 
       <div className={styles.subTabsRow}>
@@ -51,7 +66,9 @@ const AddAppModalWidgets: React.FC<AddAppModalWidgetsProps> = ({
         {apps.map((app, index) => (
           <div key={app.key} className={styles.card}>
             <div className={styles.cardMain}>
-              <div className={styles.iconArea}>{app.icon}</div>
+              <div className={styles.iconArea} style={{ background: app.iconBg || undefined }}>
+                {app.icon}
+              </div>
               <div className={styles.text}>
                 <div className={styles.title}>{app.name}</div>
                 <div className={styles.subtitle}>{app.desc}</div>
@@ -60,11 +77,12 @@ const AddAppModalWidgets: React.FC<AddAppModalWidgetsProps> = ({
             <div className={styles.footer}>
               <div className={styles.hot}>
                 <span>🔥</span>
-                <span>{(index + 1) * 1000}</span>
+                <span>{app.popularity || (index + 1) * 1000}</span>
               </div>
               <Button
                 type='primary'
                 size='small'
+                loading={loading}
                 onClick={() => {
                   onAddApp(app)
                 }}

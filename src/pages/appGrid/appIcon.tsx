@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react'
+import React, { useRef, useEffect, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { CloseCircleFilled, FolderFilled } from '@ant-design/icons'
@@ -35,10 +35,38 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
 
   const longPressTimer = useRef<NodeJS.Timeout | null>(null)
   const longPressTriggered = useRef(false)
+  const [failedIconUrls, setFailedIconUrls] = useState<Record<string, boolean>>({})
 
   const isFolder = node.type === 'folder'
   const folder = isFolder ? (node as AppFolder) : null
   const item = !isFolder ? (node as AppItem) : null
+  const isImageIcon = (icon?: string) => /^(https?:\/\/|data:image\/)/i.test(String(icon || ''))
+  const iconTextFromName = (value?: string) => {
+    const text = String(value || '').trim()
+    if (!text) return 'A'
+    const chinese = text.match(/[\u4e00-\u9fa5]/g)
+    if (chinese?.length) return chinese.slice(0, 2).join('')
+    const letters = text.replace(/[^a-z0-9]/gi, '').slice(0, 2)
+    return (letters || text.slice(0, 2)).toUpperCase()
+  }
+
+  const renderImageIcon = (
+    icon: string | undefined,
+    className: string,
+    fallback: React.ReactNode
+  ) => {
+    const active = String(icon || '')
+    if (failedIconUrls[active]) return fallback
+    if (!active) return fallback
+    return (
+      <img
+        src={active}
+        alt=''
+        className={className}
+        onError={() => setFailedIconUrls((value) => ({ ...value, [active]: true }))}
+      />
+    )
+  }
 
   // 拖拽相关 - 只有在不禁用拖拽时才使用
   const sortable = useSortable({
@@ -66,7 +94,8 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
     width: iconSettings.size,
     height: iconSettings.size,
     borderRadius: iconSettings.radius,
-    opacity: iconSettings.opacity / 100
+    opacity: iconSettings.opacity / 100,
+    background: !isImageIcon(node.icon) ? node.iconBg || undefined : undefined
   }
 
   const appNameStyle: React.CSSProperties = {
@@ -106,6 +135,15 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
     if (!item) return
 
     try {
+      if (item.url.startsWith('deeptab://widget/')) {
+        document.querySelector('[data-deeptab-widgets]')?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'center'
+        })
+        return
+      }
+
       const normalizedUrl = normalizeUrl(item.url)
       if (normalizedUrl) {
         chrome.tabs.create({ url: normalizedUrl, active: true })
@@ -149,6 +187,10 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
     }
   }, [])
 
+  useEffect(() => {
+    setFailedIconUrls({})
+  }, [node.id, node.icon])
+
   return (
     <div
       ref={disableDrag ? undefined : setNodeRef}
@@ -188,14 +230,32 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
             {/* 文件夹封面 - 显示最多4个子图标 */}
             {folder && folder.children.length > 0 ? (
               <div className={styles.folderCover}>
-                {folder.children.slice(0, 4).map((child, index) => (
+                {folder.children.slice(0, 4).map((child) => (
                   <span key={child.id} className={styles.folderCoverIcon}>
-                    {child.icon}
+                    {isImageIcon(child.icon) ? (
+                      renderImageIcon(
+                        child.icon,
+                        styles.folderCoverImg,
+                        iconTextFromName(child.name)
+                      )
+                    ) : (
+                      child.icon
+                    )}
                   </span>
                 ))}
               </div>
             ) : (
-              <span className={styles.iconEmoji}>{folder?.icon || <FolderFilled />}</span>
+              <span className={styles.iconEmoji}>
+                {isImageIcon(folder?.icon) ? (
+                  renderImageIcon(
+                    folder?.icon,
+                    styles.iconImg,
+                    <FolderFilled />
+                  )
+                ) : (
+                  folder?.icon || <FolderFilled />
+                )}
+              </span>
             )}
             {/* 徽标计数 */}
             {folder && folder.children.length > 0 && (
@@ -205,7 +265,17 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
             )}
           </>
         ) : (
-          <span className={styles.iconEmoji}>{item?.icon}</span>
+          <span className={styles.iconEmoji}>
+            {isImageIcon(item?.icon) ? (
+              renderImageIcon(
+                item?.icon,
+                styles.iconImg,
+                iconTextFromName(item?.name)
+              )
+            ) : (
+              item?.icon
+            )}
+          </span>
         )}
       </div>
 

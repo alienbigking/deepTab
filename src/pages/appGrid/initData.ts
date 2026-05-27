@@ -1,4 +1,9 @@
-import type { Apps } from './types/appGrid'
+import type { Apps, AppItem } from './types/appGrid'
+
+const APP_GRID_DATA_VERSION = 5
+const APP_GRID_DATA_VERSION_KEY = 'app_grid_data_version'
+const APP_GRID_STORAGE_KEY = 'app_grid_data'
+const APP_GRID_LEGACY_KEYS = ['app_grid_data', 'app_grid_icon_settings', 'bottom_bar_pins']
 
 /**
  * 初始化默认应用数据
@@ -24,26 +29,42 @@ export const defaultApps: Omit<Apps, 'id' | 'order'>[] = [
  */
 export const initDefaultApps = async (): Promise<void> => {
   return new Promise((resolve) => {
-    chrome.storage.local.get(['app_grid_data'], (result) => {
-      // 如果已有数据,不覆盖
-      if (result.app_grid_data && result.app_grid_data.length > 0) {
+    chrome.storage.local.get([APP_GRID_STORAGE_KEY, APP_GRID_DATA_VERSION_KEY], (result) => {
+      const storedVersion = result[APP_GRID_DATA_VERSION_KEY]
+      const shouldReset = storedVersion !== APP_GRID_DATA_VERSION
+
+      const initApps = () => {
+        const apps: AppItem[] = defaultApps.map((app, index) => ({
+          ...app,
+          type: 'item',
+          id: `app_init_${Date.now()}_${index}`,
+          order: index,
+          createdAt: new Date().toISOString()
+        }))
+
+        chrome.storage.local.set(
+          {
+            [APP_GRID_STORAGE_KEY]: apps,
+            [APP_GRID_DATA_VERSION_KEY]: APP_GRID_DATA_VERSION
+          },
+          () => {
+            console.log('✅ 默认应用数据初始化完成')
+            resolve()
+          }
+        )
+      }
+
+      if (shouldReset) {
+        chrome.storage.local.remove(APP_GRID_LEGACY_KEYS, initApps)
+        return
+      }
+
+      if (result[APP_GRID_STORAGE_KEY] && result[APP_GRID_STORAGE_KEY].length > 0) {
         resolve()
         return
       }
 
-      // 生成完整的应用数据
-      const apps: Apps[] = defaultApps.map((app, index) => ({
-        ...app,
-        id: `app_init_${Date.now()}_${index}`,
-        order: index,
-        createdAt: new Date().toISOString()
-      }))
-
-      // 保存到 storage
-      chrome.storage.local.set({ app_grid_data: apps }, () => {
-        console.log('✅ 默认应用数据初始化完成')
-        resolve()
-      })
+      initApps()
     })
   })
 }

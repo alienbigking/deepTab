@@ -5,6 +5,7 @@ export interface Apps {
   id: string // 唯一标识s
   name: string // 应用名称
   icon: string // 图标(emoji 或 URL)
+  iconBg?: string // 文字/emoji 图标背景色
   url: string // 应用链接
   order: number // 排序序号
   categoryId?: string // 分类/分页 ID
@@ -64,6 +65,7 @@ export interface ContextMenuState {
 export interface AddAppParams {
   name: string
   icon: string
+  iconBg?: string
   url: string
   categoryId?: string
 }
@@ -75,6 +77,7 @@ export interface UpdateAppParams {
   id: string
   name?: string
   icon?: string
+  iconBg?: string
   url?: string
   categoryId?: string
 }

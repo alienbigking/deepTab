@@ -96,10 +96,12 @@ const CalendarWidget: React.FC = () => {
         title='日期'
         open={open}
         onCancel={() => handleOpenChange(false)}
-        rootClassName={addAppModalStyles.addAppModalRoot}
+        rootClassName={`${addAppModalStyles.addAppModalRoot} ${styles.widgetModalRoot}`}
         className={styles.widgetModal}
         centered
         width={1000}
+        transitionName=''
+        maskTransitionName=''
         styles={{ body: { overflow: 'hidden' } }}
         footer={null}
         destroyOnHidden

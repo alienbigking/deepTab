@@ -11,7 +11,7 @@ import HotSearchWidget from './hotSearchWidget'
  */
 const WidgetsContainer: React.FC = () => {
   return (
-    <div className={styles.widgetsContainer}>
+    <div className={styles.widgetsContainer} data-deeptab-widgets>
       <CalendarWidget />
       <WeatherWidget />
       <TodoWidget />

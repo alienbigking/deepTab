@@ -33,6 +33,7 @@ interface DockItemProps {
 
 const DockSortableItem: React.FC<DockItemProps> = (props) => {
   const { app, onOpen, onRemove, onEdit } = props
+  const [iconLoadFailed, setIconLoadFailed] = useState(false)
 
   // 只允许普通图标在底部栏，文件夹不支持
   if (app.type !== 'item') return null
@@ -51,8 +52,14 @@ const DockSortableItem: React.FC<DockItemProps> = (props) => {
     opacity: isDragging ? 0.6 : 1
   }
 
-  const isImageIcon = (icon: string) => {
-    return /^(https?:\/\/|data:image\/)/.test(icon)
+  const hasImageIcon = /^(https?:\/\/|data:image\/)/i.test(app.icon)
+  const isImageIcon = hasImageIcon && !iconLoadFailed
+  const iconTextFromName = () => {
+    const text = String(app.name || '').trim()
+    const chinese = text.match(/[\u4e00-\u9fa5]/g)
+    if (chinese?.length) return chinese.slice(0, 2).join('')
+    const letters = text.replace(/[^a-z0-9]/gi, '').slice(0, 2)
+    return (letters || text.slice(0, 2) || 'A').toUpperCase()
   }
 
   return (
@@ -82,10 +89,17 @@ const DockSortableItem: React.FC<DockItemProps> = (props) => {
         {...attributes}
         {...listeners}
       >
-        {isImageIcon(app.icon) ? (
-          <img className={cn(styles.iconImg)} src={app.icon} alt={app.name} />
+        {isImageIcon ? (
+          <img
+            className={cn(styles.iconImg)}
+            src={app.icon}
+            alt=''
+            onError={() => setIconLoadFailed(true)}
+          />
         ) : (
-          <span className={cn(styles.emoji)}>{app.icon}</span>
+          <span className={cn(styles.emoji)}>
+            {hasImageIcon ? iconTextFromName() : app.icon || iconTextFromName()}
+          </span>
         )}
       </div>
     </Dropdown>
@@ -153,6 +167,13 @@ const BottomBar: React.FC<BottomBarProps> = (props) => {
   }
 
   const fallbackApps = dockApps
+  const iconTextFromApp = (app: AppItem) => {
+    const text = String(app.name || '').trim()
+    const chinese = text.match(/[\u4e00-\u9fa5]/g)
+    if (chinese?.length) return chinese.slice(0, 2).join('')
+    const letters = text.replace(/[^a-z0-9]/gi, '').slice(0, 2)
+    return (letters || text.slice(0, 2) || 'A').toUpperCase()
+  }
 
   return (
     <div className={cn(styles.bottomBarWrap)}>
@@ -180,10 +201,10 @@ const BottomBar: React.FC<BottomBarProps> = (props) => {
               title={app.name}
               onClick={() => openApp(app.url)}
             >
-              {/^(https?:\/\/|data:image\/)/.test(app.icon) ? (
-                <img className={cn(styles.iconImg)} src={app.icon} alt={app.name} />
+              {/^(https?:\/\/|data:image\/)/i.test(app.icon) ? (
+                <img className={cn(styles.iconImg)} src={app.icon} alt='' />
               ) : (
-                <span className={cn(styles.emoji)}>{app.icon}</span>
+                <span className={cn(styles.emoji)}>{app.icon || iconTextFromApp(app)}</span>
               )}
             </div>
           ))

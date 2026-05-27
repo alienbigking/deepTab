@@ -109,10 +109,12 @@ const TodoWidget: React.FC = () => {
         title='待办事项'
         open={open}
         onCancel={() => setOpen(false)}
-        rootClassName={addAppModalStyles.addAppModalRoot}
+        rootClassName={`${addAppModalStyles.addAppModalRoot} ${styles.widgetModalRoot}`}
         className={styles.widgetModal}
         centered
         width={1000}
+        transitionName=''
+        maskTransitionName=''
         styles={{ body: { overflow: 'hidden' } }}
         footer={null}
         destroyOnHidden
