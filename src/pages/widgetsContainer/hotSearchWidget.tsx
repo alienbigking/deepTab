@@ -156,7 +156,12 @@ const HotSearchWidget: React.FC = () => {
 
   return (
     <>
-      <Card className={styles.hotSearchCard} variant='borderless' onClick={handleOpenModal}>
+      <Card
+        className={styles.hotSearchCard}
+        variant='borderless'
+        style={{ '--dt-hot-platform-color': activePlatform.color } as React.CSSProperties}
+        onClick={handleOpenModal}
+      >
         <Spin spinning={loading && !data}>
           <div className={styles.hotSearchCompact}>
             <div className={styles.hotSearchCompactHeader}>

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Button, Card, Modal, Select, Spin, Tooltip } from 'antd'
 import { EnvironmentOutlined, ReloadOutlined } from '@ant-design/icons'
+import cn from 'classnames'
 import addAppModalStyles from '@/pages/appGrid/addAppModal.module.less'
 import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 import styles from './widgets.module.less'
@@ -11,6 +12,16 @@ const windDirectionText = (degree?: number) => {
   if (degree === undefined) return '--'
   const dirs = ['北', '东北', '东', '东南', '南', '西南', '西', '西北']
   return dirs[Math.round(degree / 45) % 8]
+}
+
+const getWeatherTheme = (weather?: IWeatherData | null) => {
+  const condition = `${weather?.condition || ''}${weather?.icon || ''}`
+  if (/雷|⛈/.test(condition)) return 'storm'
+  if (/雪|❄/.test(condition)) return 'snow'
+  if (/雨|🌧|🌦/.test(condition)) return 'rain'
+  if (/雾|霾|🌫/.test(condition)) return 'fog'
+  if (/阴|云|☁/.test(condition)) return 'cloudy'
+  return 'sunny'
 }
 
 const WeatherWidget: React.FC = () => {
@@ -68,7 +79,11 @@ const WeatherWidget: React.FC = () => {
 
   return (
     <>
-      <Card className={styles.widgetCard} variant='borderless' onClick={() => setOpen(true)}>
+      <Card
+        className={cn(styles.widgetCard, styles.weatherCard, styles[`weatherTheme_${getWeatherTheme(data)}`])}
+        variant='borderless'
+        onClick={() => setOpen(true)}
+      >
         <Spin spinning={loading && !data}>
           <div className={styles.weatherWidget}>
             <div className={styles.weatherCompact}>

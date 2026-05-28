@@ -62,6 +62,108 @@
   }
 }
 
+.homePage {
+  width: 100%;
+  min-height: 100%;
+  will-change: transform, opacity, filter;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+
+.homePageAnimating {
+  animation-duration: 620ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: both;
+}
+
+.homePageInNextA {
+}
+
+.homePageInNextB {
+}
+
+.homePageInPrevA {
+}
+
+.homePageInPrevB {
+}
+
+@keyframes homePageInNextA {
+  0% {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translate3d(0, 42px, 0) scale(0.985);
+  }
+
+  55% {
+    opacity: 1;
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes homePageInNextB {
+  0% {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translate3d(0, 42px, 0) scale(0.985);
+  }
+
+  55% {
+    opacity: 1;
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes homePageInPrevA {
+  0% {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translate3d(0, -42px, 0) scale(0.985);
+  }
+
+  55% {
+    opacity: 1;
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes homePageInPrevB {
+  0% {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translate3d(0, -42px, 0) scale(0.985);
+  }
+
+  55% {
+    opacity: 1;
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
 // 设置按钮
 .settingsButton {
   position: fixed;

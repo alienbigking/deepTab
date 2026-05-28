@@ -19,6 +19,7 @@ import styles from './appCategorySidebar.module.less'
 import useAppCategoryStore from './stores/appCategory'
 import type { CategoryIconKey } from './types/appCategory'
 import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
+import useAuthStore from '@/pages/auth/stores/auth'
 
 const iconMap: Record<CategoryIconKey, React.ReactNode> = {
   home: <HomeOutlined />,
@@ -72,23 +73,37 @@ const AppCategorySidebar: React.FC<AppCategorySidebarProps> = (props) => {
   const [editorOpen, setEditorOpen] = useState(false)
   const [editorMode, setEditorMode] = useState<'add' | 'edit'>('add')
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [avatarError, setAvatarError] = useState(false)
   const [editorForm] = Form.useForm<CategoryEditorForm>()
   const editorIcon = Form.useWatch('icon', editorForm)
+  const session = useAuthStore((s) => s.session)
+  const initAuth = useAuthStore((s) => s.init)
+  const user = session?.user
+  const avatar = avatarError ? '' : user?.avatar
 
   useEffect(() => {
     void init()
+    void initAuth()
 
     const onChanged = (changes: any, areaName: string) => {
       if (areaName !== 'local') return
-      if (!changes?.app_categories) return
-      void init()
+      if (changes?.app_categories) {
+        void init()
+      }
+      if (changes?.auth_session || changes?.token) {
+        void initAuth()
+      }
     }
 
     chrome.storage.onChanged.addListener(onChanged)
     return () => {
       chrome.storage.onChanged.removeListener(onChanged)
     }
-  }, [init])
+  }, [init, initAuth])
+
+  useEffect(() => {
+    setAvatarError(false)
+  }, [user?.avatar])
 
   const visibleCategories = useMemo(
     () => categories.slice().sort((a, b) => a.order - b.order),
@@ -215,7 +230,11 @@ const AppCategorySidebar: React.FC<AppCategorySidebarProps> = (props) => {
 
         <div className={cn(styles.bar)}>
           <div className={cn(styles.avatar)}>
-            <UserOutlined style={{ fontSize: 22, color: 'rgba(255,255,255,0.85)' }} />
+            {avatar ? (
+              <img src={avatar} alt={user?.nickname || user?.username || 'avatar'} onError={() => setAvatarError(true)} />
+            ) : (
+              <UserOutlined style={{ fontSize: 22, color: 'rgba(255,255,255,0.85)' }} />
+            )}
           </div>
 
           <div className={cn(styles.divider)} />

@@ -17,7 +17,7 @@
 
 // 应用网格容器
 .appGridContainer {
-  padding: 0 80px;
+  padding: 8px 80px 0;
   flex: 1;
   overflow-y: auto;
   display: flex;
@@ -33,12 +33,15 @@
   align-items: center;
 }
 
-// 应用网格
 .appGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-  gap: 24px;
-  max-width: 1200px;
+  grid-template-columns: repeat(auto-fill, 120px);
+  gap: var(--dt-grid-gap, 24px);
+  grid-auto-rows: calc((220px - var(--dt-grid-gap, 24px)) / 2);
+  grid-auto-flow: row dense;
+  justify-content: center;
+  align-items: start;
+  max-width: 1720px;
   width: 100%;
   padding-bottom: 160px;
 }
@@ -265,6 +268,8 @@
 // 可拖拽文件夹容器
 .droppableFolder {
   position: relative;
+  width: 120px;
+  min-height: calc((220px - var(--dt-grid-gap, 24px)) / 2);
   transition:
     transform 0.34s cubic-bezier(0.22, 1, 0.36, 1),
     opacity 0.18s ease;
@@ -290,6 +295,8 @@
 // 可拖拽图标容器
 .droppableIcon {
   position: relative;
+  width: 120px;
+  min-height: calc((220px - var(--dt-grid-gap, 24px)) / 2);
   transition:
     opacity 0.18s ease,
     transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
@@ -314,6 +321,44 @@
     .iconWrapper,
     .appName {
       transform: none;
+    }
+  }
+}
+
+.droppableWidget {
+  position: relative;
+  min-width: 0;
+  height: 220px;
+  transition:
+    opacity 0.18s ease,
+    transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+  touch-action: none;
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  &:hover {
+    z-index: 5;
+  }
+
+  &.widgetDropOver {
+    transform: translateY(-1px) scale(1.01);
+  }
+
+  &.isDragging {
+    opacity: 0;
+    cursor: grabbing;
+  }
+
+  :global {
+    .ant-card {
+      width: var(--dt-widget-node-width) !important;
+      min-width: var(--dt-widget-node-width) !important;
+      max-width: var(--dt-widget-node-width) !important;
+      border-radius: 16px !important;
+      overflow: hidden;
     }
   }
 }

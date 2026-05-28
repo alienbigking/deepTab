@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Button, Tabs } from 'antd'
 import cn from 'classnames'
 import styles from './addAppModalWidgets.module.less'
@@ -11,6 +11,7 @@ interface RecommendedApp {
   desc: string
   iconBg?: string
   popularity?: number
+  widgetSpan?: 2 | 4
 }
 
 interface AddAppModalWidgetsProps {
@@ -34,6 +35,8 @@ const AddAppModalWidgets: React.FC<AddAppModalWidgetsProps> = ({
   onChangeSubTab,
   onAddApp
 }) => {
+  const [spanByKey, setSpanByKey] = useState<Record<string, 2 | 4>>({})
+
   return (
     <div className={styles.container}>
       <div className={styles.categoryRow}>
@@ -79,12 +82,34 @@ const AddAppModalWidgets: React.FC<AddAppModalWidgetsProps> = ({
                 <span>🔥</span>
                 <span>{app.popularity || (index + 1) * 1000}</span>
               </div>
+              {app.url.startsWith('deeptab://widget/') && (
+                <div className={styles.spanSwitch}>
+                  {[2, 4].map((span) => (
+                    <button
+                      key={span}
+                      type='button'
+                      className={cn(
+                        styles.spanOption,
+                        (spanByKey[app.key] || app.widgetSpan || 4) === span && styles.spanOptionActive
+                      )}
+                      onClick={() => setSpanByKey((value) => ({ ...value, [app.key]: span as 2 | 4 }))}
+                    >
+                      {span}列
+                    </button>
+                  ))}
+                </div>
+              )}
               <Button
                 type='primary'
                 size='small'
                 loading={loading}
                 onClick={() => {
-                  onAddApp(app)
+                  onAddApp({
+                    ...app,
+                    widgetSpan: app.url.startsWith('deeptab://widget/')
+                      ? spanByKey[app.key] || app.widgetSpan || 4
+                      : app.widgetSpan
+                  })
                 }}
               >
                 添加

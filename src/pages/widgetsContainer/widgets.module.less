@@ -1,5 +1,6 @@
 // Widget card
 @widget-card-height: 220px;
+@widget-card-radius: 16px;
 
 .widgetCard {
   position: relative;
@@ -8,7 +9,7 @@
   max-height: @widget-card-height;
   box-sizing: border-box;
   background: var(--dt-widget-bg);
-  border-radius: 16px;
+  border-radius: @widget-card-radius;
   border: 1px solid rgba(255, 255, 255, 0.36);
   box-shadow:
     var(--dt-widget-shadow),
@@ -64,6 +65,97 @@
     linear-gradient(145deg, rgba(255, 255, 255, 0.97), rgba(234, 247, 255, 0.82));
 }
 
+.weatherCard {
+  color: rgba(0, 0, 0, 0.86);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.78;
+    transition: opacity 0.3s ease;
+  }
+
+  &:hover::after {
+    opacity: 1;
+  }
+}
+
+.weatherTheme_sunny::before {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 203, 71, 0.62), transparent 24%),
+    radial-gradient(circle at 86% 12%, rgba(116, 194, 255, 0.28), transparent 30%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.97), rgba(225, 244, 255, 0.88));
+}
+
+.weatherTheme_sunny::after {
+  background:
+    radial-gradient(circle at 14% 18%, rgba(255, 214, 92, 0.4), transparent 18%),
+    linear-gradient(120deg, transparent 52%, rgba(255, 255, 255, 0.22) 52%, transparent 72%);
+}
+
+.weatherTheme_cloudy::before {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(175, 202, 222, 0.48), transparent 28%),
+    radial-gradient(circle at 82% 12%, rgba(255, 255, 255, 0.56), transparent 30%),
+    linear-gradient(145deg, rgba(248, 252, 255, 0.96), rgba(218, 231, 242, 0.86));
+}
+
+.weatherTheme_cloudy::after {
+  background:
+    radial-gradient(ellipse at 70% 30%, rgba(255, 255, 255, 0.58), transparent 24%),
+    radial-gradient(ellipse at 50% 42%, rgba(185, 205, 222, 0.34), transparent 28%);
+}
+
+.weatherTheme_rain::before {
+  background:
+    radial-gradient(circle at 14% 18%, rgba(88, 167, 255, 0.34), transparent 30%),
+    linear-gradient(145deg, rgba(240, 248, 255, 0.96), rgba(196, 220, 238, 0.88));
+}
+
+.weatherTheme_rain::after {
+  background:
+    repeating-linear-gradient(105deg, transparent 0 13px, rgba(65, 130, 194, 0.18) 14px 16px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(61, 118, 170, 0.08));
+}
+
+.weatherTheme_snow::before {
+  background:
+    radial-gradient(circle at 20% 16%, rgba(171, 219, 255, 0.38), transparent 30%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(226, 239, 248, 0.9));
+}
+
+.weatherTheme_snow::after {
+  background:
+    radial-gradient(circle at 20% 28%, rgba(255, 255, 255, 0.86) 0 2px, transparent 3px),
+    radial-gradient(circle at 70% 18%, rgba(255, 255, 255, 0.74) 0 2px, transparent 3px),
+    radial-gradient(circle at 82% 62%, rgba(255, 255, 255, 0.72) 0 2px, transparent 3px);
+}
+
+.weatherTheme_fog::before {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.97), rgba(223, 229, 229, 0.9));
+}
+
+.weatherTheme_fog::after {
+  background:
+    repeating-linear-gradient(0deg, transparent 0 24px, rgba(154, 166, 166, 0.16) 25px 33px),
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+}
+
+.weatherTheme_storm::before {
+  background:
+    radial-gradient(circle at 15% 18%, rgba(130, 104, 255, 0.28), transparent 32%),
+    linear-gradient(145deg, rgba(236, 241, 255, 0.97), rgba(178, 190, 220, 0.88));
+}
+
+.weatherTheme_storm::after {
+  background:
+    linear-gradient(120deg, transparent 48%, rgba(255, 213, 72, 0.42) 49%, transparent 54%),
+    repeating-linear-gradient(105deg, transparent 0 14px, rgba(52, 75, 118, 0.18) 15px 17px);
+}
+
 .widgetCard:has(.todoWidget)::before {
   background:
     radial-gradient(circle at 84% 16%, rgba(117, 84, 255, 0.2), transparent 30%),
@@ -71,7 +163,7 @@
 }
 
 .calendarWidget {
-  width: 180px;
+  width: 100%;
   height: 100%;
   color: var(--dt-widget-text);
   cursor: pointer;
@@ -137,6 +229,38 @@
     font-style: normal;
     font-size: 12px;
     color: var(--dt-widget-text-3);
+  }
+}
+
+.calendarFestival {
+  min-width: 0;
+  margin-top: 18px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 223, 111, 0.18);
+  border: 1px solid rgba(217, 159, 0, 0.14);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  span,
+  em {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-style: normal;
+    font-size: 12px;
+  }
+
+  span {
+    color: rgba(59, 43, 0, 0.86);
+    font-weight: 700;
+  }
+
+  em {
+    color: rgba(59, 43, 0, 0.52);
   }
 }
 
@@ -403,7 +527,7 @@
   }
 }
 .weatherWidget {
-  width: 260px;
+  width: 100%;
   height: 100%;
   color: var(--dt-widget-text);
   cursor: pointer;
@@ -709,7 +833,7 @@
 }
 
 .todoWidget {
-  width: 260px;
+  width: 100%;
   height: 100%;
   color: var(--dt-widget-text);
   cursor: pointer;
@@ -758,6 +882,34 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.todoCompactProgress {
+  position: relative;
+  margin-top: 12px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(112, 83, 255, 0.08);
+  overflow: hidden;
+
+  span {
+    position: relative;
+    z-index: 1;
+    display: block;
+    padding: 0 10px;
+    line-height: 22px;
+    font-size: 11px;
+    color: rgba(69, 53, 158, 0.72);
+  }
+
+  i {
+    position: absolute;
+    inset: 0 auto 0 0;
+    min-width: 8px;
+    border-radius: inherit;
+    background: linear-gradient(90deg, rgba(108, 92, 255, 0.28), rgba(255, 122, 168, 0.28));
+    transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
 }
 
 .todoCompactItem {
@@ -949,10 +1101,10 @@
   min-height: @widget-card-height;
   max-height: @widget-card-height;
   box-sizing: border-box;
-  border-radius: 30px;
+  border-radius: @widget-card-radius;
   overflow: hidden;
   background:
-    radial-gradient(circle at 8% 14%, rgba(255, 67, 88, 0.13), transparent 30%),
+    radial-gradient(circle at 8% 14%, color-mix(in srgb, var(--dt-hot-platform-color, #ff3434) 22%, transparent), transparent 30%),
     radial-gradient(circle at 92% 6%, rgba(255, 178, 73, 0.16), transparent 30%),
     linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(255, 248, 244, 0.88));
   border: 1px solid rgba(255, 255, 255, 0.4);
@@ -965,13 +1117,31 @@
     box-shadow 0.3s ease,
     transform 0.3s ease;
 
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--dt-hot-platform-color, #ff3434) 13%, transparent), transparent 42%),
+      radial-gradient(circle at 90% 80%, color-mix(in srgb, var(--dt-hot-platform-color, #ff3434) 18%, transparent), transparent 30%);
+    opacity: 0.85;
+    transition: opacity 0.3s ease;
+  }
+
   &:hover {
     box-shadow: var(--dt-widget-shadow-hover);
     transform: translateY(-2px);
+
+    &::before {
+      opacity: 1;
+    }
   }
 
   :global {
     .ant-card-body {
+      position: relative;
+      z-index: 1;
       height: 100%;
       box-sizing: border-box;
       padding: 14px 28px;
@@ -1038,8 +1208,8 @@
   }
 
   &:nth-child(1) span {
-    color: #ff3434;
-    text-shadow: 0 6px 16px rgba(255, 52, 52, 0.2);
+    color: var(--dt-hot-platform-color, #ff3434);
+    text-shadow: 0 6px 16px color-mix(in srgb, var(--dt-hot-platform-color, #ff3434) 22%, transparent);
   }
 
   &:nth-child(2) span {

@@ -39,6 +39,7 @@ const TodoWidget: React.FC = () => {
 
   const activeTodos = todos.filter((todo) => !todo.completed)
   const completedTodos = todos.filter((todo) => todo.completed)
+  const completionRate = todos.length ? Math.round((completedTodos.length / todos.length) * 100) : 0
   const filteredTodos = useMemo(() => {
     const nextList =
       filter === 'active' ? activeTodos : filter === 'completed' ? completedTodos : todos
@@ -102,6 +103,10 @@ const TodoWidget: React.FC = () => {
                 </div>
               ))
             )}
+          </div>
+          <div className={styles.todoCompactProgress}>
+            <span>完成率 {completionRate}%</span>
+            <i style={{ width: `${completionRate}%` }} />
           </div>
         </div>
       </Card>

@@ -1,6 +1,6 @@
 import type { Apps, AppItem } from './types/appGrid'
 
-const APP_GRID_DATA_VERSION = 5
+const APP_GRID_DATA_VERSION = 7
 const APP_GRID_DATA_VERSION_KEY = 'app_grid_data_version'
 const APP_GRID_STORAGE_KEY = 'app_grid_data'
 const APP_GRID_LEGACY_KEYS = ['app_grid_data', 'app_grid_icon_settings', 'bottom_bar_pins']
@@ -10,6 +10,10 @@ const APP_GRID_LEGACY_KEYS = ['app_grid_data', 'app_grid_icon_settings', 'bottom
  * 用于首次使用时填充一些常用应用
  */
 export const defaultApps: Omit<Apps, 'id' | 'order'>[] = [
+  { name: '日期', icon: '27', iconBg: '#f59e0b', url: 'deeptab://widget/calendar', widgetSpan: 4, syncStatus: 'synced' },
+  { name: '天气', icon: '☁', iconBg: '#38bdf8', url: 'deeptab://widget/weather', widgetSpan: 4, syncStatus: 'synced' },
+  { name: '待办事项', icon: '✓', iconBg: '#7c3aed', url: 'deeptab://widget/todo', widgetSpan: 4, syncStatus: 'synced' },
+  { name: '热搜榜', icon: '热', iconBg: '#ef4444', url: 'deeptab://widget/hotSearch', widgetSpan: 4, syncStatus: 'synced' },
   { name: 'Google', icon: '🔍', url: 'https://www.google.com', syncStatus: 'synced' },
   { name: 'GitHub', icon: '🐙', url: 'https://github.com', syncStatus: 'synced' },
   { name: 'ChatGPT', icon: '🤖', url: 'https://chat.openai.com', syncStatus: 'synced' },

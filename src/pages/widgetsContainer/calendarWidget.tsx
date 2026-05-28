@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { Button, Card, Modal, Select, Tooltip } from 'antd'
 import { LeftOutlined, ReloadOutlined, RightOutlined } from '@ant-design/icons'
+import cn from 'classnames'
 import addAppModalStyles from '@/pages/appGrid/addAppModal.module.less'
 import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 import styles from './widgets.module.less'
@@ -16,10 +17,53 @@ interface ICalendarDay {
 
 const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
 
+const FESTIVALS: Record<string, string> = {
+  '01-01': '元旦',
+  '02-14': '情人节',
+  '03-08': '妇女节',
+  '03-12': '植树节',
+  '04-01': '愚人节',
+  '05-01': '劳动节',
+  '05-04': '青年节',
+  '06-01': '儿童节',
+  '07-01': '建党节',
+  '08-01': '建军节',
+  '09-10': '教师节',
+  '10-01': '国庆节',
+  '10-31': '万圣夜',
+  '12-24': '平安夜',
+  '12-25': '圣诞节'
+}
+
 const getWeekOfYear = (date: DayJS.Dayjs) => {
   const firstDay = date.startOf('year')
   const passedDays = date.diff(firstDay, 'day')
   return Math.ceil((passedDays + ((firstDay.day() + 6) % 7) + 1) / 7)
+}
+
+const getFestivalInfo = (date: DayJS.Dayjs) => {
+  const todayKey = date.format('MM-DD')
+  const todayFestival = FESTIVALS[todayKey]
+  if (todayFestival) {
+    return {
+      label: `今天是${todayFestival}`,
+      detail: '愿今天有一点值得记住'
+    }
+  }
+
+  const next = Object.entries(FESTIVALS)
+    .map(([key, name]) => {
+      const [month, day] = key.split('-').map(Number)
+      const candidate = date.month(month - 1).date(day)
+      const nextDate = candidate.isBefore(date, 'day') ? candidate.add(1, 'year') : candidate
+      return { name, days: nextDate.startOf('day').diff(date.startOf('day'), 'day') }
+    })
+    .sort((a, b) => a.days - b.days)[0]
+
+  return {
+    label: `下个节日 · ${next.name}`,
+    detail: `${next.days} 天后`
+  }
 }
 
 const CalendarWidget: React.FC = () => {
@@ -67,6 +111,7 @@ const CalendarWidget: React.FC = () => {
   const daysLeft = daysInYear - dayOfYear
   const weekOfYear = getWeekOfYear(today)
   const isCurrentMonth = viewMonth.isSame(today, 'month')
+  const festivalInfo = getFestivalInfo(today)
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen)
@@ -77,7 +122,11 @@ const CalendarWidget: React.FC = () => {
 
   return (
     <>
-      <Card className={styles.widgetCard} variant='borderless' onClick={() => handleOpenChange(true)}>
+      <Card
+        className={cn(styles.widgetCard, styles.calendarCard)}
+        variant='borderless'
+        onClick={() => handleOpenChange(true)}
+      >
         <div className={styles.calendarWidget}>
           <div className={styles.calendarCompactTop}>
             <span>{today.format('YYYY年M月')}</span>
@@ -89,6 +138,10 @@ const CalendarWidget: React.FC = () => {
               <span>今天</span>
               <em>第 {dayOfYear} 天</em>
             </div>
+          </div>
+          <div className={styles.calendarFestival}>
+            <span>{festivalInfo.label}</span>
+            <em>{festivalInfo.detail}</em>
           </div>
         </div>
       </Card>

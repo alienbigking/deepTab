@@ -7,6 +7,7 @@ import {
   EditOutlined,
   DeleteOutlined,
   PlusOutlined,
+  AppstoreAddOutlined,
   FolderOutlined
 } from '@ant-design/icons'
 import cn from 'classnames'
@@ -17,7 +18,7 @@ interface ContextMenuProps {
   visible: boolean
   x: number
   y: number
-  nodeType: 'item' | 'folder' | 'blank'
+  nodeType: 'item' | 'folder' | 'widget' | 'blank'
   onOpenCurrent: () => void
   onOpenNew: () => void
   onEdit: () => void
@@ -27,6 +28,7 @@ interface ContextMenuProps {
   onClose: () => void
   allFolders?: AppFolder[] // 用于"移动到文件夹"子菜单
   onCreateFolderRequested?: () => void // 新增：请求创建文件夹
+  onAddAppRequested?: () => void
 }
 
 const ContextMenu: React.FC<ContextMenuProps> = (props) => {
@@ -43,7 +45,8 @@ const ContextMenu: React.FC<ContextMenuProps> = (props) => {
     onMoveToFolder,
     onClose,
     allFolders = [],
-    onCreateFolderRequested
+    onCreateFolderRequested,
+    onAddAppRequested
   } = props
 
   // 点击外部关闭菜单
@@ -88,11 +91,18 @@ const ContextMenu: React.FC<ContextMenuProps> = (props) => {
       )
     }
 
-    // 分隔线
-    items.push({ type: 'divider' })
+    if (items.length) {
+      items.push({ type: 'divider' })
+    }
 
     // 创建文件夹（只在空白区域显示）
     if (nodeType === 'blank') {
+      items.push({
+        key: 'add-app',
+        label: '添加应用',
+        icon: <AppstoreAddOutlined />
+      })
+
       items.push({
         key: 'create-folder',
         label: '创建文件夹',
@@ -131,6 +141,15 @@ const ContextMenu: React.FC<ContextMenuProps> = (props) => {
       )
     }
 
+    if (nodeType === 'widget') {
+      items.push({
+        key: 'delete',
+        label: '移除小组件',
+        icon: <DeleteOutlined />,
+        danger: true
+      })
+    }
+
     return items
   }, [nodeType, allFolders, onMoveToFolder])
 
@@ -149,6 +168,10 @@ const ContextMenu: React.FC<ContextMenuProps> = (props) => {
       case 'create-folder':
         console.log('执行: 创建文件夹')
         onCreateFolderRequested?.()
+        break
+      case 'add-app':
+        console.log('执行: 添加应用')
+        onAddAppRequested?.()
         break
       case 'edit':
         console.log('执行: 编辑')

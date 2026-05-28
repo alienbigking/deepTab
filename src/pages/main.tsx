@@ -14,7 +14,6 @@ import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import cn from 'classnames'
 import styles from './main.module.less'
 import SearchBar from './searchBar/searchBar'
-import WidgetsContainer from './widgetsContainer/widgetsContainer'
 import AppGrid from './appGrid/appGrid'
 import SettingsSidebar from './settingsSidebar/settingsSidebar'
 import { App } from 'antd'
@@ -87,6 +86,14 @@ const Main: React.FC = () => {
   const contentRef = useRef<HTMLDivElement | null>(null)
   const wheelAccRef = useRef(0)
   const wheelLockRef = useRef(false)
+  const previousCategoryIdRef = useRef(activeCategoryId)
+  const [homePageMotion, setHomePageMotion] = useState<{
+    direction: 'next' | 'prev'
+    tick: number
+  }>({
+    direction: 'next',
+    tick: 0
+  })
 
   const draggingApp = useMemo(() => {
     if (!activeDragId) return null
@@ -207,6 +214,33 @@ const Main: React.FC = () => {
   }, [useSystemFont])
 
   useEffect(() => {
+    const previousId = previousCategoryIdRef.current
+    if (previousId === activeCategoryId) return
+
+    const orderedIds = categories
+      .slice()
+      .sort((a, b) => Number(a.order) - Number(b.order))
+      .map((category) => category.id)
+    const previousIndex = orderedIds.indexOf(previousId)
+    const currentIndex = orderedIds.indexOf(activeCategoryId)
+    const lastIndex = orderedIds.length - 1
+    const direction =
+      previousIndex === 0 && currentIndex === lastIndex
+        ? 'prev'
+        : previousIndex === lastIndex && currentIndex === 0
+          ? 'next'
+          : currentIndex >= previousIndex
+            ? 'next'
+            : 'prev'
+
+    previousCategoryIdRef.current = activeCategoryId
+    setHomePageMotion((value) => ({
+      direction,
+      tick: value.tick + 1
+    }))
+  }, [activeCategoryId, categories])
+
+  useEffect(() => {
     const root = contentRef.current
     if (!root) return
 
@@ -262,7 +296,7 @@ const Main: React.FC = () => {
       wheelLockRef.current = true
       window.setTimeout(() => {
         wheelLockRef.current = false
-      }, 350)
+      }, 680)
     }
 
     root.addEventListener('wheel', onWheel, { passive: true })
@@ -388,9 +422,6 @@ const Main: React.FC = () => {
         {/* 搜索框 */}
         <SearchBar />
 
-        {/* 小部件区域 */}
-        <WidgetsContainer />
-
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -398,8 +429,26 @@ const Main: React.FC = () => {
           onDragCancel={() => setActiveDragId(null)}
           onDragEnd={handleDragEnd}
         >
-          {/* 应用图标网格 */}
-          <AppGrid />
+          <div
+            className={cn(styles.homePage, homePageMotion.tick > 0 && styles.homePageAnimating)}
+            style={
+              homePageMotion.tick > 0
+                ? {
+                    animationName:
+                      homePageMotion.direction === 'next'
+                        ? homePageMotion.tick % 2
+                          ? styles.homePageInNextA
+                          : styles.homePageInNextB
+                        : homePageMotion.tick % 2
+                          ? styles.homePageInPrevA
+                          : styles.homePageInPrevB
+                  }
+                : undefined
+            }
+          >
+            {/* 应用图标网格 */}
+            <AppGrid />
+          </div>
 
           {bottomBarVisible && <BottomBar activeCategoryId={activeCategoryId} />}
 

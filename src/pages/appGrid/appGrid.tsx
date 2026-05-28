@@ -12,12 +12,12 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, arrayMove } from '@dnd-kit/sortable'
 import { App, Button } from 'antd'
-import { PlusOutlined } from '@ant-design/icons'
 import cn from 'classnames'
 import styles from './appGrid.module.less'
 import AppIcon from './appIcon'
 import DroppableFolder from './droppableFolder'
 import DroppableIcon from './droppableIcon'
+import DroppableWidget from './droppableWidget'
 import ContextMenu from './contextMenu'
 import AddAppModal from './addAppModal'
 import AppFolderPopover from './appFolderPopover'
@@ -26,7 +26,7 @@ import DraggableFolderIcon from './draggableFolderIcon'
 import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 import appGridService from './services/appGrid'
 import useAppGridStore from './stores/appGrid'
-import type { AppNode, AppItem, AppFolder, ContextMenuState } from './types/appGrid'
+import type { AppNode, AppItem, AppFolder, ContextMenuState, WidgetKind } from './types/appGrid'
 import { initDefaultApps } from './initData'
 import { useNotification } from '@/common/ui'
 import useAppCategoryStore from '@/pages/appCategory/stores/appCategory'
@@ -37,6 +37,19 @@ const delayedReorderStrategy = () => null
 type DragHoverMode = 'merge' | 'reorder'
 
 const isImageIcon = (icon?: string) => /^(https?:\/\/|data:image\/)/i.test(String(icon || ''))
+
+const widgetUrlPrefix = 'deeptab://widget/'
+
+const getWidgetKind = (node?: AppNode | null): WidgetKind | null => {
+  if (!node || node.type !== 'item') return null
+  const url = String(node.url || '')
+  if (!url.startsWith(widgetUrlPrefix)) return null
+  const kind = url.slice(widgetUrlPrefix.length)
+  if (kind === 'calendar' || kind === 'weather' || kind === 'todo' || kind === 'hotSearch') {
+    return kind
+  }
+  return null
+}
 
 const iconTextFromName = (value?: string) => {
   const text = String(value || '').trim()
@@ -285,7 +298,11 @@ const AppGrid: React.FC = () => {
   }
 
   // 右键菜单
-  const handleContextMenu = (e: React.MouseEvent, appId: string, nodeType: 'item' | 'folder') => {
+  const handleContextMenu = (
+    e: React.MouseEvent,
+    appId: string,
+    nodeType: 'item' | 'folder' | 'widget'
+  ) => {
     setContextMenuData({
       visible: true,
       x: e.clientX,
@@ -304,6 +321,7 @@ const AppGrid: React.FC = () => {
   const normalizeUrl = (url: string): string => {
     if (!url) return ''
     const trimmedUrl = url.trim()
+    if (trimmedUrl.startsWith(widgetUrlPrefix)) return ''
     if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
       return `https://${trimmedUrl}`
     }
@@ -372,7 +390,7 @@ const AppGrid: React.FC = () => {
   // 右键菜单 - 编辑
   const handleEdit = () => {
     const node = apps.find((a) => a.id === contextMenuData?.appId)
-    if (node && node.type === 'item') {
+    if (node && node.type === 'item' && !getWidgetKind(node)) {
       setEditingApp(node as AppItem)
       setAddModalOpen(true)
     }
@@ -441,7 +459,7 @@ const AppGrid: React.FC = () => {
   // 右键菜单 - 移动到文件夹（只在有源 ID 时生效）
   const handleMoveToFolder = async (targetFolderId: string) => {
     const sourceId = contextMenuData?.appId
-    if (!sourceId || contextMenuData?.appType === 'blank') {
+    if (!sourceId || contextMenuData?.appType === 'blank' || contextMenuData?.appType === 'widget') {
       // 空白区域不执行移动操作
       return
     }
@@ -523,6 +541,7 @@ const AppGrid: React.FC = () => {
 
     if (!draggedNode || !overNode) return
     if (draggedNode.type !== 'item' || overNode.type !== 'item') return
+    if (getWidgetKind(draggedNode) || getWidgetKind(overNode)) return
     if ((draggedNode.categoryId || 'home') !== activeCategoryId) return
     if ((overNode.categoryId || 'home') !== activeCategoryId) return
 
@@ -608,7 +627,11 @@ const AppGrid: React.FC = () => {
     const draggedNode = apps.find((app) => app.id === draggedId)
     const overNode = apps.find((app) => app.id === overId)
     const hoverMode: DragHoverMode =
-      draggedNode?.type === 'item' && overNode?.type === 'item' && isInsideMergeZone(event)
+      draggedNode?.type === 'item' &&
+      overNode?.type === 'item' &&
+      !getWidgetKind(draggedNode) &&
+      !getWidgetKind(overNode) &&
+      isInsideMergeZone(event)
         ? 'merge'
         : 'reorder'
 
@@ -763,7 +786,7 @@ const AppGrid: React.FC = () => {
     if (droppedOnNode && droppedOnNode.type === 'folder') {
       // 检查最后悬停的目标是否就是这个文件夹
       if (lastOverId === droppedOnId) {
-        if (draggedNode && draggedNode.type === 'item') {
+        if (draggedNode && draggedNode.type === 'item' && !getWidgetKind(draggedNode)) {
           try {
             await moveToFolder({ itemId: draggedId, folderId: droppedOnId })
             message.success('已移入文件夹')
@@ -776,12 +799,12 @@ const AppGrid: React.FC = () => {
       return
     }
 
-    // 主页图标之间的拖拽 - 根据悬停时间判断操作
+    // 主页节点之间的拖拽 - 根据悬停时间判断操作
     if (
       draggedNode &&
-      draggedNode.type === 'item' &&
+      (draggedNode.type === 'item' || draggedNode.type === 'folder') &&
       droppedOnNode &&
-      droppedOnNode.type === 'item' &&
+      (droppedOnNode.type === 'item' || droppedOnNode.type === 'folder') &&
       !parentFolder
     ) {
       const oldIndex = visibleApps.findIndex((app) => app.id === draggedId)
@@ -792,23 +815,6 @@ const AppGrid: React.FC = () => {
           await handleReorder(oldIndex, newIndex)
         } catch (error) {
           console.error('排序失败:', error)
-          message.error('排序失败')
-        }
-      }
-      return
-    }
-
-    // 文件夹的排序 - 文件夹拖拽到其他位置
-    if (draggedNode && draggedNode.type === 'folder' && !parentFolder) {
-      const oldIndex = visibleApps.findIndex((app) => app.id === draggedId)
-      const newIndex = visibleApps.findIndex((app) => app.id === droppedOnId)
-
-      if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
-        console.log('执行文件夹排序操作')
-        try {
-          await handleReorder(oldIndex, newIndex)
-        } catch (error) {
-          console.error('文件夹排序失败:', error)
           message.error('排序失败')
         }
       }
@@ -913,24 +919,36 @@ const AppGrid: React.FC = () => {
         onClick={handleContainerClick}
         onContextMenu={handleContainerContextMenu}
       >
-        {/* 添加按钮 */}
-        <div className={styles.addBtnWrapper}>
-          <Button type='primary' icon={<PlusOutlined />} onClick={handleAddApp} size='small'>
-            添加应用
-          </Button>
-
-          {isEditMode && (
+        {isEditMode && (
+          <div className={styles.addBtnWrapper}>
             <Button onClick={exitEditMode} size='small' className={cn(styles.doneBtn)}>
               完成
             </Button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* 应用网格 */}
         <SortableContext items={visibleApps.map((app) => app.id)} strategy={delayedReorderStrategy}>
-          <div className={styles.appGrid} style={{ gap: `${iconSettings.spacing}px` }}>
-            {visibleApps.map((node) =>
-              node.type === 'folder' ? (
+          <div
+            className={styles.appGrid}
+            style={
+              {
+                '--dt-grid-gap': `${iconSettings.spacing}px`
+              } as React.CSSProperties
+            }
+          >
+            {visibleApps.map((node) => {
+              const widgetKind = getWidgetKind(node)
+              return widgetKind ? (
+                <DroppableWidget
+                  key={node.id}
+                  widget={node as AppItem}
+                  kind={widgetKind}
+                  isEditMode={isEditMode}
+                  gridGap={iconSettings.spacing}
+                  onContextMenu={handleContextMenu}
+                />
+              ) : node.type === 'folder' ? (
                 <DroppableFolder
                   key={node.id}
                   folder={node as AppFolder}
@@ -952,7 +970,7 @@ const AppGrid: React.FC = () => {
                   onLongPress={handleLongPress}
                 />
               )
-            )}
+            })}
           </div>
         </SortableContext>
 
@@ -972,6 +990,7 @@ const AppGrid: React.FC = () => {
             onClose={closeContextMenu}
             allFolders={apps.filter((a) => a.type === 'folder') as AppFolder[]}
             onCreateFolderRequested={handleCreateFolderRequested}
+            onAddAppRequested={handleAddApp}
           />
         )}
 

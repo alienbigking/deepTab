@@ -9,6 +9,7 @@ export interface Apps {
   url: string // 应用链接
   order: number // 排序序号
   categoryId?: string // 分类/分页 ID
+  widgetSpan?: 2 | 4 // 小组件占用的 icon 列数
   userId?: string // 用户 ID(接入后端后使用)
   createdAt?: string // 创建时间
   updatedAt?: string // 更新时间
@@ -31,6 +32,8 @@ export interface IconSettings {
  * 应用节点类型（支持文件夹）
  */
 export type AppNode = AppItem | AppFolder
+
+export type WidgetKind = 'calendar' | 'weather' | 'todo' | 'hotSearch'
 
 /**
  * 普通应用图标项
@@ -56,7 +59,7 @@ export interface ContextMenuState {
   x: number
   y: number
   appId: string
-  appType?: 'item' | 'folder' | 'blank' // 区分图标、文件夹或空白区域
+  appType?: 'item' | 'folder' | 'widget' | 'blank' // 区分图标、文件夹、小组件或空白区域
 }
 
 /**
@@ -68,6 +71,7 @@ export interface AddAppParams {
   iconBg?: string
   url: string
   categoryId?: string
+  widgetSpan?: 2 | 4
 }
 
 /**
@@ -80,6 +84,7 @@ export interface UpdateAppParams {
   iconBg?: string
   url?: string
   categoryId?: string
+  widgetSpan?: 2 | 4
 }
 
 /**

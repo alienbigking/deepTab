@@ -30,6 +30,7 @@ interface RecommendedApp {
   popularity: number
   updatedAt: string
   iconBg?: string
+  widgetSpan?: 2 | 4
 }
 
 const categoryItems: { key: AppCategory; label: string }[] = [
@@ -153,6 +154,7 @@ const widgetApps: RecommendedApp[] = [
     icon: '27',
     iconBg: '#f59e0b',
     url: 'deeptab://widget/calendar',
+    widgetSpan: 4,
     desc: '在主页添加日期与进度小组件入口',
     category: 'efficiency',
     popularity: 7200,
@@ -164,6 +166,7 @@ const widgetApps: RecommendedApp[] = [
     icon: '☁',
     iconBg: '#38bdf8',
     url: 'deeptab://widget/weather',
+    widgetSpan: 4,
     desc: '快速查看城市天气和预报',
     category: 'efficiency',
     popularity: 7000,
@@ -175,6 +178,7 @@ const widgetApps: RecommendedApp[] = [
     icon: '✓',
     iconBg: '#7c3aed',
     url: 'deeptab://widget/todo',
+    widgetSpan: 4,
     desc: '管理今天要完成的事项',
     category: 'efficiency',
     popularity: 6800,
@@ -185,7 +189,8 @@ const widgetApps: RecommendedApp[] = [
     name: '热搜',
     icon: '热',
     iconBg: '#ef4444',
-    url: 'deeptab://widget/hot-search',
+    url: 'deeptab://widget/hotSearch',
+    widgetSpan: 4,
     desc: '追踪各平台热门榜单',
     category: 'social',
     popularity: 7400,
@@ -488,7 +493,8 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
         icon: icon || app.icon,
         iconBg: app.iconBg,
         url: normalizeUrl(app.url),
-        categoryId: targetCategoryId
+        categoryId: targetCategoryId,
+        widgetSpan: app.widgetSpan
       })
       message.success(`已添加 ${app.name}`)
       onSuccess()
