@@ -39,6 +39,8 @@ const DroppableFolder: React.FC<DroppableFolderProps> = ({
       id: folder.id,
       animateLayoutChanges,
       data: {
+        container: 'grid',
+        appId: folder.id,
         type: 'folder',
         folder: folder
       }
@@ -54,7 +56,7 @@ const DroppableFolder: React.FC<DroppableFolderProps> = ({
     transition: isDragging
       ? undefined
       : 'transform 380ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease',
-    opacity: isDragging ? 0 : 1,
+    opacity: isDragging ? 0.08 : 1,
     touchAction: 'none'
   }
 

@@ -315,7 +315,7 @@
   }
 
   &.isDragging {
-    opacity: 0;
+    opacity: 0.96;
     cursor: grabbing;
 
     .iconWrapper,
@@ -348,9 +348,49 @@
   }
 
   &.isDragging {
-    opacity: 0;
+    opacity: 0.96;
     cursor: grabbing;
   }
+
+  :global {
+    .ant-card {
+      width: var(--dt-widget-node-width) !important;
+      min-width: var(--dt-widget-node-width) !important;
+      max-width: var(--dt-widget-node-width) !important;
+      border-radius: 16px !important;
+      overflow: hidden;
+    }
+  }
+}
+
+.dragOverlayRoot {
+  cursor: grabbing;
+  pointer-events: none;
+  z-index: 9999;
+  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.18));
+}
+
+.dragOverlayIcon {
+  width: 120px;
+  min-height: calc((220px - var(--dt-grid-gap, 24px)) / 2);
+  display: flex;
+  justify-content: center;
+  transform: translateZ(0);
+
+  .appIcon {
+    transform: none !important;
+  }
+
+  .iconWrapper,
+  .appName {
+    transform: none !important;
+  }
+}
+
+.dragOverlayWidget {
+  height: 220px;
+  opacity: 0.96;
+  transform: translateZ(0) scale(1.01);
 
   :global {
     .ant-card {

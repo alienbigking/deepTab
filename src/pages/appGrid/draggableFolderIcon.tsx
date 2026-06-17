@@ -21,6 +21,8 @@ const DraggableFolderIcon: React.FC<DraggableFolderIconProps> = ({
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: icon.id,
     data: {
+      container: 'folder',
+      appId: icon.id,
       type: 'folder-item',
       item: icon
     }

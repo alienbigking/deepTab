@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import {
+  closestCorners,
   DndContext,
-  closestCenter,
-  DragOverlay,
   KeyboardSensor,
   PointerSensor,
+  pointerWithin,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent
 } from '@dnd-kit/core'
+import { snapCenterToCursor } from '@dnd-kit/modifiers'
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import cn from 'classnames'
 import styles from './main.module.less'
@@ -30,6 +32,39 @@ import useAppGridStore from './appGrid/stores/appGrid'
 import bottomBarService from './bottomBar/services/bottomBar'
 import useBottomBarStore from './bottomBar/stores/bottomBar'
 import { BOTTOM_BAR_DROPPABLE_ID } from './bottomBar/bottomBar'
+import { MAIN_GRID_DROPPABLE_ID } from './appGrid/appGrid'
+
+const pageCollisionDetection: CollisionDetection = (args) => {
+  const isContainerId = (id: string | number) =>
+    id === MAIN_GRID_DROPPABLE_ID || id === BOTTOM_BAR_DROPPABLE_ID
+
+  const nonContainerDroppables = args.droppableContainers.filter(
+    (container) => !isContainerId(container.id)
+  )
+
+  const pointerOnItems = pointerWithin({
+    ...args,
+    droppableContainers: nonContainerDroppables
+  })
+  if (pointerOnItems.length > 0) {
+    return pointerOnItems
+  }
+
+  const cornerOnItems = closestCorners({
+    ...args,
+    droppableContainers: nonContainerDroppables
+  })
+  if (cornerOnItems.length > 0) {
+    return cornerOnItems
+  }
+
+  const pointerOnContainers = pointerWithin(args)
+  if (pointerOnContainers.length > 0) {
+    return pointerOnContainers
+  }
+
+  return closestCorners(args)
+}
 
 /**
  * 新标签页主组件
@@ -94,11 +129,6 @@ const Main: React.FC = () => {
     direction: 'next',
     tick: 0
   })
-
-  const draggingApp = useMemo(() => {
-    if (!activeDragId) return null
-    return apps.find((a) => a.id === activeDragId) || null
-  }, [activeDragId, apps])
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -327,13 +357,14 @@ const Main: React.FC = () => {
     const { active, over } = event
 
     const activeAppId = String(active?.data?.current?.appId || active.id)
+    const fromContainer = String(active?.data?.current?.container || '')
     setActiveDragId(null)
+
+    if (fromContainer !== 'dock' && String(over?.data?.current?.container || '') !== 'dock') return
 
     if (!over) return
 
     const overAppId = String(over?.data?.current?.appId || over.id)
-
-    const fromContainer = String(active?.data?.current?.container || '')
     const toContainer = String(over?.data?.current?.container || '')
 
     const isOverDock = toContainer === 'dock' || String(over.id) === BOTTOM_BAR_DROPPABLE_ID
@@ -424,7 +455,8 @@ const Main: React.FC = () => {
 
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCenter}
+          collisionDetection={pageCollisionDetection}
+          modifiers={[snapCenterToCursor]}
           onDragStart={handleDragStart}
           onDragCancel={() => setActiveDragId(null)}
           onDragEnd={handleDragEnd}
@@ -451,22 +483,6 @@ const Main: React.FC = () => {
           </div>
 
           {bottomBarVisible && <BottomBar activeCategoryId={activeCategoryId} />}
-
-          <DragOverlay>
-            {draggingApp ? (
-              <div className={cn(styles.dragOverlayItem)}>
-                {/^(https?:\/\/|data:image\/)/.test(draggingApp.icon) ? (
-                  <img
-                    className={cn(styles.dragOverlayImg)}
-                    src={draggingApp.icon}
-                    alt={draggingApp.name}
-                  />
-                ) : (
-                  <span className={cn(styles.dragOverlayEmoji)}>{draggingApp.icon}</span>
-                )}
-              </div>
-            ) : null}
-          </DragOverlay>
         </DndContext>
 
         {/* 设置侧边栏 */}

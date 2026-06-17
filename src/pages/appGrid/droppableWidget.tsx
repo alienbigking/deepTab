@@ -44,6 +44,8 @@ const DroppableWidget: React.FC<DroppableWidgetProps> = ({
     id: widget.id,
     animateLayoutChanges,
     data: {
+      container: 'grid',
+      appId: widget.id,
       type: 'widget',
       item: widget,
       widgetKind: kind
@@ -58,7 +60,7 @@ const DroppableWidget: React.FC<DroppableWidgetProps> = ({
     transition: isDragging
       ? undefined
       : 'transform 420ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease',
-    opacity: isDragging ? 0 : 1,
+    opacity: isDragging ? 0.06 : 1,
     touchAction: 'none',
     gridColumn: `span ${span}`,
     gridRow: 'span 2',
