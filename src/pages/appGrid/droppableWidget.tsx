@@ -56,11 +56,11 @@ const DroppableWidget: React.FC<DroppableWidgetProps> = ({
   const gap = Number.isFinite(gridGap) ? gridGap : 24
   const width = span * iconTrackWidth + (span - 1) * gap
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: isDragging ? undefined : CSS.Transform.toString(transform),
     transition: isDragging
       ? undefined
       : 'transform 420ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease',
-    opacity: isDragging ? 0.06 : 1,
+    opacity: isDragging ? 0.08 : 1,
     touchAction: 'none',
     gridColumn: `span ${span}`,
     gridRow: 'span 2',

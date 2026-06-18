@@ -134,6 +134,7 @@ export interface AppGridStore {
   syncStatus: 'idle' | 'syncing' | 'error'
   iconSettings: IconSettings
   openedFolderId: string | null // 当前打开的文件夹 ID
+  dragActiveNode: AppNode | null // 当前拖拽中的节点
 
   // Actions
   setApps: (apps: AppNode[] | ((prevApps: AppNode[]) => AppNode[])) => void
@@ -144,6 +145,7 @@ export interface AppGridStore {
   setIconSettings: (settings: Partial<IconSettings>) => void
   resetIconSettings: () => void
   setOpenedFolderId: (folderId: string | null) => void
+  setDragActiveNode: (node: AppNode | null) => void
 
   // 数据加载 actions
   loadApps: () => Promise<void>

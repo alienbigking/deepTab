@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { DragOverlay, useDndMonitor, useDroppable, type DragEndEvent } from '@dnd-kit/core'
+import { useDndMonitor, useDroppable, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext } from '@dnd-kit/sortable'
 import { App, Button } from 'antd'
 import cn from 'classnames'
@@ -11,7 +11,6 @@ import ContextMenu from './contextMenu'
 import AddAppModal from './addAppModal'
 import AppFolderPopover from './appFolderPopover'
 import CreateFolderModal from './createFolderModal'
-import AppIcon from './appIcon'
 import CalendarWidget from '@/pages/widgetsContainer/calendarWidget'
 import WeatherWidget from '@/pages/widgetsContainer/weatherWidget'
 import TodoWidget from '@/pages/widgetsContainer/todoWidget'
@@ -23,6 +22,7 @@ import type { AppNode, AppItem, AppFolder, ContextMenuState, WidgetKind } from '
 import { initDefaultApps } from './initData'
 import { useNotification } from '@/common/ui'
 import useAppCategoryStore from '@/pages/appCategory/stores/appCategory'
+import useBottomBarStore from '@/pages/bottomBar/stores/bottomBar'
 
 export const MAIN_GRID_DROPPABLE_ID = 'main-grid'
 
@@ -121,6 +121,36 @@ const findClosestGridItemId = (point: { x: number; y: number }, activeId: string
   return closestId
 }
 
+const getTargetIconRect = (id: string) => {
+  const element = document.querySelector<HTMLElement>(`[data-app-grid-id="${id}"]`)
+  const iconElement = element?.querySelector<HTMLElement>(`.${styles.iconWrapper}`)
+  return iconElement?.getBoundingClientRect() || element?.getBoundingClientRect() || null
+}
+
+const isInsideMergeZone = (dropPoint: { x: number; y: number }, targetId: string) => {
+  const rect = getTargetIconRect(targetId)
+  if (!rect) return false
+
+  const horizontalInset = rect.width * 0.18
+  const verticalInset = rect.height * 0.18
+
+  return (
+    dropPoint.x >= rect.left + horizontalInset &&
+    dropPoint.x <= rect.right - horizontalInset &&
+    dropPoint.y >= rect.top + verticalInset &&
+    dropPoint.y <= rect.bottom - verticalInset
+  )
+}
+
+const getIconTextFromName = (value?: string) => {
+  const text = String(value || '').trim()
+  if (!text) return 'A'
+  const chinese = text.match(/[\u4e00-\u9fa5]/g)
+  if (chinese?.length) return chinese.slice(0, 2).join('')
+  const letters = text.replace(/[^a-z0-9]/gi, '').slice(0, 2)
+  return (letters || text.slice(0, 2)).toUpperCase()
+}
+
 const AppGrid: React.FC = () => {
   const { message, modal } = App.useApp()
   const { showNotification } = useNotification()
@@ -143,13 +173,20 @@ const AppGrid: React.FC = () => {
     moveToFolder,
     moveFromFolder,
     deleteFolder,
-    updateFolder
+    updateFolder,
+    setDragActiveNode
   } = useAppGridStore()
   const activeCategoryId = useAppCategoryStore((s) => s.activeCategoryId)
+  const pinnedAppIds = useBottomBarStore((s) => s.pinnedAppIds)
 
   const visibleApps = useMemo(() => {
-    return apps.filter((app) => (app.categoryId || 'home') === activeCategoryId)
-  }, [activeCategoryId, apps])
+    return apps.filter(
+      (app) =>
+        (app.categoryId || 'home') === activeCategoryId &&
+        !pinnedAppIds.includes(app.id) &&
+        (app.type === 'folder' || app.name || app.url)
+    )
+  }, [activeCategoryId, apps, pinnedAppIds])
 
   const { setNodeRef, isOver } = useDroppable({
     id: MAIN_GRID_DROPPABLE_ID,
@@ -403,6 +440,68 @@ const AppGrid: React.FC = () => {
     await updateFolder(id, params)
   }
 
+  const mergeItemsToFolder = async (sourceId: string, targetId: string) => {
+    const currentList = apps
+    const draggedNode = currentList.find((app) => app.id === sourceId)
+    const targetNode = currentList.find((app) => app.id === targetId)
+
+    if (!draggedNode || !targetNode) return false
+    if (draggedNode.type !== 'item' || targetNode.type !== 'item') return false
+    if (getWidgetKind(draggedNode) || getWidgetKind(targetNode)) return false
+    if ((draggedNode.categoryId || 'home') !== activeCategoryId) return false
+    if ((targetNode.categoryId || 'home') !== activeCategoryId) return false
+
+    const previousRects = getGridItemRects()
+    const folderId = `folder_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+    const folder: AppFolder = {
+      type: 'folder',
+      id: folderId,
+      name: '文件夹',
+      icon: '📁',
+      iconBg: targetNode.iconBg,
+      order: 0,
+      categoryId: targetNode.categoryId || draggedNode.categoryId || activeCategoryId,
+      children: [
+        { ...targetNode, order: 0 },
+        { ...draggedNode, order: 1 }
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      syncStatus: 'pending'
+    }
+
+    const nextApps = currentList
+      .reduce<AppNode[]>((next, node) => {
+        if (node.id === sourceId) return next
+        if (node.id === targetId) {
+          next.push(folder)
+          return next
+        }
+        next.push(node)
+        return next
+      }, [])
+      .map((node, index) => ({
+        ...node,
+        order: index,
+        updatedAt: new Date().toISOString(),
+        syncStatus: 'pending' as const
+      }))
+
+    setApps(nextApps)
+    animateGridReorder(previousRects, sourceId)
+
+    try {
+      await appGridService.saveAll(nextApps)
+      message.success('已合并为文件夹')
+      return true
+    } catch (error) {
+      console.error('合并文件夹失败:', error)
+      message.error('合并失败，请重试')
+      await loadApps()
+      return false
+    }
+  }
+
   const handleModalSuccess = async () => {
     await loadApps()
   }
@@ -426,12 +525,14 @@ const AppGrid: React.FC = () => {
 
       setActiveId(nextId)
       setActiveNode(nextNode)
+      setDragActiveNode(nextNode)
     },
     onDragCancel: (event) => {
       const fromContainer = String(event.active?.data?.current?.container || '')
       if (fromContainer !== 'grid' && fromContainer !== 'folder') return
       setActiveId(null)
       setActiveNode(null)
+      setDragActiveNode(null)
     },
     onDragEnd: async (event) => {
       const fromContainer = String(event.active?.data?.current?.container || '')
@@ -442,6 +543,7 @@ const AppGrid: React.FC = () => {
 
       setActiveId(null)
       setActiveNode(null)
+      setDragActiveNode(null)
 
       if (!event.over) return
 
@@ -452,10 +554,9 @@ const AppGrid: React.FC = () => {
       if (draggedId === droppedOnId) return
 
       const dropPoint = getDropPoint(event)
-      const closestGridItemId =
-        dropPoint && fromContainer === 'grid'
-          ? findClosestGridItemId(dropPoint, draggedId)
-          : null
+      const closestGridItemId = dropPoint && fromContainer === 'grid'
+        ? findClosestGridItemId(dropPoint, draggedId)
+        : null
       const resolvedGridTargetId = closestGridItemId || droppedOnId
       const droppedOnNode = apps.find((app) => app.id === resolvedGridTargetId)
       const parentFolder = apps.find(
@@ -476,6 +577,43 @@ const AppGrid: React.FC = () => {
             console.error('移出文件夹失败:', error)
             message.error('移出失败')
           }
+          return
+        }
+
+        if (fromContainer === 'grid' && closestGridItemId) {
+          const oldIndex = visibleApps.findIndex((app) => app.id === draggedId)
+          const newIndex = visibleApps.findIndex((app) => app.id === closestGridItemId)
+
+          if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+            const previousRects = getGridItemRects()
+            const movedVisible = [...visibleApps]
+            const [movedItem] = movedVisible.splice(oldIndex, 1)
+            movedVisible.splice(newIndex, 0, movedItem)
+
+            const indices = apps
+              .map((app, index) => ({ app, index }))
+              .filter(({ app }) => (app.categoryId || 'home') === activeCategoryId)
+              .map(({ index }) => index)
+
+            const nextApps = [...apps]
+            indices.forEach((index, order) => {
+              nextApps[index] = {
+                ...movedVisible[order],
+                order: index
+              }
+            })
+
+            setApps(nextApps)
+            animateGridReorder(previousRects, draggedId)
+
+            try {
+              await appGridService.updateOrder(nextApps)
+            } catch (error) {
+              console.error('空白区域排序保存失败:', error)
+              message.error('排序失败')
+              await loadApps()
+            }
+          }
         }
         return
       }
@@ -493,6 +631,20 @@ const AppGrid: React.FC = () => {
           }
         }
         return
+      }
+
+      if (
+        dropPoint &&
+        draggedNode &&
+        droppedOnNode &&
+        draggedNode.type === 'item' &&
+        droppedOnNode.type === 'item' &&
+        !getWidgetKind(draggedNode) &&
+        !getWidgetKind(droppedOnNode) &&
+        isInsideMergeZone(dropPoint, resolvedGridTargetId)
+      ) {
+        const merged = await mergeItemsToFolder(draggedId, resolvedGridTargetId)
+        if (merged) return
       }
 
       if (
@@ -653,49 +805,81 @@ const AppGrid: React.FC = () => {
           onSuccess={handleModalSuccess}
         />
       </div>
-
-      <DragOverlay dropAnimation={null} adjustScale={false}>
-        {activeNode ? (
-          (() => {
-            const activeWidgetKind = getWidgetKind(activeNode)
-
-            if (activeWidgetKind && activeNode.type === 'item') {
-              const span = activeNode.widgetSpan === 2 ? 2 : 4
-              const gap = Number.isFinite(iconSettings.spacing) ? iconSettings.spacing : 24
-              const width = span * iconTrackWidth + (span - 1) * gap
-
-              return (
-                <div
-                  className={cn(styles.dragOverlayRoot, styles.dragOverlayWidget)}
-                  style={
-                    {
-                      width,
-                      '--dt-widget-node-width': `${width}px`
-                    } as React.CSSProperties
-                  }
-                >
-                  {widgetPreviewMap[activeWidgetKind]}
-                </div>
-              )
-            }
-
-            return (
-              <div className={cn(styles.dragOverlayRoot, styles.dragOverlayIcon)}>
-                <AppIcon
-                  node={activeNode}
-                  isEditMode={isEditMode}
-                  iconSettings={iconSettings}
-                  onDelete={() => {}}
-                  onContextMenu={() => {}}
-                  onLongPress={() => {}}
-                  disableDrag={true}
-                />
-              </div>
-            )
-          })()
-        ) : null}
-      </DragOverlay>
     </>
+  )
+}
+
+/**
+ * Grid 拖拽 Overlay 内容组件
+ * 提供给 main.tsx 的 DragOverlay 使用
+ */
+export const GridDragOverlayContent: React.FC = () => {
+  const { dragActiveNode, iconSettings } = useAppGridStore()
+
+  if (!dragActiveNode) return null
+
+  const activeWidgetKind = getWidgetKind(dragActiveNode)
+
+  if (activeWidgetKind && dragActiveNode.type === 'item') {
+    const span = dragActiveNode.widgetSpan === 2 ? 2 : 4
+    const gap = Number.isFinite(iconSettings.spacing) ? iconSettings.spacing : 24
+    const width = span * iconTrackWidth + (span - 1) * gap
+
+    return (
+      <div
+        className={cn(styles.dragOverlayRoot, styles.dragOverlayWidget)}
+        style={
+          {
+            width,
+            '--dt-widget-node-width': `${width}px`
+          } as React.CSSProperties
+        }
+      >
+        {widgetPreviewMap[activeWidgetKind]}
+      </div>
+    )
+  }
+
+  const isImageIcon = /^(https?:\/\/|data:image\/)/i.test(String(dragActiveNode.icon || ''))
+  const overlayIconStyle: React.CSSProperties = {
+    width: iconSettings.size,
+    height: iconSettings.size,
+    borderRadius: iconSettings.radius,
+    opacity: iconSettings.opacity / 100,
+    background: isImageIcon ? undefined : dragActiveNode.iconBg || undefined
+  }
+
+  return (
+    <div className={cn(styles.dragOverlayRoot, styles.droppableIcon, styles.appIcon)}>
+      <div className={styles.iconWrapper} style={overlayIconStyle}>
+        {dragActiveNode.type === 'folder' && (dragActiveNode as AppFolder).children.length ? (
+          <div className={styles.folderCover}>
+            {(dragActiveNode as AppFolder).children.slice(0, 4).map((child) => {
+              const isChildImage = /^(https?:\/\/|data:image\/)/i.test(
+                String(child.icon || '')
+              )
+              return (
+                <span key={child.id} className={styles.folderCoverIcon}>
+                  {isChildImage ? (
+                    <img className={styles.folderCoverImg} src={child.icon} alt='' />
+                  ) : (
+                    child.icon || getIconTextFromName(child.name)
+                  )}
+                </span>
+              )
+            })}
+          </div>
+        ) : (
+          <span className={styles.iconEmoji}>
+            {isImageIcon ? (
+              <img className={styles.iconImg} src={String(dragActiveNode.icon || '')} alt='' />
+            ) : (
+              dragActiveNode.icon || getIconTextFromName(dragActiveNode.name)
+            )}
+          </span>
+        )}
+      </div>
+    </div>
   )
 }
 

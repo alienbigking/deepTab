@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react'
 import {
   closestCorners,
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   pointerWithin,
@@ -16,7 +17,7 @@ import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import cn from 'classnames'
 import styles from './main.module.less'
 import SearchBar from './searchBar/searchBar'
-import AppGrid from './appGrid/appGrid'
+import AppGrid, { GridDragOverlayContent } from './appGrid/appGrid'
 import SettingsSidebar from './settingsSidebar/settingsSidebar'
 import { App } from 'antd'
 import { SettingOutlined } from '@ant-design/icons'
@@ -38,14 +39,19 @@ const pageCollisionDetection: CollisionDetection = (args) => {
   const isContainerId = (id: string | number) =>
     id === MAIN_GRID_DROPPABLE_ID || id === BOTTOM_BAR_DROPPABLE_ID
 
+  const pointerCollisions = pointerWithin(args)
+  const dockPointerCollision = pointerCollisions.find(
+    (collision) => collision.id === BOTTOM_BAR_DROPPABLE_ID
+  )
+  if (dockPointerCollision) {
+    return [dockPointerCollision]
+  }
+
   const nonContainerDroppables = args.droppableContainers.filter(
     (container) => !isContainerId(container.id)
   )
 
-  const pointerOnItems = pointerWithin({
-    ...args,
-    droppableContainers: nonContainerDroppables
-  })
+  const pointerOnItems = pointerCollisions.filter((collision) => !isContainerId(collision.id))
   if (pointerOnItems.length > 0) {
     return pointerOnItems
   }
@@ -58,9 +64,8 @@ const pageCollisionDetection: CollisionDetection = (args) => {
     return cornerOnItems
   }
 
-  const pointerOnContainers = pointerWithin(args)
-  if (pointerOnContainers.length > 0) {
-    return pointerOnContainers
+  if (pointerCollisions.length > 0) {
+    return pointerCollisions
   }
 
   return closestCorners(args)
@@ -114,7 +119,6 @@ const Main: React.FC = () => {
   const initCategories = useAppCategoryStore((s) => s.init)
   const setActiveCategoryId = useAppCategoryStore((s) => s.setActiveCategoryId)
   const apps = useAppGridStore((s) => s.apps)
-  const setApps = useAppGridStore((s) => s.setApps)
   const pinnedAppIds = useBottomBarStore((s) => s.pinnedAppIds)
   const setPinnedAppIds = useBottomBarStore((s) => s.setPinnedAppIds)
 
@@ -140,6 +144,11 @@ const Main: React.FC = () => {
       coordinateGetter: sortableKeyboardCoordinates
     })
   )
+
+  const activeDockApp = useMemo(() => {
+    if (!activeDragId) return null
+    return apps.find((app) => app.id === activeDragId && app.type === 'item') || null
+  }, [activeDragId, apps])
 
   // 页面加载时清空地址栏并聚焦
   useEffect(() => {
@@ -350,17 +359,20 @@ const Main: React.FC = () => {
   }
 
   const handleDragStart = (event: DragStartEvent) => {
+    const fromContainer = String(event.active?.data?.current?.container || '')
+    if (fromContainer !== 'dock') {
+      setActiveDragId(null)
+      return
+    }
     setActiveDragId(String(event.active?.data?.current?.appId || event.active.id))
   }
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
-
     const activeAppId = String(active?.data?.current?.appId || active.id)
     const fromContainer = String(active?.data?.current?.container || '')
+    const activeType = String(active?.data?.current?.type || '')
     setActiveDragId(null)
-
-    if (fromContainer !== 'dock' && String(over?.data?.current?.container || '') !== 'dock') return
 
     if (!over) return
 
@@ -369,7 +381,24 @@ const Main: React.FC = () => {
 
     const isOverDock = toContainer === 'dock' || String(over.id) === BOTTOM_BAR_DROPPABLE_ID
 
-    if (fromContainer === 'dock' && toContainer === 'dock') {
+    if (isOverDock && fromContainer !== 'dock') {
+      if (activeType !== 'item') return
+      if (pinnedAppIds.includes(activeAppId)) return
+
+      const nextPinned = [...pinnedAppIds, activeAppId]
+      setPinnedAppIds(nextPinned)
+      try {
+        await bottomBarService.savePins(nextPinned)
+      } catch (error) {
+        console.error('固定到底部栏失败:', error)
+        message.error('固定到底部栏失败，请重试')
+      }
+      return
+    }
+
+    if (fromContainer !== 'dock') return
+
+    if (toContainer === 'dock') {
       if (activeAppId === overAppId) return
 
       const oldIndex = pinnedAppIds.findIndex((id) => id === activeAppId)
@@ -387,57 +416,15 @@ const Main: React.FC = () => {
       return
     }
 
-    if (isOverDock) {
-      let nextPinned: string[] | null = null
-      setPinnedAppIds((prev) => {
-        if (prev.includes(activeAppId)) {
-          nextPinned = null
-          return prev
-        }
-        nextPinned = [...prev, activeAppId]
-        return nextPinned
-      })
-
-      if (nextPinned) {
-        try {
-          await bottomBarService.savePins(nextPinned)
-        } catch (error) {
-          console.error('保存底部栏失败:', error)
-          message.error('固定到底部栏失败，请重试')
-        }
+    const nextPinned = pinnedAppIds.filter((id) => id !== activeAppId)
+    if (nextPinned.length !== pinnedAppIds.length) {
+      setPinnedAppIds(nextPinned)
+      try {
+        await bottomBarService.savePins(nextPinned)
+      } catch (error) {
+        console.error('更新 Dock 固定项失败:', error)
+        message.error('更新 Dock 失败，请重试')
       }
-
-      return
-    }
-
-    if (fromContainer === 'dock') return
-
-    if (activeAppId === overAppId) return
-
-    const visibleApps = apps.filter((app) => (app.categoryId || 'home') === activeCategoryId)
-    const oldIndex = visibleApps.findIndex((app) => app.id === activeAppId)
-    const newIndex = visibleApps.findIndex((app) => app.id === overAppId)
-    if (oldIndex === -1 || newIndex === -1) return
-
-    const movedVisible = arrayMove(visibleApps, oldIndex, newIndex)
-
-    const indices = apps
-      .map((app, index) => ({ app, index }))
-      .filter(({ app }) => (app.categoryId || 'home') === activeCategoryId)
-      .map(({ index }) => index)
-
-    const nextApps = [...apps]
-    indices.forEach((idx, k) => {
-      nextApps[idx] = movedVisible[k]
-    })
-
-    setApps(nextApps)
-
-    try {
-      await appGridService.updateOrder(nextApps)
-    } catch (error) {
-      console.error('保存顺序失败:', error)
-      message.error('拖放失败，请重试！')
     }
   }
 
@@ -483,6 +470,26 @@ const Main: React.FC = () => {
           </div>
 
           {bottomBarVisible && <BottomBar activeCategoryId={activeCategoryId} />}
+
+          <DragOverlay dropAnimation={null} adjustScale={false}>
+            {activeDockApp ? (
+              <div className={cn(styles.dragOverlayItem)}>
+                {/^(https?:\/\/|data:image\/)/.test(activeDockApp.icon) ? (
+                  <img
+                    className={cn(styles.dragOverlayImg)}
+                    src={activeDockApp.icon}
+                    alt={activeDockApp.name}
+                  />
+                ) : (
+                  <span className={cn(styles.dragOverlayEmoji)}>
+                    {activeDockApp.icon || activeDockApp.name.slice(0, 1)}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <GridDragOverlayContent />
+            )}
+          </DragOverlay>
         </DndContext>
 
         {/* 设置侧边栏 */}

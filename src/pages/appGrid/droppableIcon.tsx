@@ -44,11 +44,11 @@ const DroppableIcon: React.FC<DroppableIconProps> = ({
     })
 
   const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
+    transform: isDragging ? undefined : CSS.Transform.toString(transform),
     transition: isDragging
       ? undefined
       : 'transform 380ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease',
-    opacity: isDragging ? 0.08 : 1,
+    opacity: isDragging ? 0.12 : 1,
     touchAction: 'none'
   }
 

@@ -34,6 +34,7 @@ export const useAppGridStore = create<AppGridStore>((set, get) => ({
   syncStatus: 'idle',
   iconSettings: defaultIconSettings,
   openedFolderId: null,
+  dragActiveNode: null,
 
   // Actions
   setApps: (apps) =>
@@ -50,6 +51,7 @@ export const useAppGridStore = create<AppGridStore>((set, get) => ({
     })),
   resetIconSettings: () => set({ iconSettings: defaultIconSettings }),
   setOpenedFolderId: (folderId) => set({ openedFolderId: folderId }),
+  setDragActiveNode: (node) => set({ dragActiveNode: node }),
 
   // 加载应用列表
   loadApps: async () => {

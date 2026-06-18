@@ -73,7 +73,7 @@ const Invitation: React.FC = () => {
           <div className={cn(styles.inviteCode)}>
             <span>邀请码</span>
             <Input value={stats.inviteCode} readOnly className={styles.inviteInput} />
-            <Button icon={<CopyOutlined />} onClick={() => void copy(stats.inviteCode)}>
+            <Button type='primary' icon={<CopyOutlined />} onClick={() => void copy(stats.inviteCode)}>
               复制
             </Button>
           </div>
@@ -81,7 +81,7 @@ const Invitation: React.FC = () => {
           <div className={cn(styles.inviteCode)}>
             <span>邀请链接</span>
             <Input value={inviteLink} readOnly className={styles.inviteInput} />
-            <Button icon={<CopyOutlined />} onClick={() => void copy(inviteLink)}>
+            <Button type='primary' icon={<CopyOutlined />} onClick={() => void copy(inviteLink)}>
               复制
             </Button>
           </div>
