@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import cn from 'classnames'
 import { App, Button, Drawer, Avatar, Badge, Dropdown } from 'antd'
+import SimpleBar from 'simplebar-react'
 import {
   UserOutlined,
   CrownOutlined,
@@ -225,19 +226,21 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
           </div>
 
           {/* 菜单列表 */}
-          <div className={cn(styles.menuList)}>
-            {menuItems.map((item) => (
-              <div
-                key={item.key}
-                className={cn(styles.menuItem, { [styles.active]: activeMenu === item.key })}
-                onClick={() => setActiveMenu(item.key as MenuKey)}
-              >
-                <span className={cn(styles.menuIcon)}>{item.icon}</span>
-                <span className={cn(styles.menuLabel)}>{item.label}</span>
-                {item.badge && <Badge count={item.badge} className={cn(styles.menuBadge)} />}
-              </div>
-            ))}
-          </div>
+          <SimpleBar className={cn(styles.menuList, 'dtPrettyScrollbar')} autoHide>
+            <div className={styles.menuListInner}>
+              {menuItems.map((item) => (
+                <div
+                  key={item.key}
+                  className={cn(styles.menuItem, { [styles.active]: activeMenu === item.key })}
+                  onClick={() => setActiveMenu(item.key as MenuKey)}
+                >
+                  <span className={cn(styles.menuIcon)}>{item.icon}</span>
+                  <span className={cn(styles.menuLabel)}>{item.label}</span>
+                  {item.badge && <Badge count={item.badge} className={cn(styles.menuBadge)} />}
+                </div>
+              ))}
+            </div>
+          </SimpleBar>
 
           {/* 底部信息 */}
           <div className={cn(styles.bottomInfo)}>
@@ -250,7 +253,9 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
         </div>
 
         {/* 右侧内容 */}
-        <div className={cn(styles.rightContent)}>{renderContent()}</div>
+        <SimpleBar className={cn(styles.rightContent, 'dtPrettyScrollbar')} autoHide>
+          <div className={styles.rightContentInner}>{renderContent()}</div>
+        </SimpleBar>
       </div>
       <input
         ref={avatarInputRef}

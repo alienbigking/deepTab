@@ -10,7 +10,7 @@ import bottomBarService from './services/bottomBar'
 import { Dropdown } from 'antd'
 import AddAppModal from '@/pages/appGrid/addAppModal'
 import appGridService from '@/pages/appGrid/services/appGrid'
-import type { AppNode, AppItem } from '@/pages/appGrid/types/appGrid'
+import type { AppItem } from '@/pages/appGrid/types/appGrid'
 
 interface BottomBarProps {
   activeCategoryId?: string
@@ -21,8 +21,6 @@ export const BOTTOM_BAR_DROPPABLE_ID = 'bottom-bar-dock'
 const getDockSortableId = (appId: string) => {
   return `dock:${appId}`
 }
-
-const MAX_FALLBACK_ITEMS = 5
 
 interface DockItemProps {
   app: AppItem
@@ -128,14 +126,6 @@ const BottomBar: React.FC<BottomBarProps> = (props) => {
       .filter(Boolean) as AppItem[]
   }, [apps, pinnedAppIds])
 
-  const dockApps = useMemo(() => {
-    return apps
-      .filter((node): node is AppItem => node.type === 'item')
-      .filter((app) => (app.categoryId || 'home') === activeCategoryId)
-      .sort((a, b) => a.order - b.order)
-      .slice(0, MAX_FALLBACK_ITEMS)
-  }, [apps, activeCategoryId])
-
   const normalizeUrl = (url: string): string => {
     if (!url) return ''
     const trimmedUrl = url.trim()
@@ -166,15 +156,6 @@ const BottomBar: React.FC<BottomBarProps> = (props) => {
     setEditOpen(true)
   }
 
-  const fallbackApps = dockApps
-  const iconTextFromApp = (app: AppItem) => {
-    const text = String(app.name || '').trim()
-    const chinese = text.match(/[\u4e00-\u9fa5]/g)
-    if (chinese?.length) return chinese.slice(0, 2).join('')
-    const letters = text.replace(/[^a-z0-9]/gi, '').slice(0, 2)
-    return (letters || text.slice(0, 2) || 'A').toUpperCase()
-  }
-
   return (
     <div className={cn(styles.bottomBarWrap)}>
       <div ref={setNodeRef} className={cn(styles.dock, { [styles.dockOver]: isOver })}>
@@ -194,20 +175,7 @@ const BottomBar: React.FC<BottomBarProps> = (props) => {
             ))}
           </SortableContext>
         ) : (
-          fallbackApps.map((app) => (
-            <div
-              key={app.id}
-              className={cn(styles.dockItem)}
-              title={app.name}
-              onClick={() => openApp(app.url)}
-            >
-              {/^(https?:\/\/|data:image\/)/i.test(app.icon) ? (
-                <img className={cn(styles.iconImg)} src={app.icon} alt='' />
-              ) : (
-                <span className={cn(styles.emoji)}>{app.icon || iconTextFromApp(app)}</span>
-              )}
-            </div>
-          ))
+          <span className={styles.dockEmpty}>拖入图标到此处</span>
         )}
       </div>
 

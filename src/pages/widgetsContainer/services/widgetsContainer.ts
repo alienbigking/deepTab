@@ -16,6 +16,12 @@ const HOT_SEARCH_FALLBACK_APIS = [
   'https://api-hot.imsyy.top/{platform}'
 ]
 
+const HOT_SEARCH_PLATFORM_ALIASES: Record<string, string[]> = {
+  zhihu: ['zhihu'],
+  weixin: ['weixin', 'weread'],
+  csdn: ['csdn']
+}
+
 const hotSearchPlatforms: IHotSearchPlatform[] = [
   { key: 'baidu', name: '百度·热搜', shortName: '百度热搜', icon: 'du', color: '#4b6bff', path: '/baidu' },
   { key: 'weibo', name: '微博·热搜榜', shortName: '微博', icon: 'wb', color: '#ff5a2f', path: '/weibo' },
@@ -72,11 +78,51 @@ const pickCity = (city: string) => {
   return weatherCities.find((item) => item.key === key || item.name === city) || weatherCities[0]
 }
 
+const normalizeCityName = (value?: string) =>
+  String(value || '')
+    .replace(/市$/, '')
+    .replace(/特别行政区$/, '')
+    .trim()
+
+const nearestCityByCoords = (latitude: number, longitude: number) => {
+  const distance = (city: IWeatherCity) =>
+    Math.abs(city.latitude - latitude) + Math.abs(city.longitude - longitude)
+  return weatherCities.reduce((best, item) => (distance(item) < distance(best) ? item : best), weatherCities[0])
+}
+
+const resolveCityNameByCoords = async (latitude: number, longitude: number, fallbackName: string) => {
+  try {
+    const params = new URLSearchParams({
+      latitude: String(latitude),
+      longitude: String(longitude),
+      localityLanguage: 'zh'
+    })
+    const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?${params.toString()}`)
+    if (!response.ok) throw new Error('reverse geocode request failed')
+    const data = await response.json()
+    return (
+      normalizeCityName(data?.city) ||
+      normalizeCityName(data?.locality) ||
+      normalizeCityName(data?.principalSubdivision) ||
+      fallbackName
+    )
+  } catch (error) {
+    console.warn('反查定位城市失败:', error)
+    return fallbackName
+  }
+}
+
 const shortWeekday = (dateText: string, index: number) => {
   if (index === 0) return '今天'
   if (index === 1) return '明天'
   const date = new Date(dateText)
   return ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][date.getDay()]
+}
+
+const shortMonthDay = (dateText: string) => {
+  const date = new Date(dateText)
+  if (Number.isNaN(date.getTime())) return ''
+  return `${date.getDate()}号`
 }
 
 const formatHour = (time: string) => {
@@ -234,7 +280,7 @@ const hotSearchUrl = (title: string) => `https://www.baidu.com/s?wd=${encodeURIC
 const fallbackHotSearch = (platform: IHotSearchPlatform): IHotSearchData => ({
   platform,
   updatedAt: new Date().toISOString(),
-  items: hotSearchFallbackTitles(platform).slice(0, 5).map((title, index) => ({
+  items: hotSearchFallbackTitles(platform).map((title, index) => ({
     id: `${platform.key}_fallback_${index}`,
     title,
     hot: `${(790.49 - index * 9.31).toFixed(2)}万`,
@@ -257,11 +303,25 @@ const formatHotValue = (value: unknown) => {
   return String(value)
 }
 
-const hotSearchApiUrl = (template: string, platform: IHotSearchPlatform) => {
+const hotSearchApiUrl = (template: string, platform: IHotSearchPlatform, platformKey = platform.key) => {
   if (template.includes('{platform}')) {
-    return template.replaceAll('{platform}', encodeURIComponent(platform.key))
+    return template.replaceAll('{platform}', encodeURIComponent(platformKey))
   }
   return `${template.replace(/\/$/, '')}${platform.path}`
+}
+
+const stripJsonNoise = (text: string) => {
+  const trimmed = text.trim()
+  const objectIndex = trimmed.indexOf('{')
+  const arrayIndex = trimmed.indexOf('[')
+  const startIndexes = [objectIndex, arrayIndex].filter((index) => index >= 0)
+  if (!startIndexes.length) return trimmed
+  return trimmed.slice(Math.min(...startIndexes))
+}
+
+const readHotSearchPayload = async (response: Response) => {
+  const text = await response.text()
+  return JSON.parse(stripJsonNoise(text))
 }
 
 const normalizeHotSearchItems = (payload: unknown, platform: IHotSearchPlatform): IHotSearchData => {
@@ -289,8 +349,12 @@ const normalizeHotSearchItems = (payload: unknown, platform: IHotSearchPlatform)
       result.push({
         id: `${platform.key}_${String(item.id || item.index || index)}`,
         title,
-        hot: formatHotValue(item.hot || item.hotValue || item.desc || item.follow || item.views),
-        url: typeof item.url === 'string' ? item.url : hotSearchUrl(title)
+        hot: formatHotValue(item.hot || item.hotValue || item.desc || item.follow || item.views || item.author),
+        url: typeof item.url === 'string'
+          ? item.url
+          : typeof item.mobileUrl === 'string'
+            ? item.mobileUrl
+            : hotSearchUrl(title)
       })
       return result
     }, [])
@@ -342,6 +406,7 @@ const fetchWeatherByCity = async (picked: IWeatherCity): Promise<IWeatherData> =
     condition: current.condition,
     icon: current.icon,
     city: picked.name,
+    cityKey: picked.key,
     updatedAt: data?.current?.time || new Date().toISOString(),
     humidity: Math.round(Number(data?.current?.relative_humidity_2m || 0)),
     windSpeed: Math.round(Number(data?.current?.wind_speed_10m || 0)),
@@ -367,6 +432,7 @@ const fetchWeatherByCity = async (picked: IWeatherCity): Promise<IWeatherData> =
       const info = weatherText(Number(code))
       return {
         day: shortWeekday(dailyTimes[index], index),
+        date: shortMonthDay(dailyTimes[index]),
         icon: info.icon,
         condition: info.condition,
         temperature: Math.round(Number(dailyMax[index] || 0)),
@@ -389,24 +455,37 @@ export default {
   async getHotSearch(platformKey = 'baidu'): Promise<IHotSearchData> {
     const platform =
       hotSearchPlatforms.find((item) => item.key === platformKey) || hotSearchPlatforms[0]
+    const platformKeys = HOT_SEARCH_PLATFORM_ALIASES[platform.key] || [platform.key]
 
-    for (const apiTemplate of [HOT_SEARCH_API, ...HOT_SEARCH_FALLBACK_APIS]) {
-      try {
-        const response = await fetch(hotSearchApiUrl(apiTemplate, platform))
-        if (!response.ok) throw new Error('hot search request failed')
-        const payload = await response.json()
-        const data = normalizeHotSearchItems(payload, platform)
-        if (data.items.length > 0) return data
-      } catch (error) {
-        console.warn(`获取${platform.name}数据失败:`, error)
+    for (const key of platformKeys) {
+      for (const apiTemplate of [HOT_SEARCH_API, ...HOT_SEARCH_FALLBACK_APIS]) {
+        try {
+          const response = await fetch(hotSearchApiUrl(apiTemplate, platform, key))
+          if (!response.ok) throw new Error('hot search request failed')
+          const payload = await readHotSearchPayload(response)
+          const data = normalizeHotSearchItems(payload, platform)
+          if (data.items.length > 0) return data
+        } catch (error) {
+          console.warn(`获取${platform.name}数据失败:`, error)
+        }
       }
     }
 
-    return emptyHotSearch(platform)
+    return fallbackHotSearch(platform)
   },
 
   async getWeather(city: string): Promise<IWeatherData> {
     try {
+      if (city === 'current-location') {
+        const config = await this.getWidgetConfig()
+        if (config.weatherCoords) {
+          return await this.getWeatherByCoords(
+            config.weatherCoords.latitude,
+            config.weatherCoords.longitude,
+            config.weatherCoords.city
+          )
+        }
+      }
       const picked = pickCity(city)
       return await fetchWeatherByCity(picked)
     } catch (error) {
@@ -415,17 +494,27 @@ export default {
     }
   },
 
-  async getWeatherByCoords(latitude: number, longitude: number, name = '当前位置'): Promise<IWeatherData> {
+  async getWeatherByCoords(latitude: number, longitude: number, name?: string): Promise<IWeatherData> {
+    const nearestCity = nearestCityByCoords(latitude, longitude)
+    const cityName = normalizeCityName(name) || await resolveCityNameByCoords(latitude, longitude, nearestCity.name)
     try {
-      return await fetchWeatherByCity({
+      const weather = await fetchWeatherByCity({
         key: 'current-location',
-        name,
+        name: cityName,
         latitude,
         longitude
       })
+      return {
+        ...weather,
+        city: cityName,
+        cityKey: 'current-location'
+      }
     } catch (error) {
       console.error('获取定位天气失败:', error)
-      return fallbackWeather(name)
+      return {
+        ...fallbackWeather(cityName),
+        cityKey: 'current-location'
+      }
     }
   },
 
@@ -475,7 +564,9 @@ export default {
           showCalendar: true,
           showWeather: true,
           showTodo: true,
-          weatherCity: 'beijing'
+          weatherCity: 'current-location',
+          weatherCoords: undefined,
+          hotSearchHiddenPlatforms: []
         }
       )
     } catch (error) {
@@ -484,7 +575,9 @@ export default {
         showCalendar: true,
         showWeather: true,
         showTodo: true,
-        weatherCity: 'beijing'
+        weatherCity: 'current-location',
+        weatherCoords: undefined,
+        hotSearchHiddenPlatforms: []
       }
     }
   },

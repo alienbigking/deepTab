@@ -14,13 +14,6 @@
   }
 }
 
-.title {
-  font-size: 20px;
-  font-weight: 600;
-  margin-bottom: 6px;
-  color: var(--dt-settings-card-text);
-}
-
 .subTitle {
   font-size: 13px;
   color: var(--dt-settings-card-muted);
@@ -57,4 +50,18 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+
+  :global {
+    .ant-btn-dangerous:not(.ant-btn-primary) {
+      color: #ff4d4f !important;
+      background: rgba(255, 255, 255, 0.96) !important;
+      border-color: rgba(255, 77, 79, 0.48) !important;
+    }
+
+    .ant-btn-dangerous:not(.ant-btn-primary):hover {
+      color: #fff !important;
+      background: #ff4d4f !important;
+      border-color: #ff4d4f !important;
+    }
+  }
 }

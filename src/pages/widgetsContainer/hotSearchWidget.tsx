@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Card, Modal, Spin, Tooltip } from 'antd'
+import { Card, Checkbox, Modal, Spin, Tooltip, message } from 'antd'
 import { LeftOutlined, ReloadOutlined, RightOutlined, SettingFilled } from '@ant-design/icons'
+import SimpleBar from 'simplebar-react'
 import addAppModalStyles from '@/pages/appGrid/addAppModal.module.less'
 import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 import styles from './widgets.module.less'
@@ -17,19 +18,34 @@ const HotSearchWidget: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [modalLoading, setModalLoading] = useState(false)
   const [open, setOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [hiddenPlatformKeys, setHiddenPlatformKeys] = useState<string[]>([])
   const requestIdRef = useRef(0)
   const modalRequestIdRef = useRef(0)
+  const settingsPanelRef = useRef<HTMLDivElement | null>(null)
+  const settingsButtonRef = useRef<HTMLButtonElement | null>(null)
+  const [messageApi, contextHolder] = message.useMessage()
+
+  const visiblePlatforms = useMemo(() => {
+    const list = platforms.filter((item) => !hiddenPlatformKeys.includes(item.key))
+    return list.length ? list : platforms.slice(0, 1)
+  }, [hiddenPlatformKeys, platforms])
 
   const platformIndex = Math.max(
     0,
-    platforms.findIndex((item) => item.key === platformKey)
+    visiblePlatforms.findIndex((item) => item.key === platformKey)
   )
-  const activePlatform = platforms[platformIndex] || platforms[0]
+  const activePlatform = visiblePlatforms[platformIndex] || visiblePlatforms[0]
   const modalPlatformIndex = Math.max(
     0,
-    platforms.findIndex((item) => item.key === modalPlatformKey)
+    visiblePlatforms.findIndex((item) => item.key === modalPlatformKey)
   )
-  const activeModalPlatform = platforms[modalPlatformIndex] || platforms[0]
+  const activeModalPlatform = visiblePlatforms[modalPlatformIndex] || visiblePlatforms[0]
+
+  const loadWidgetConfig = async () => {
+    const config = await widgetsContainerService.getWidgetConfig()
+    setHiddenPlatformKeys(config.hotSearchHiddenPlatforms || [])
+  }
 
   const loadHotSearch = async (nextPlatformKey = platformKey) => {
     const requestId = requestIdRef.current + 1
@@ -70,11 +86,44 @@ const HotSearchWidget: React.FC = () => {
   }
 
   useEffect(() => {
+    void loadWidgetConfig()
     void loadHotSearch('baidu')
   }, [])
 
+  useEffect(() => {
+    if (!settingsOpen) return
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node
+      if (settingsPanelRef.current?.contains(target)) return
+      if (settingsButtonRef.current?.contains(target)) return
+      setSettingsOpen(false)
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+    }
+  }, [settingsOpen])
+
+  useEffect(() => {
+    if (!activePlatform?.key) return
+    if (platformKey === activePlatform.key) return
+    setPlatformKey(activePlatform.key)
+    setData(cache[activePlatform.key] || null)
+    void loadHotSearch(activePlatform.key)
+  }, [activePlatform?.key])
+
+  useEffect(() => {
+    if (!activeModalPlatform?.key) return
+    if (modalPlatformKey === activeModalPlatform.key) return
+    setModalPlatformKey(activeModalPlatform.key)
+    setModalData(cache[activeModalPlatform.key] || null)
+    void loadModalHotSearch(activeModalPlatform.key)
+  }, [activeModalPlatform?.key])
+
   const switchPlatform = (nextIndex: number) => {
-    const nextPlatform = platforms[(nextIndex + platforms.length) % platforms.length]
+    const nextPlatform = visiblePlatforms[(nextIndex + visiblePlatforms.length) % visiblePlatforms.length]
     setPlatformKey(nextPlatform.key)
     if (cache[nextPlatform.key]) {
       setData(cache[nextPlatform.key])
@@ -98,6 +147,24 @@ const HotSearchWidget: React.FC = () => {
     setModalPlatformKey(platformKey)
     setModalData(data)
     setOpen(true)
+  }
+
+  const handleTogglePlatform = async (key: string, checked: boolean) => {
+    const nextHidden = checked
+      ? hiddenPlatformKeys.filter((item) => item !== key)
+      : Array.from(new Set([...hiddenPlatformKeys, key]))
+    const nextVisible = platforms.filter((item) => !nextHidden.includes(item.key))
+    if (!nextVisible.length) {
+      messageApi.warning('至少保留一个热搜源')
+      return
+    }
+
+    setHiddenPlatformKeys(nextHidden)
+    const config = await widgetsContainerService.getWidgetConfig()
+    await widgetsContainerService.saveWidgetConfig({
+      ...config,
+      hotSearchHiddenPlatforms: nextHidden
+    })
   }
 
   const openItem = (url?: string) => {
@@ -156,6 +223,7 @@ const HotSearchWidget: React.FC = () => {
 
   return (
     <>
+      {contextHolder}
       <Card
         className={styles.hotSearchCard}
         variant='borderless'
@@ -214,52 +282,88 @@ const HotSearchWidget: React.FC = () => {
         destroyOnHidden
       >
         <div className={styles.hotSearchModal}>
-          <aside className={styles.hotSearchSidebar}>
-            {platforms.map((platform) => (
-              <button
-                key={platform.key}
-                type='button'
-                className={platform.key === activeModalPlatform.key ? styles.active : ''}
-                onClick={() => handlePlatformClick(platform.key)}
-              >
-                <PlatformIcon platform={platform} />
-                <em>{platform.name}</em>
-              </button>
-            ))}
-          </aside>
+          <SimpleBar className={`${styles.hotSearchSidebar} dtPrettyScrollbar`} autoHide>
+            <div className={styles.hotSearchSidebarInner}>
+              {visiblePlatforms.map((platform) => (
+                <button
+                  key={platform.key}
+                  type='button'
+                  className={platform.key === activeModalPlatform.key ? styles.active : ''}
+                  onClick={() => handlePlatformClick(platform.key)}
+                >
+                  <PlatformIcon platform={platform} />
+                  <em>{platform.name}</em>
+                </button>
+              ))}
+            </div>
+          </SimpleBar>
 
           <section className={styles.hotSearchMain}>
             <div className={styles.hotSearchModalToolbar}>
               <span>上次更新：{modalUpdatedAt}</span>
               <div>
                 <Tooltip title='刷新'>
-                  <button type='button' onClick={() => void loadModalHotSearch()}>
-                    <ReloadOutlined />
+                  <button
+                    type='button'
+                    className={modalLoading ? styles.refreshingToolbarButton : ''}
+                    disabled={modalLoading}
+                    onClick={() => void loadModalHotSearch()}
+                  >
+                    <ReloadOutlined spin={modalLoading} />
                   </button>
                 </Tooltip>
                 <Tooltip title='设置'>
-                  <button type='button'>
+                  <button
+                    ref={settingsButtonRef}
+                    type='button'
+                    className={settingsOpen ? styles.activeToolbarButton : ''}
+                    onClick={() => setSettingsOpen((value) => !value)}
+                  >
                     <SettingFilled />
                   </button>
                 </Tooltip>
               </div>
             </div>
 
-            <div className={styles.hotSearchModalList}>
-              {modalDisplayItems.length ? (
-                modalDisplayItems.map((item, index) => (
-                  <button key={`${activeModalPlatform.key}_${item.id}`} type='button' onClick={() => openItem(item.url)}>
-                    <span className={styles[`rank${Math.min(index + 1, 4)}`]}>{index + 1}</span>
-                    <strong>{item.title}</strong>
-                    <em>{item.hot}</em>
-                  </button>
-                ))
-              ) : (
-                <div className={styles.hotSearchEmpty}>
-                  {modalLoading ? '正在获取热搜...' : '当前平台暂时没有获取到热搜，稍后刷新试试'}
+            {settingsOpen && (
+              <div ref={settingsPanelRef} className={styles.hotSearchSettingsPanel}>
+                <div className={styles.hotSearchSettingsHeader}>
+                  <div>
+                    <strong>热搜源显示</strong>
+                    <span>勾选后会显示在左侧来源列表和小卡片切换中</span>
+                  </div>
                 </div>
-              )}
-            </div>
+                <div className={styles.hotSearchSettingsGrid}>
+                  {platforms.map((platform) => (
+                    <Checkbox
+                      key={platform.key}
+                      checked={!hiddenPlatformKeys.includes(platform.key)}
+                      onChange={(event) => void handleTogglePlatform(platform.key, event.target.checked)}
+                    >
+                      {platform.shortName}
+                    </Checkbox>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <SimpleBar className={`${styles.hotSearchModalList} dtPrettyScrollbar`} autoHide>
+              <div className={styles.hotSearchModalListInner}>
+                {modalDisplayItems.length ? (
+                  modalDisplayItems.map((item, index) => (
+                    <button key={`${activeModalPlatform.key}_${item.id}`} type='button' onClick={() => openItem(item.url)}>
+                      <span className={styles[`rank${Math.min(index + 1, 4)}`]}>{index + 1}</span>
+                      <strong>{item.title}</strong>
+                      <em>{item.hot}</em>
+                    </button>
+                  ))
+                ) : (
+                  <div className={styles.hotSearchEmpty}>
+                    {modalLoading ? '正在获取热搜...' : '当前平台暂时没有获取到热搜，稍后刷新试试'}
+                  </div>
+                )}
+              </div>
+            </SimpleBar>
           </section>
         </div>
       </Modal>

@@ -17,7 +17,9 @@ export const useWidgetsContainerStore = create<WidgetsContainerStore>((set) => (
     showCalendar: true,
     showWeather: true,
     showTodo: true,
-    weatherCity: '北京'
+    weatherCity: 'current-location',
+    weatherCoords: undefined,
+    hotSearchHiddenPlatforms: []
   },
   setWeatherData: (weatherData) => set({ weatherData }),
   setTodoList: (todoList) => set({ todoList }),

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Button, Card, Modal, Select, Spin, Tooltip } from 'antd'
 import { EnvironmentOutlined, ReloadOutlined } from '@ant-design/icons'
+import SimpleBar from 'simplebar-react'
 import cn from 'classnames'
 import addAppModalStyles from '@/pages/appGrid/addAppModal.module.less'
 import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
@@ -27,7 +28,7 @@ const getWeatherTheme = (weather?: IWeatherData | null) => {
 const WeatherWidget: React.FC = () => {
   const cities = useMemo(() => widgetsContainerService.getWeatherCities(), [])
   const [data, setData] = useState<IWeatherData | null>(null)
-  const [city, setCity] = useState('beijing')
+  const [city, setCity] = useState('current-location')
   const [loading, setLoading] = useState(false)
   const [locating, setLocating] = useState(false)
   const [open, setOpen] = useState(false)
@@ -42,11 +43,54 @@ const WeatherWidget: React.FC = () => {
     }
   }
 
+  const locateWeather = async (save = true) => {
+    if (!navigator.geolocation) {
+      await loadWeather('beijing')
+      return
+    }
+
+    setLocating(true)
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: false,
+          timeout: 8000
+        })
+      })
+      const weather = await widgetsContainerService.getWeatherByCoords(
+        position.coords.latitude,
+        position.coords.longitude
+      )
+      setData(weather)
+      setCity('current-location')
+      if (save) {
+        const config = await widgetsContainerService.getWidgetConfig()
+        await widgetsContainerService.saveWidgetConfig({
+          ...config,
+          weatherCity: 'current-location',
+          weatherCoords: {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            city: weather.city
+          }
+        })
+      }
+    } catch {
+      await loadWeather('beijing')
+    } finally {
+      setLocating(false)
+    }
+  }
+
   useEffect(() => {
     const load = async () => {
       const config = await widgetsContainerService.getWidgetConfig()
-      const nextCity = config.weatherCity || 'beijing'
+      const nextCity = config.weatherCity || 'current-location'
       setCity(nextCity)
+      if (nextCity === 'current-location' && !config.weatherCoords) {
+        await locateWeather(true)
+        return
+      }
       await loadWeather(nextCity)
     }
     void load()
@@ -55,26 +99,16 @@ const WeatherWidget: React.FC = () => {
   const handleCityChange = async (nextCity: string) => {
     setCity(nextCity)
     const config = await widgetsContainerService.getWidgetConfig()
-    await widgetsContainerService.saveWidgetConfig({ ...config, weatherCity: nextCity })
+    await widgetsContainerService.saveWidgetConfig({
+      ...config,
+      weatherCity: nextCity,
+      weatherCoords: nextCity === 'current-location' ? config.weatherCoords : undefined
+    })
     await loadWeather(nextCity)
   }
 
   const locate = async () => {
-    if (!navigator.geolocation) return
-    setLocating(true)
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const weather = await widgetsContainerService.getWeatherByCoords(
-          position.coords.latitude,
-          position.coords.longitude,
-          '当前位置'
-        )
-        setData(weather)
-        setLocating(false)
-      },
-      () => setLocating(false),
-      { enableHighAccuracy: false, timeout: 8000 }
-    )
+    await locateWeather(true)
   }
 
   return (
@@ -96,6 +130,25 @@ const WeatherWidget: React.FC = () => {
               </div>
               <div className={styles.weatherCompactTemp}>
                 <span>{data?.temperature ?? '--'}</span>°
+              </div>
+            </div>
+
+            <div className={styles.weatherCompactMetrics}>
+              <div>
+                <strong>{data?.humidity ?? '--'}%</strong>
+                <span>湿度</span>
+              </div>
+              <div>
+                <strong>{windDirectionText(data?.windDirection)}</strong>
+                <span>风向</span>
+              </div>
+              <div>
+                <strong>{data?.windSpeed ?? '--'}km/h</strong>
+                <span>风速</span>
+              </div>
+              <div>
+                <strong>{data?.pressure ?? '--'}</strong>
+                <span>百帕</span>
               </div>
             </div>
 
@@ -135,7 +188,12 @@ const WeatherWidget: React.FC = () => {
                 size='small'
                 value={city}
                 className={styles.weatherCitySelect}
-                options={cities.map((item) => ({ label: item.name, value: item.key }))}
+                options={[
+                  ...(city === 'current-location'
+                    ? [{ label: data?.city || '当前城市', value: 'current-location' }]
+                    : []),
+                  ...cities.map((item) => ({ label: item.name, value: item.key }))
+                ]}
                 onChange={(value) => void handleCityChange(value)}
               />
               <div className={styles.weatherActions}>
@@ -216,28 +274,35 @@ const WeatherWidget: React.FC = () => {
               <span>日落 {data?.sunset || '--'}</span>
             </div>
 
-            <div className={styles.hourlyForecast}>
-              {(data?.hourly || []).map((item) => (
-                <div key={item.time} className={styles.hourlyItem}>
-                  <span>{item.time}</span>
-                  <b>{item.icon}</b>
-                  <strong>{item.temperature}°</strong>
-                  <em>{item.precipitationProbability ?? 0}%</em>
-                </div>
-              ))}
-            </div>
+            <SimpleBar className={`${styles.hourlyForecast} dtPrettyScrollbar`} autoHide>
+              <div className={styles.hourlyForecastInner}>
+                {(data?.hourly || []).map((item) => (
+                  <div key={item.time} className={styles.hourlyItem}>
+                    <span>{item.time}</span>
+                    <b>{item.icon}</b>
+                    <strong>{item.temperature}°</strong>
+                    <em>{item.precipitationProbability ?? 0}%</em>
+                  </div>
+                ))}
+              </div>
+            </SimpleBar>
 
-            <div className={styles.weatherForecast}>
-              {(data?.forecast || []).map((item) => (
-                <div key={item.day} className={styles.forecastItem}>
-                  <span>{item.day}</span>
-                  <span>{item.icon}</span>
-                  <strong>{item.temperature}°</strong>
-                  <em>{item.minTemperature ?? '--'}°</em>
-                  <small>{item.precipitationProbability ?? 0}%</small>
-                </div>
-              ))}
-            </div>
+            <SimpleBar className={`${styles.weatherForecast} dtPrettyScrollbar`} autoHide>
+              <div className={styles.weatherForecastInner}>
+                {(data?.forecast || []).map((item) => (
+                  <div key={item.day} className={styles.forecastItem}>
+                    <span>
+                      <b>{item.day}</b>
+                      <small>{item.date}</small>
+                    </span>
+                    <span>{item.icon}</span>
+                    <strong>{item.temperature}°</strong>
+                    <em>{item.minTemperature ?? '--'}°</em>
+                    <small>{item.precipitationProbability ?? 0}%</small>
+                  </div>
+                ))}
+              </div>
+            </SimpleBar>
           </div>
         </div>
       </Modal>

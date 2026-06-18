@@ -166,10 +166,9 @@ const BackupRestore: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <Card className='dtSettingsCard' variant='borderless'>
+      <Card title='备份与恢复' className='dtSettingsCard' variant='borderless'>
         <div className={styles.content}>
           <div className={styles.header}>
-            <h2 className={styles.title}>备份与恢复</h2>
             <p className={styles.subTitle}>备份你的个性化配置，在设备之间快速同步或恢复。</p>
           </div>
 

@@ -172,10 +172,9 @@ const ResetSettings: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <Card className='dtSettingsCard' variant='borderless'>
+      <Card title='重置设置' className='dtSettingsCard' variant='borderless'>
         <div className={styles.content}>
           <div className={styles.header}>
-            <h2 className={styles.title}>重置设置</h2>
             <p className={styles.subTitle}>当你希望回到出厂默认状态时，可以在这里快速重置。</p>
           </div>
 

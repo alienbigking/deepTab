@@ -3,6 +3,12 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+
+  :global {
+    .dtSettingsCard {
+      box-shadow: none !important;
+    }
+  }
 }
 
 .currentDefault {
@@ -28,14 +34,14 @@
   padding: 12px 14px;
   border-radius: 14px;
   background: var(--dt-widget-bg);
-  box-shadow: var(--dt-widget-shadow);
+  box-shadow: none;
   cursor: pointer;
   transition: all 0.2s;
   user-select: none;
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: var(--dt-widget-shadow-hover);
+    box-shadow: none;
   }
 }
 
@@ -103,7 +109,7 @@
   padding: 12px 14px;
   border-radius: 14px;
   background: var(--dt-widget-bg);
-  box-shadow: var(--dt-widget-shadow);
+  box-shadow: none;
 }
 
 .customMain {

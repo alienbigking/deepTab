@@ -96,7 +96,27 @@
         border-color: rgba(0, 0, 0, 0.14) !important;
         background: rgba(255, 255, 255, 0.96) !important;
       }
+
+      .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous),
+      .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous) span,
+      .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous) .anticon {
+        color: rgba(0, 0, 0, 0.88) !important;
+      }
+
+      .ant-tabs-tab-btn {
+        color: rgba(255, 255, 255, 0.78) !important;
+      }
+
+      .ant-tabs-tab:hover .ant-tabs-tab-btn,
+      .ant-tabs-tab-active .ant-tabs-tab-btn {
+        color: rgba(255, 255, 255, 0.98) !important;
+      }
+
+      .ant-tabs-ink-bar {
+        background: rgba(255, 255, 255, 0.95) !important;
+      }
     }
+
   }
 
   // 左侧菜单
@@ -152,8 +172,10 @@
     // 菜单列表
     .menuList {
       flex: 1;
+    }
+
+    .menuListInner {
       padding: 20px 0;
-      overflow-y: auto;
 
       // 菜单项
       .menuItem {
@@ -264,7 +286,19 @@
     background: var(--dt-settings-right-bg);
     backdrop-filter: blur(30px) saturate(180%);
     -webkit-backdrop-filter: blur(30px) saturate(180%);
-    overflow-y: auto;
+    min-width: 0;
+    min-height: 0;
+
+    :global {
+      .simplebar-content {
+        height: 100%;
+      }
+    }
+  }
+
+  .rightContentInner {
+    height: 100%;
+    min-height: 100%;
   }
 
   // 占位内容

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Input, Popover, Space } from 'antd'
+import { Input, Space } from 'antd'
 import { CloseOutlined, DownOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
 import cn from 'classnames'
 import styles from './searchBar.module.less'
@@ -283,6 +283,7 @@ const SearchBar: React.FC = () => {
       const root = wrapRef.current
       if (!root) return
       if (root.contains(e.target as Node)) return
+      setEnginePickerOpen(false)
       setPanelOpen(false)
       setActiveIndex(-1)
     }
@@ -377,87 +378,23 @@ const SearchBar: React.FC = () => {
           placeholder='输入关键词搜索'
           prefix={
             <Space size={8} className={styles.prefixWrap}>
-              <Popover
-                open={enginePickerOpen}
-                onOpenChange={setEnginePickerOpen}
-                trigger='click'
-                placement='bottomLeft'
-                overlayClassName={styles.enginePopover}
-                content={
-                  <div className={styles.enginePanel}>
-                    <div className={styles.engineGrid}>
-                      {builtinEngines.map((it) => (
-                        <div
-                          key={it.id}
-                          className={
-                            it.id === resolvedEngineId
-                              ? `${styles.engineTile} ${styles.engineTileActive}`
-                              : styles.engineTile
-                          }
-                          onClick={() => void handlePickEngine(it.id)}
-                          role='button'
-                          tabIndex={0}
-                        >
-                          <div className={styles.engineTileIcon}>
-                            <EngineIcon engineId={it.id} />
-                          </div>
-                          <div className={styles.engineTileLabel}>{it.name}</div>
-                        </div>
-                      ))}
-
-                      {customEngines.map((it) => (
-                        <div
-                          key={it.id}
-                          className={
-                            it.id === resolvedEngineId
-                              ? `${styles.engineTile} ${styles.engineTileActive}`
-                              : styles.engineTile
-                          }
-                          onClick={() => void handlePickEngine(it.id)}
-                          role='button'
-                          tabIndex={0}
-                        >
-                          <div className={styles.engineTileIcon}>
-                            <EngineIcon engineId={it.id} />
-                          </div>
-                          <div className={styles.engineTileLabel}>{it.name}</div>
-                        </div>
-                      ))}
-
-                      <div
-                        className={styles.engineTile}
-                        onClick={() => {
-                          setEnginePickerOpen(false)
-                          openSearchEngineSettings()
-                        }}
-                        role='button'
-                        tabIndex={0}
-                      >
-                        <div className={styles.engineTileIcon}>
-                          <PlusOutlined />
-                        </div>
-                        <div className={styles.engineTileLabel}>添加</div>
-                      </div>
-                    </div>
-                  </div>
-                }
+              <span
+                className={styles.engineTrigger}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setEnginePickerOpen((v) => !v)
+                  setPanelOpen(false)
+                }}
               >
-                <span
-                  className={styles.engineTrigger}
-                  onMouseDown={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                  }}
-                >
-                  <span className={styles.engineTriggerIcon}>
-                    <EngineIcon engineId={String(currentEngine.id)} />
-                  </span>
-                  <DownOutlined className={styles.engineTriggerArrow} />
+                <span className={styles.engineTriggerIcon}>
+                  <EngineIcon engineId={String(currentEngine.id)} />
                 </span>
-              </Popover>
+                <DownOutlined className={styles.engineTriggerArrow} />
+              </span>
               <SearchOutlined className={styles.searchIcon} />
             </Space>
           }
@@ -475,6 +412,70 @@ const SearchBar: React.FC = () => {
           onPressEnter={(e) => handleSearch((e.target as HTMLInputElement).value)}
           onKeyDown={handleKeyDown}
         />
+
+        {enginePickerOpen && (
+          <div
+            className={styles.enginePanel}
+            onMouseDown={(e) => {
+              e.preventDefault()
+            }}
+          >
+            <div className={styles.engineGrid}>
+              {builtinEngines.map((it) => (
+                <div
+                  key={it.id}
+                  className={
+                    it.id === resolvedEngineId
+                      ? `${styles.engineTile} ${styles.engineTileActive}`
+                      : styles.engineTile
+                  }
+                  onClick={() => void handlePickEngine(it.id)}
+                  role='button'
+                  tabIndex={0}
+                >
+                  <div className={styles.engineTileIcon}>
+                    <EngineIcon engineId={it.id} />
+                  </div>
+                  <div className={styles.engineTileLabel}>{it.name}</div>
+                </div>
+              ))}
+
+              {customEngines.map((it) => (
+                <div
+                  key={it.id}
+                  className={
+                    it.id === resolvedEngineId
+                      ? `${styles.engineTile} ${styles.engineTileActive}`
+                      : styles.engineTile
+                  }
+                  onClick={() => void handlePickEngine(it.id)}
+                  role='button'
+                  tabIndex={0}
+                >
+                  <div className={styles.engineTileIcon}>
+                    <EngineIcon engineId={it.id} />
+                  </div>
+                  <div className={styles.engineTileLabel}>{it.name}</div>
+                </div>
+              ))}
+
+              <div
+                className={styles.engineTile}
+                onClick={() => {
+                  setEnginePickerOpen(false)
+                  openSearchEngineSettings()
+                }}
+                role='button'
+                tabIndex={0}
+              >
+                <div className={styles.engineTileIcon}>
+                  <PlusOutlined />
+                </div>
+                <div className={styles.engineTileLabel}>添加</div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {(showHistoryPanel || showSuggestPanel) && (
           <div

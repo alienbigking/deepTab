@@ -35,6 +35,7 @@ const SearchStyleModal: React.FC<SearchStyleModalProps> = (props) => {
       rootClassName={cn(styles.searchStyleModalRoot)}
       getContainer={false}
       maskClosable={false}
+      transitionName=''
       maskTransitionName={modalMaskTransitionName}
       maskStyle={modalMaskStyle}
     >

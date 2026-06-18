@@ -232,6 +232,24 @@
   }
 }
 
+.calendarCompactMeta {
+  margin-top: 2px;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap;
+  gap: 5px !important;
+
+  i {
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: rgba(255, 223, 111, 0.2);
+    font-style: normal;
+    font-size: 11px;
+    line-height: 1;
+    color: rgba(59, 43, 0, 0.68);
+  }
+}
+
 .calendarFestival {
   min-width: 0;
   margin-top: 18px;
@@ -339,6 +357,23 @@
     color: #fff;
   }
 
+  .calendarHeroMeta {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+
+    i {
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
+      font-style: normal;
+      font-size: 12px;
+      line-height: 1;
+      color: rgba(255, 255, 255, 0.86);
+    }
+  }
+
   b {
     width: 84px;
     height: 84px;
@@ -357,13 +392,13 @@
   grid-template-columns: minmax(0, 1fr) 280px;
   gap: 12px;
   flex: 1;
+  height: 0;
   min-height: 0;
   padding: 0;
 }
 
 .calendarMonthPanel,
 .calendarInfoPanel {
-  padding: 14px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.92);
   color: rgba(0, 0, 0, 0.86);
@@ -371,9 +406,68 @@
   overflow: hidden;
 }
 
+.calendarInfoPanel {
+  height: 100%;
+  max-height: 100%;
+  min-width: 0;
+  padding: 0;
+}
+
+.calendarInfoScroller {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+
+  :global {
+    .simplebar-wrapper,
+    .simplebar-mask,
+    .simplebar-offset,
+    .simplebar-content-wrapper {
+      height: 100%;
+      max-height: 100%;
+    }
+
+    .simplebar-content-wrapper {
+      overflow: auto !important;
+    }
+
+    .simplebar-track.simplebar-vertical {
+      right: 4px;
+    }
+
+    .simplebar-scrollbar::before {
+      background: rgba(0, 0, 0, 0.28);
+      opacity: 0;
+    }
+
+    .simplebar-scrollbar.simplebar-visible::before,
+    .simplebar-track.simplebar-vertical:hover .simplebar-scrollbar::before {
+      background: rgba(0, 0, 0, 0.38);
+      opacity: 0.9;
+    }
+  }
+
+  &:hover {
+    :global {
+      .simplebar-scrollbar::before {
+        background: rgba(0, 0, 0, 0.38);
+        opacity: 0.9;
+      }
+    }
+  }
+}
+
+.calendarInfoPanelInner {
+  min-height: 100%;
+  padding: 14px 20px 14px 14px;
+  box-sizing: border-box;
+}
+
 .calendarMonthPanel {
+  padding: 14px;
   display: flex;
   flex-direction: column;
+  overflow: auto;
 }
 
 .calendarMonthToolbar {
@@ -432,19 +526,55 @@
 }
 
 .calendarDayCell {
-  display: grid;
-  place-items: center;
+  position: relative;
+  width: calc(100% - 12px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
   border-radius: 10px;
   font-size: 13px;
   color: rgba(0, 0, 0, 0.74);
   background: rgba(0, 0, 0, 0.04);
   min-height: 0;
+  padding: 22px 6px 5px;
+  box-sizing: border-box;
+  gap: 2px;
+
+  b {
+    position: absolute;
+    top: 6px;
+    left: 9px;
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  em {
+    max-width: 100%;
+    font-size: 10.5px;
+    font-style: normal;
+    line-height: 1.05;
+    color: rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.calendarDayTopLabel {
+  min-height: 10px;
+  margin-top: 2px;
+  font-size: 12px !important;
+  color: #cf5b00 !important;
+  font-weight: 700;
 }
 
 .calendarGrid {
-  flex: 1;
+  flex: 0 0 auto;
   min-height: 0;
-  grid-auto-rows: minmax(0, 1fr);
+  grid-auto-rows: 58px;
 }
 
 .muted {
@@ -453,10 +583,107 @@
 }
 
 .today {
-  color: #fff;
+  color: #3a2a00;
   font-weight: 800;
-  background: var(--dt-primary-color);
-  box-shadow: 0 8px 18px rgba(22, 119, 255, 0.28);
+  background: linear-gradient(145deg, rgba(255, 221, 120, 0.58), rgba(255, 245, 216, 0.74));
+  box-shadow: 0 8px 18px rgba(217, 159, 0, 0.18);
+
+  b {
+    color: #3a2a00;
+  }
+
+  em {
+    color: rgba(58, 42, 0, 0.62);
+  }
+}
+
+.weekend {
+  color: #d4380d;
+
+  b,
+  em {
+    color: #d4380d;
+  }
+}
+
+.markedDay {
+  background: rgba(255, 150, 48, 0.08);
+}
+
+.calendarTodayCard {
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  span {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.45);
+  }
+
+  strong {
+    font-size: 16px;
+    color: rgba(0, 0, 0, 0.86);
+  }
+
+  em {
+    font-style: normal;
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.55);
+  }
+}
+
+.calendarMonthSummary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+
+  div {
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.04);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  span {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.48);
+  }
+
+  strong {
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.86);
+  }
+}
+
+.calendarFestivalList {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  span {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.48);
+  }
+
+  em {
+    font-style: normal;
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.78);
+  }
 }
 
 .calendarStats {
@@ -488,8 +715,9 @@
 }
 
 .calendarYearProgress {
+  position: relative;
   margin-top: 10px;
-  padding: 12px;
+  padding: 24px 12px 12px;
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.04);
 
@@ -512,18 +740,24 @@
 
   &::before {
     content: '';
-    display: block;
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    right: 12px;
     height: 8px;
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.08);
+    background: rgba(0, 0, 0, 0.1);
   }
 
   i {
+    position: absolute;
+    top: 10px;
+    left: 12px;
     display: block;
     height: 8px;
-    margin-top: -8px;
     border-radius: 999px;
-    background: var(--dt-primary-color);
+    background: linear-gradient(90deg, #ff8a3d, #ffcf5a);
+    box-shadow: 0 4px 10px rgba(255, 138, 61, 0.26);
   }
 }
 .weatherWidget {
@@ -531,16 +765,17 @@
   height: 100%;
   color: var(--dt-widget-text);
   cursor: pointer;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 46px 44px;
+  gap: 10px;
 }
 
 .weatherCompact {
-  height: 100%;
   display: flex;
-  flex-direction: column;
   justify-content: space-between;
-  gap: 10px;
+  align-items: flex-start;
+  min-height: 0;
+  padding-bottom: 2px;
 }
 
 .weatherCompactMain {
@@ -585,22 +820,26 @@
   color: var(--dt-widget-text);
 
   span {
-    font-size: 34px;
+    font-size: 32px;
     line-height: 1;
   }
 }
 
 .weatherCompactForecast {
-  min-height: 50px;
+  min-height: 0;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: 92%;
+  margin: 0 auto;
 
   div {
-    padding: 7px 6px;
-    border-radius: 9px;
-    background: rgba(74, 144, 226, 0.08);
-    border: 1px solid rgba(74, 144, 226, 0.1);
+    min-width: 0;
+    padding: 7px 8px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.44);
+    border: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -609,12 +848,52 @@
 
   span {
     font-size: 11px;
-    color: var(--dt-widget-text-3);
+    line-height: 1.1;
+    color: rgba(0, 0, 0, 0.58);
   }
 
   strong {
     font-size: 11px;
-    color: var(--dt-widget-text-2);
+    color: rgba(0, 0, 0, 0.72);
+    white-space: nowrap;
+  }
+}
+
+.weatherCompactMetrics {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  width: 88%;
+  margin: 0 auto;
+
+  div {
+    min-width: 0;
+    padding: 6px 8px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.42);
+    border: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+
+  span {
+    font-size: 11px;
+    line-height: 1.1;
+    color: rgba(0, 0, 0, 0.58);
+  }
+
+  strong {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: rgba(0, 0, 0, 0.72);
+    font-size: 13px;
+    line-height: 1.15;
+    font-weight: 700;
     white-space: nowrap;
   }
 }
@@ -626,8 +905,8 @@
   box-sizing: border-box;
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(340px, 0.8fr);
-  grid-template-rows: auto 170px auto minmax(0, 1fr);
-  gap: 14px;
+  grid-template-rows: auto 150px auto minmax(0, 1fr);
+  gap: 12px;
   color: #fff;
 }
 
@@ -655,7 +934,7 @@
   gap: 16px;
   grid-column: 1;
   grid-row: 2;
-  padding: 22px 24px;
+  padding: 18px 22px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -714,7 +993,7 @@
 
   div {
     min-width: 0;
-    padding: 14px;
+    padding: 11px 12px;
     border-radius: 14px;
     background: rgba(255, 255, 255, 0.92);
     display: flex;
@@ -741,7 +1020,7 @@
   justify-content: space-between;
   grid-column: 2;
   grid-row: 3;
-  padding: 14px 16px;
+  padding: 11px 14px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -750,25 +1029,32 @@
 }
 
 .hourlyForecast {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  overflow-y: auto;
   grid-column: 1;
   grid-row: 4;
   min-height: 0;
-  padding: 0 4px 0 0;
-  scrollbar-width: thin;
+
+  :global {
+    .simplebar-content {
+      min-height: 100%;
+    }
+  }
+}
+
+.hourlyForecastInner {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding-right: 10px;
 }
 
 .hourlyItem {
   min-width: 0;
-  min-height: 58px;
+  min-height: 50px;
   display: grid;
   grid-template-columns: 52px 34px minmax(0, 1fr) 44px;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.92);
 
@@ -796,20 +1082,31 @@
 }
 
 .weatherForecast {
+  grid-column: 2;
+  grid-row: 4;
+  min-height: 0;
+
+  :global {
+    .simplebar-content {
+      min-height: 100%;
+    }
+  }
+}
+
+.weatherForecastInner {
   display: grid;
   grid-template-columns: 1fr;
   gap: 8px;
-  grid-column: 2;
-  grid-row: 4;
-  overflow-y: auto;
+  padding-right: 10px;
 
   .forecastItem {
     min-width: 0;
+    min-height: 50px;
     display: grid;
     grid-template-columns: 1fr 34px 56px 44px 42px;
     align-items: center;
     gap: 8px;
-    padding: 10px 12px;
+    padding: 8px 10px;
     border-radius: 14px;
     background: rgba(255, 255, 255, 0.92);
     font-size: 12px;
@@ -817,6 +1114,16 @@
 
     span:nth-child(2) {
       font-size: 20px;
+    }
+
+    span:first-child {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    b {
+      font-weight: 500;
     }
 
     strong {
@@ -1163,8 +1470,9 @@
 
 .hotSearchCompactHeader {
   display: grid;
-  grid-template-columns: 32px 1fr 32px;
+  grid-template-columns: 92px minmax(0, 1fr) 92px;
   align-items: center;
+  gap: 6px;
   margin-bottom: 8px;
 
   strong {
@@ -1176,11 +1484,20 @@
   }
 
   button {
+    width: 24px;
+    height: 24px;
+    display: grid;
+    place-items: center;
     border: 0;
     background: transparent;
     color: var(--dt-widget-text-3);
     cursor: pointer;
     font-size: 13px;
+    padding: 0;
+
+    &:last-child {
+      justify-self: end;
+    }
   }
 }
 
@@ -1270,12 +1587,22 @@
 }
 
 .hotSearchSidebar {
-  padding: 18px;
   border-right: 1px solid var(--dt-settings-card-border);
+  min-height: 0;
+
+  :global {
+    .simplebar-content {
+      min-height: 100%;
+    }
+  }
+}
+
+.hotSearchSidebarInner {
+  min-height: 100%;
+  padding: 18px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  overflow-y: auto;
 
   button {
     width: 100%;
@@ -1368,19 +1695,131 @@
     color: #000;
     cursor: pointer;
     font-size: 20px;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    transition:
+      background 0.18s ease,
+      transform 0.18s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.06);
+      transform: translateY(-1px);
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.72;
+      transform: none;
+    }
   }
+}
+
+.activeToolbarButton {
+  background: rgba(0, 0, 0, 0.08) !important;
+}
+
+.refreshingToolbarButton {
+  background: rgba(0, 0, 0, 0.06) !important;
+}
+
+.hotSearchSettingsPanel {
+  position: absolute;
+  top: 54px;
+  right: 28px;
+  z-index: 5;
+  width: 350px;
+  padding: 16px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  background:
+    radial-gradient(circle at 18% 10%, rgba(255, 255, 255, 0.96), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(255, 246, 252, 0.72));
+  box-shadow:
+    0 20px 48px rgba(35, 16, 38, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+
+  :global {
+    .ant-checkbox-wrapper {
+      margin: 0;
+      color: #000;
+      font-size: 14px;
+      line-height: 1.2;
+      min-width: 0;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.48);
+      transition:
+        background 0.18s ease,
+        box-shadow 0.18s ease;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.72);
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+      }
+    }
+
+    .ant-checkbox + span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding-inline-start: 8px;
+      padding-inline-end: 0;
+    }
+  }
+}
+
+.hotSearchSettingsHeader {
+  margin-bottom: 14px;
+
+  div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  strong {
+    color: #000;
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  span {
+    color: rgba(0, 0, 0, 0.48);
+    font-size: 12px;
+    line-height: 1.35;
+  }
+}
+
+.hotSearchSettingsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
 }
 
 .hotSearchModalList {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  padding-right: 10px;
+}
+
+.hotSearchModalListInner {
+  min-height: 100%;
+  padding-right: 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 
   button {
+    min-height: 52px;
     border: 0;
     display: grid;
     grid-template-columns: 40px minmax(0, 1fr) 96px;
@@ -1429,7 +1868,7 @@
 }
 
 .hotSearchEmpty {
-  height: 100%;
+  flex: 1;
   min-height: 240px;
   display: grid;
   place-items: center;
@@ -1492,9 +1931,21 @@
     background: linear-gradient(145deg, rgba(47, 132, 222, 0.55), rgba(26, 66, 116, 0.72));
   }
 
-  .weatherCompactForecast div {
-    background: rgba(99, 174, 255, 0.1);
-    border-color: rgba(99, 174, 255, 0.14);
+  .weatherCompactForecast div,
+  .weatherCompactMetrics div {
+    background: rgba(99, 174, 255, 0.22);
+    border: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .weatherCompactForecast span,
+  .weatherCompactMetrics span {
+    color: rgba(255, 255, 255, 0.66);
+  }
+
+  .weatherCompactForecast strong,
+  .weatherCompactMetrics strong {
+    color: rgba(255, 255, 255, 0.9);
   }
 
   .todoCompactHeader em {

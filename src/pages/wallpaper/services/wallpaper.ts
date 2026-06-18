@@ -7,7 +7,263 @@ import {
   IWallpaperConfig
 } from '../types/wallpaper'
 
+type RemoteWallpaperManifest = {
+  images?: Partial<IImageWallpaper>[]
+  dynamic?: Partial<IDynamicWallpaper>[]
+}
+
+type BingImage = {
+  url?: string
+  urlbase?: string
+  title?: string
+  copyright?: string
+}
+
+type PicsumImage = {
+  id: string
+  author: string
+  width: number
+  height: number
+  download_url: string
+}
+
+const WALLPAPER_IMAGE_CACHE_KEY = 'wallpaperRemoteImageCache'
+const WALLPAPER_DYNAMIC_CACHE_KEY = 'wallpaperRemoteDynamicCache'
+const WALLPAPER_REMOTE_SOURCE_KEY = 'wallpaperRemoteSources'
+const syncTimeout = 10000
 const buildUrl = (path: string) => `${env.HOST_API_URL.replace(/\/$/, '')}${path}`
+const bingBaseUrl = 'https://www.bing.com'
+const publicManifestUrls = [
+  buildUrl('/api/deepTab/wallpapers/manifest'),
+  'https://deeptab.com/wallpapers/manifest.json'
+]
+
+const isHttpUrl = (value: unknown): value is string => {
+  return typeof value === 'string' && /^https?:\/\//i.test(value)
+}
+
+const withTimeout = async <T>(task: Promise<T>, timeout = syncTimeout): Promise<T> => {
+  const controller = new AbortController()
+  const timer = window.setTimeout(() => controller.abort(), timeout)
+  try {
+    return await task
+  } finally {
+    window.clearTimeout(timer)
+  }
+}
+
+const fetchJson = async <T>(url: string, timeout = syncTimeout): Promise<T> => {
+  const controller = new AbortController()
+  const timer = window.setTimeout(() => controller.abort(), timeout)
+
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        Accept: 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+
+    return (await response.json()) as T
+  } finally {
+    window.clearTimeout(timer)
+  }
+}
+
+const getStorageValue = async <T>(key: string, fallback: T): Promise<T> => {
+  try {
+    const result = await chrome.storage.local.get([key])
+    return (result[key] as T) || fallback
+  } catch (error) {
+    console.warn(`读取 ${key} 失败:`, error)
+    return fallback
+  }
+}
+
+const setStorageValue = async <T>(key: string, value: T) => {
+  try {
+    await chrome.storage.local.set({ [key]: value })
+  } catch (error) {
+    console.warn(`写入 ${key} 失败:`, error)
+  }
+}
+
+const normalizeImageWallpaper = (
+  item: Partial<IImageWallpaper>,
+  fallbackId: string
+): IImageWallpaper | null => {
+  if (!isHttpUrl(item.url)) return null
+  const thumbnail = isHttpUrl(item.thumbnail) ? item.thumbnail : item.url
+
+  return {
+    id: item.id || fallbackId,
+    type: 'image',
+    url: item.url,
+    thumbnail,
+    category: item.category || '其他',
+    author: item.author,
+    source: item.source
+  }
+}
+
+const normalizeDynamicWallpaper = (
+  item: Partial<IDynamicWallpaper>,
+  fallbackId: string
+): IDynamicWallpaper | null => {
+  if (!isHttpUrl(item.videoUrl)) return null
+  if (!isHttpUrl(item.thumbnail)) return null
+
+  return {
+    id: item.id || fallbackId,
+    type: 'dynamic',
+    videoUrl: item.videoUrl,
+    thumbnail: item.thumbnail
+  }
+}
+
+const dedupeByUrl = <T extends { url?: string; videoUrl?: string; id: string }>(items: T[]) => {
+  const seen = new Set<string>()
+  return items.filter((item) => {
+    const key = item.url || item.videoUrl || item.id
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+const normalizeResponseList = <T>(data: unknown): T[] => {
+  if (Array.isArray(data)) return data as T[]
+  if (data && typeof data === 'object') {
+    const payload = data as { data?: unknown; list?: unknown; items?: unknown }
+    if (Array.isArray(payload.data)) return payload.data as T[]
+    if (Array.isArray(payload.list)) return payload.list as T[]
+    if (Array.isArray(payload.items)) return payload.items as T[]
+  }
+  return []
+}
+
+const fetchDeepTabImages = async () => {
+  const response = await http<Partial<IImageWallpaper>[]>(buildUrl('/api/deepTab/wallpapers/images'), {
+    timeout: syncTimeout
+  })
+  return normalizeResponseList<Partial<IImageWallpaper>>(response.data).map((item, index) =>
+    normalizeImageWallpaper(item, `deeptab-image-${index}`)
+  )
+}
+
+const fetchDeepTabDynamic = async () => {
+  const response = await http<Partial<IDynamicWallpaper>[]>(buildUrl('/api/deepTab/wallpapers/dynamic'), {
+    timeout: syncTimeout
+  })
+  return normalizeResponseList<Partial<IDynamicWallpaper>>(response.data).map((item, index) =>
+    normalizeDynamicWallpaper(item, `deeptab-dynamic-${index}`)
+  )
+}
+
+const fetchRemoteManifests = async () => {
+  const customUrls = await getStorageValue<string[]>(WALLPAPER_REMOTE_SOURCE_KEY, [])
+  const urls = Array.from(new Set([...customUrls, ...publicManifestUrls])).filter(isHttpUrl)
+  const results = await Promise.allSettled(urls.map((url) => fetchJson<RemoteWallpaperManifest>(url, 6000)))
+  return results.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []))
+}
+
+const fetchBingImages = async (): Promise<IImageWallpaper[]> => {
+  const params = new URLSearchParams({
+    format: 'js',
+    idx: '0',
+    n: '8',
+    mkt: 'zh-CN'
+  })
+  const data = await fetchJson<{ images?: BingImage[] }>(
+    `${bingBaseUrl}/HPImageArchive.aspx?${params.toString()}`
+  )
+
+  return (data.images || [])
+    .map((item, index) => {
+      const fullUrl = item.url?.startsWith('http') ? item.url : `${bingBaseUrl}${item.url || ''}`
+      const thumbnailBase = item.urlbase ? `${bingBaseUrl}${item.urlbase}_640x360.jpg` : fullUrl
+      return normalizeImageWallpaper(
+        {
+          id: `bing-${index}-${item.urlbase || item.url || ''}`,
+          type: 'image',
+          url: fullUrl,
+          thumbnail: thumbnailBase,
+          category: '自然',
+          author: item.copyright || item.title || 'Bing',
+          source: 'Bing'
+        },
+        `bing-${index}`
+      )
+    })
+    .filter(Boolean) as IImageWallpaper[]
+}
+
+const fetchPicsumImages = async (): Promise<IImageWallpaper[]> => {
+  const page = Math.max(1, Math.floor(Date.now() / 86400000) % 25)
+  const data = await fetchJson<PicsumImage[]>(`https://picsum.photos/v2/list?page=${page}&limit=12`)
+
+  return data
+    .map((item) =>
+      normalizeImageWallpaper(
+        {
+          id: `picsum-${item.id}`,
+          type: 'image',
+          url: `https://picsum.photos/id/${item.id}/1920/1080`,
+          thumbnail: `https://picsum.photos/id/${item.id}/640/360`,
+          category: '其他',
+          author: item.author,
+          source: 'Picsum'
+        },
+        `picsum-${item.id}`
+      )
+    )
+    .filter(Boolean) as IImageWallpaper[]
+}
+
+const buildCategoryImageSeeds = (): IImageWallpaper[] => {
+  const categories = [
+    { category: '动物', query: 'animal' },
+    { category: '动物', query: 'dog' },
+    { category: '植物', query: 'plant' },
+    { category: '植物', query: 'flower' },
+    { category: '动漫', query: 'anime' },
+    { category: '动漫', query: 'illustration' },
+    { category: '街头', query: 'street' },
+    { category: '街头', query: 'city' }
+  ]
+
+  return categories.map((item, index) => ({
+    id: `loremflickr-${item.query}-${index}`,
+    type: 'image',
+    url: `https://loremflickr.com/1920/1080/${item.query}?lock=${index + 30}`,
+    thumbnail: `https://loremflickr.com/640/360/${item.query}?lock=${index + 30}`,
+    category: item.category,
+    author: 'LoremFlickr',
+    source: 'LoremFlickr'
+  }))
+}
+
+const dynamicFallbacks: IDynamicWallpaper[] = [
+  {
+    id: 'mdn-flower',
+    type: 'dynamic',
+    videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+    thumbnail: 'https://loremflickr.com/640/360/flower?lock=101'
+  },
+  {
+    id: 'mdn-river',
+    type: 'dynamic',
+    videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/river.mp4',
+    thumbnail: 'https://loremflickr.com/640/360/river?lock=102'
+  }
+]
+
+const getCachedImages = () => getStorageValue<IImageWallpaper[]>(WALLPAPER_IMAGE_CACHE_KEY, [])
+const getCachedDynamic = () => getStorageValue<IDynamicWallpaper[]>(WALLPAPER_DYNAMIC_CACHE_KEY, [])
 
 /**
  * wallpaper 服务层
@@ -47,154 +303,71 @@ export default {
 
   // 获取图片壁纸列表
   async getImageWallpapers(): Promise<IImageWallpaper[]> {
+    const cached = await getCachedImages()
+
     try {
-      const response = await http(buildUrl('/api/deepTab/wallpapers/images'))
-      const data: unknown = response.data
-      if (!Array.isArray(data)) return []
-      return (data as IImageWallpaper[]).map((item) => ({
-        ...item,
-        category: item.category || '其他'
-      }))
+      const [deeptabResult, manifestResult, bingResult, picsumResult] = await Promise.allSettled([
+        withTimeout(fetchDeepTabImages()),
+        fetchRemoteManifests(),
+        fetchBingImages(),
+        fetchPicsumImages()
+      ])
+
+      const manifestImages =
+        manifestResult.status === 'fulfilled'
+          ? manifestResult.value.flatMap((manifest) => manifest.images || [])
+          : []
+
+      const remoteImages = [
+        ...(deeptabResult.status === 'fulfilled' ? deeptabResult.value : []),
+        ...manifestImages.map((item, index) => normalizeImageWallpaper(item, `manifest-image-${index}`)),
+        ...(bingResult.status === 'fulfilled' ? bingResult.value : []),
+        ...(picsumResult.status === 'fulfilled' ? picsumResult.value : []),
+        ...buildCategoryImageSeeds()
+      ].filter(Boolean) as IImageWallpaper[]
+
+      const next = dedupeByUrl(remoteImages)
+      if (next.length > 0) {
+        await setStorageValue(WALLPAPER_IMAGE_CACHE_KEY, next)
+        return next
+      }
     } catch (error) {
-      console.error('获取图片壁纸失败:', error)
-      const mocks: IImageWallpaper[] = [
-        {
-          id: 'featured-animal-1',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1546182990-dffeafbe841d?auto=format&fit=crop&w=1920&q=80',
-          thumbnail:
-            'https://images.unsplash.com/photo-1546182990-dffeafbe841d?auto=format&fit=crop&w=600&q=80',
-          category: '动物',
-          author: 'Unsplash',
-          source: 'unsplash'
-        },
-        {
-          id: 'featured-animal-2',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=1920&q=80',
-          thumbnail:
-            'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=600&q=80',
-          category: '动物',
-          author: 'Unsplash',
-          source: 'unsplash'
-        },
-        {
-          id: 'featured-plant-1',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1920&q=80',
-          thumbnail:
-            'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=600&q=80',
-          category: '植物',
-          author: 'Unsplash',
-          source: 'unsplash'
-        },
-        {
-          id: 'featured-plant-2',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=1920&q=80',
-          thumbnail:
-            'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=600&q=80',
-          category: '植物',
-          author: 'Unsplash',
-          source: 'unsplash'
-        },
-        {
-          id: 'featured-anime-1',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1520975916090-3105956dac38?auto=format&fit=crop&w=1920&q=80',
-          thumbnail:
-            'https://images.unsplash.com/photo-1520975916090-3105956dac38?auto=format&fit=crop&w=600&q=80',
-          category: '动漫',
-          author: 'Unsplash',
-          source: 'unsplash'
-        },
-        {
-          id: 'featured-anime-2',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1518443895914-7d8b0f1b5cdb?auto=format&fit=crop&w=1920&q=80',
-          thumbnail:
-            'https://images.unsplash.com/photo-1518443895914-7d8b0f1b5cdb?auto=format&fit=crop&w=600&q=80',
-          category: '动漫',
-          author: 'Unsplash',
-          source: 'unsplash'
-        },
-        {
-          id: 'featured-street-1',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=1920&q=80',
-          thumbnail:
-            'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=600&q=80',
-          category: '街头',
-          author: 'Unsplash',
-          source: 'unsplash'
-        },
-        {
-          id: 'featured-street-2',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1520975682031-ae460d545300?auto=format&fit=crop&w=1920&q=80',
-          thumbnail:
-            'https://images.unsplash.com/photo-1520975682031-ae460d545300?auto=format&fit=crop&w=600&q=80',
-          category: '街头',
-          author: 'Unsplash',
-          source: 'unsplash'
-        },
-        {
-          id: 'featured-nature-1',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1920&q=80',
-          thumbnail:
-            'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=600&q=80',
-          category: '自然',
-          author: 'Unsplash',
-          source: 'unsplash'
-        },
-        {
-          id: 'featured-nature-2',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1920&q=80',
-          thumbnail:
-            'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=600&q=80',
-          category: '自然',
-          author: 'Unsplash',
-          source: 'unsplash'
-        }
-      ]
-      return mocks
+      console.error('同步图片壁纸失败:', error)
     }
+
+    return cached
   },
 
   // 获取动态壁纸列表
   async getDynamicWallpapers(): Promise<IDynamicWallpaper[]> {
+    const cached = await getCachedDynamic()
+
     try {
-      const response = await http(buildUrl('/api/deepTab/wallpapers/dynamic'))
-      return response.data
+      const [deeptabResult, manifestResult] = await Promise.allSettled([
+        withTimeout(fetchDeepTabDynamic()),
+        fetchRemoteManifests()
+      ])
+
+      const manifestDynamic =
+        manifestResult.status === 'fulfilled'
+          ? manifestResult.value.flatMap((manifest) => manifest.dynamic || [])
+          : []
+
+      const remoteDynamic = [
+        ...(deeptabResult.status === 'fulfilled' ? deeptabResult.value : []),
+        ...manifestDynamic.map((item, index) => normalizeDynamicWallpaper(item, `manifest-dynamic-${index}`))
+      ].filter(Boolean) as IDynamicWallpaper[]
+
+      const next = dedupeByUrl(remoteDynamic)
+      if (next.length > 0) {
+        await setStorageValue(WALLPAPER_DYNAMIC_CACHE_KEY, next)
+        return next
+      }
     } catch (error) {
-      console.error('获取动态壁纸失败:', error)
-      const mocks: IDynamicWallpaper[] = [
-        {
-          id: 'dynamic-1',
-          type: 'dynamic',
-          videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
-          thumbnail:
-            'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=600&q=80'
-        },
-        {
-          id: 'dynamic-2',
-          type: 'dynamic',
-          videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/forest.mp4',
-          thumbnail:
-            'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=600&q=80'
-        },
-        {
-          id: 'dynamic-3',
-          type: 'dynamic',
-          videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/river.mp4',
-          thumbnail:
-            'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=600&q=80'
-        }
-      ]
-      return mocks
+      console.error('同步动态壁纸失败:', error)
     }
+
+    return cached.length > 0 ? cached : dynamicFallbacks
   },
 
   // 获取当前壁纸配置

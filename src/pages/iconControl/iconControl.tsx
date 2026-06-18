@@ -36,10 +36,9 @@ const IconControl: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <Card className='dtSettingsCard' variant='borderless'>
+      <Card title='图标控制' className='dtSettingsCard' variant='borderless'>
         <div className={styles.content}>
           <div className={styles.header}>
-            <h2 className={styles.title}>图标控制</h2>
             <p className={styles.subTitle}>
               细致调节图标的大小、圆角、间距和文字样式，让桌面更符合你的审美。
             </p>
