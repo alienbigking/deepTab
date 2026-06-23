@@ -14,7 +14,7 @@ import type { AppItem, WidgetKind } from './types/appGrid'
 import styles from './appGrid.module.less'
 
 const animateLayoutChanges: AnimateLayoutChanges = (args) =>
-  defaultAnimateLayoutChanges({ ...args, wasDragging: true })
+  defaultAnimateLayoutChanges(args)
 
 interface DroppableWidgetProps {
   widget: AppItem

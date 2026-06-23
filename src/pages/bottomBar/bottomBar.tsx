@@ -11,6 +11,7 @@ import { Dropdown } from 'antd'
 import AddAppModal from '@/pages/appGrid/addAppModal'
 import appGridService from '@/pages/appGrid/services/appGrid'
 import type { AppItem } from '@/pages/appGrid/types/appGrid'
+import { createFallbackIcon, isImageIconSource } from '@/pages/appGrid/iconFallback'
 
 interface BottomBarProps {
   activeCategoryId?: string
@@ -50,15 +51,9 @@ const DockSortableItem: React.FC<DockItemProps> = (props) => {
     opacity: isDragging ? 0.6 : 1
   }
 
-  const hasImageIcon = /^(https?:\/\/|data:image\/)/i.test(app.icon)
+  const hasImageIcon = isImageIconSource(app.icon)
   const isImageIcon = hasImageIcon && !iconLoadFailed
-  const iconTextFromName = () => {
-    const text = String(app.name || '').trim()
-    const chinese = text.match(/[\u4e00-\u9fa5]/g)
-    if (chinese?.length) return chinese.slice(0, 2).join('')
-    const letters = text.replace(/[^a-z0-9]/gi, '').slice(0, 2)
-    return (letters || text.slice(0, 2) || 'A').toUpperCase()
-  }
+  const fallbackIcon = createFallbackIcon(app.name)
 
   return (
     <Dropdown
@@ -94,9 +89,11 @@ const DockSortableItem: React.FC<DockItemProps> = (props) => {
             alt=''
             onError={() => setIconLoadFailed(true)}
           />
+        ) : hasImageIcon ? (
+          <img className={cn(styles.iconImg)} src={fallbackIcon} alt='' />
         ) : (
           <span className={cn(styles.emoji)}>
-            {hasImageIcon ? iconTextFromName() : app.icon || iconTextFromName()}
+            {app.icon || <img className={cn(styles.iconImg)} src={fallbackIcon} alt='' />}
           </span>
         )}
       </div>

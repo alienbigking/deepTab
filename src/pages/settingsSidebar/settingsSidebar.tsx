@@ -178,12 +178,12 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
       onClose={onClose}
       open={open}
       width={1000}
+      zIndex={1600}
       rootClassName={cn(styles.settingsDrawer)}
       closable={false}
       styles={{
         body: { padding: 0 }
       }}
-      getContainer={false}
     >
       <div className={cn(styles.sidebarLayout)}>
         {/* 左侧菜单 */}

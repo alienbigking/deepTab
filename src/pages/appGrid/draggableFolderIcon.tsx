@@ -3,6 +3,7 @@ import { useDraggable } from '@dnd-kit/core'
 import type { AppItem, IconSettings } from './types/appGrid'
 import cn from 'classnames'
 import styles from './appGrid.module.less'
+import { createFallbackIcon, isImageIconSource } from './iconFallback'
 
 interface DraggableFolderIconProps {
   icon: AppItem
@@ -41,15 +42,9 @@ const DraggableFolderIcon: React.FC<DraggableFolderIconProps> = ({
     color: iconSettings.fontColor === 'light' ? '#ffffff' : 'rgba(0,0,0,0.85)'
   }
 
-  const hasImageIcon = /^(https?:\/\/|data:image\/)/i.test(icon.icon)
+  const hasImageIcon = isImageIconSource(icon.icon)
   const isImageIcon = hasImageIcon && !iconLoadFailed
-  const iconTextFromName = () => {
-    const text = String(icon.name || '').trim()
-    const chinese = text.match(/[\u4e00-\u9fa5]/g)
-    if (chinese?.length) return chinese.slice(0, 2).join('')
-    const letters = text.replace(/[^a-z0-9]/gi, '').slice(0, 2)
-    return (letters || text.slice(0, 2) || 'A').toUpperCase()
-  }
+  const fallbackIcon = createFallbackIcon(icon.name)
 
   return (
     <div
@@ -76,8 +71,10 @@ const DraggableFolderIcon: React.FC<DraggableFolderIconProps> = ({
                 alt=''
                 onError={() => setIconLoadFailed(true)}
               />
+            ) : hasImageIcon ? (
+              <img className={styles.iconImg} src={fallbackIcon} alt='' />
             ) : (
-              hasImageIcon ? iconTextFromName() : icon.icon || iconTextFromName()
+              icon.icon || <img className={styles.iconImg} src={fallbackIcon} alt='' />
             )}
           </span>
         </div>

@@ -9,9 +9,10 @@ import { CloseCircleFilled } from '@ant-design/icons'
 import type { AppItem, IconSettings } from './types/appGrid'
 import cn from 'classnames'
 import styles from './appGrid.module.less'
+import { createFallbackIcon, isImageIconSource } from './iconFallback'
 
 const animateLayoutChanges: AnimateLayoutChanges = (args) =>
-  defaultAnimateLayoutChanges({ ...args, wasDragging: true })
+  defaultAnimateLayoutChanges(args)
 
 interface DroppableIconProps {
   icon: AppItem
@@ -57,7 +58,7 @@ const DroppableIcon: React.FC<DroppableIconProps> = ({
     height: iconSettings.size,
     borderRadius: iconSettings.radius,
     opacity: iconSettings.opacity / 100,
-    background: /^(https?:\/\/|data:image\/)/i.test(icon.icon) ? undefined : icon.iconBg || undefined
+    background: isImageIconSource(icon.icon) ? undefined : icon.iconBg || undefined
   }
 
   const appNameStyle: React.CSSProperties = {
@@ -97,15 +98,9 @@ const DroppableIcon: React.FC<DroppableIconProps> = ({
     onContextMenu(e, icon.id, 'item')
   }
 
-  const hasImageIcon = /^(https?:\/\/|data:image\/)/i.test(icon.icon)
+  const hasImageIcon = isImageIconSource(icon.icon)
   const isImageIcon = hasImageIcon && !iconLoadFailed
-  const iconTextFromName = () => {
-    const text = String(icon.name || '').trim()
-    const chinese = text.match(/[\u4e00-\u9fa5]/g)
-    if (chinese?.length) return chinese.slice(0, 2).join('')
-    const letters = text.replace(/[^a-z0-9]/gi, '').slice(0, 2)
-    return (letters || text.slice(0, 2) || 'A').toUpperCase()
-  }
+  const fallbackIcon = createFallbackIcon(icon.name)
 
   return (
     <div
@@ -146,8 +141,10 @@ const DroppableIcon: React.FC<DroppableIconProps> = ({
               alt=''
               onError={() => setIconLoadFailed(true)}
             />
+          ) : hasImageIcon ? (
+            <img className={styles.iconImg} src={fallbackIcon} alt='' />
           ) : (
-            hasImageIcon ? iconTextFromName() : icon.icon || iconTextFromName()
+            icon.icon || <img className={styles.iconImg} src={fallbackIcon} alt='' />
           )}
         </span>
       </div>

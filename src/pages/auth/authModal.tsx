@@ -70,7 +70,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose }) => {
       footer={null}
       centered
       width={420}
+      rootClassName={styles.authModalRoot}
       className={styles.authModal}
+      transitionName=''
       maskTransitionName={modalMaskTransitionName}
       maskStyle={modalMaskStyle}
       destroyOnHidden

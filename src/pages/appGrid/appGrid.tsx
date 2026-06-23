@@ -20,6 +20,7 @@ import appGridService from './services/appGrid'
 import useAppGridStore from './stores/appGrid'
 import type { AppNode, AppItem, AppFolder, ContextMenuState, WidgetKind } from './types/appGrid'
 import { initDefaultApps } from './initData'
+import { isImageIconSource } from './iconFallback'
 import { useNotification } from '@/common/ui'
 import useAppCategoryStore from '@/pages/appCategory/stores/appCategory'
 import useBottomBarStore from '@/pages/bottomBar/stores/bottomBar'
@@ -840,7 +841,7 @@ export const GridDragOverlayContent: React.FC = () => {
     )
   }
 
-  const isImageIcon = /^(https?:\/\/|data:image\/)/i.test(String(dragActiveNode.icon || ''))
+  const isImageIcon = isImageIconSource(String(dragActiveNode.icon || ''))
   const overlayIconStyle: React.CSSProperties = {
     width: iconSettings.size,
     height: iconSettings.size,
@@ -855,9 +856,7 @@ export const GridDragOverlayContent: React.FC = () => {
         {dragActiveNode.type === 'folder' && (dragActiveNode as AppFolder).children.length ? (
           <div className={styles.folderCover}>
             {(dragActiveNode as AppFolder).children.slice(0, 4).map((child) => {
-              const isChildImage = /^(https?:\/\/|data:image\/)/i.test(
-                String(child.icon || '')
-              )
+              const isChildImage = isImageIconSource(String(child.icon || ''))
               return (
                 <span key={child.id} className={styles.folderCoverIcon}>
                   {isChildImage ? (

@@ -8,10 +8,23 @@
 }
 
 .content {
+  --dt-main-grid-top-offset: 156px;
   position: relative;
   z-index: 1;
   width: 100%;
   height: 100%;
+  padding-top: var(--dt-main-grid-top-offset);
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overflow-anchor: none;
+  overscroll-behavior: contain;
+  scroll-padding-top: var(--dt-main-grid-top-offset);
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 
   .dragOverlayItem {
     width: 64px;
@@ -64,15 +77,15 @@
 
 .homePage {
   width: 100%;
-  min-height: 100%;
+  min-height: calc(100vh - var(--dt-main-grid-top-offset, 156px));
   will-change: transform, opacity, filter;
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
 }
 
 .homePageAnimating {
-  animation-duration: 620ms;
-  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-duration: 780ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
   animation-fill-mode: both;
 }
 
@@ -91,15 +104,13 @@
 @keyframes homePageInNextA {
   0% {
     opacity: 0;
-    filter: blur(8px);
-    transform: translate3d(0, 42px, 0) scale(0.985);
+    filter: blur(6px);
+    transform: translate3d(0, 30px, 0) scale(0.9);
   }
-
-  55% {
+  40% {
     opacity: 1;
     filter: blur(0);
   }
-
   100% {
     opacity: 1;
     filter: blur(0);
@@ -110,15 +121,13 @@
 @keyframes homePageInNextB {
   0% {
     opacity: 0;
-    filter: blur(8px);
-    transform: translate3d(0, 42px, 0) scale(0.985);
+    filter: blur(6px);
+    transform: translate3d(0, 30px, 0) scale(0.9);
   }
-
-  55% {
+  40% {
     opacity: 1;
     filter: blur(0);
   }
-
   100% {
     opacity: 1;
     filter: blur(0);
@@ -129,15 +138,13 @@
 @keyframes homePageInPrevA {
   0% {
     opacity: 0;
-    filter: blur(8px);
-    transform: translate3d(0, -42px, 0) scale(0.985);
+    filter: blur(6px);
+    transform: translate3d(0, -30px, 0) scale(0.9);
   }
-
-  55% {
+  40% {
     opacity: 1;
     filter: blur(0);
   }
-
   100% {
     opacity: 1;
     filter: blur(0);
@@ -148,15 +155,13 @@
 @keyframes homePageInPrevB {
   0% {
     opacity: 0;
-    filter: blur(8px);
-    transform: translate3d(0, -42px, 0) scale(0.985);
+    filter: blur(6px);
+    transform: translate3d(0, -30px, 0) scale(0.9);
   }
-
-  55% {
+  40% {
     opacity: 1;
     filter: blur(0);
   }
-
   100% {
     opacity: 1;
     filter: blur(0);

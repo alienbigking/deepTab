@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react'
 import {
   closestCorners,
   DndContext,
@@ -34,6 +34,7 @@ import bottomBarService from './bottomBar/services/bottomBar'
 import useBottomBarStore from './bottomBar/stores/bottomBar'
 import { BOTTOM_BAR_DROPPABLE_ID } from './bottomBar/bottomBar'
 import { MAIN_GRID_DROPPABLE_ID } from './appGrid/appGrid'
+import { isImageIconSource } from './appGrid/iconFallback'
 
 const pageCollisionDetection: CollisionDetection = (args) => {
   const isContainerId = (id: string | number) =>
@@ -125,6 +126,7 @@ const Main: React.FC = () => {
   const contentRef = useRef<HTMLDivElement | null>(null)
   const wheelAccRef = useRef(0)
   const wheelLockRef = useRef(false)
+  const pageSwitchScrollLockUntilRef = useRef(0)
   const previousCategoryIdRef = useRef(activeCategoryId)
   const [homePageMotion, setHomePageMotion] = useState<{
     direction: 'next' | 'prev'
@@ -279,6 +281,27 @@ const Main: React.FC = () => {
     }))
   }, [activeCategoryId, categories])
 
+  useLayoutEffect(() => {
+    const root = contentRef.current
+    if (!root) return
+
+    root.scrollTop = 0
+
+    const resetScroll = () => {
+      root.scrollTop = 0
+    }
+    const firstFrame = window.requestAnimationFrame(() => {
+      resetScroll()
+      window.requestAnimationFrame(resetScroll)
+    })
+    const timeout = window.setTimeout(resetScroll, 120)
+
+    return () => {
+      window.cancelAnimationFrame(firstFrame)
+      window.clearTimeout(timeout)
+    }
+  }, [activeCategoryId])
+
   useEffect(() => {
     const root = contentRef.current
     if (!root) return
@@ -315,8 +338,20 @@ const Main: React.FC = () => {
       const delta = Number(e.deltaY) || 0
       if (!delta) return
 
+      if (wheelLockRef.current || Date.now() < pageSwitchScrollLockUntilRef.current) {
+        root.scrollTop = 0
+        wheelAccRef.current = 0
+        return
+      }
+
+      const canScroll =
+        root.scrollHeight > root.clientHeight + 2 &&
+        ((delta > 0 && root.scrollTop + root.clientHeight < root.scrollHeight - 2) ||
+          (delta < 0 && root.scrollTop > 2))
+      if (canScroll) return
+
       wheelAccRef.current += delta
-      const threshold = getThreshold(scrollSensitivity)
+      const threshold = Math.max(30, Math.round(getThreshold(scrollSensitivity) * 0.2))
 
       if (wheelLockRef.current) return
       if (Math.abs(wheelAccRef.current) < threshold) return
@@ -325,9 +360,15 @@ const Main: React.FC = () => {
       const idx = ids.findIndex((id) => id === activeCategoryId)
       const currentIdx = idx >= 0 ? idx : 0
       const step = wheelAccRef.current > 0 ? 1 : -1
-      const nextIdx = (currentIdx + step + ids.length) % ids.length
+      const nextIdx = currentIdx + step
+      if (nextIdx < 0 || nextIdx >= ids.length) {
+        wheelAccRef.current = 0
+        return
+      }
       const nextId = ids[nextIdx]
       if (nextId && nextId !== activeCategoryId) {
+        root.scrollTop = 0
+        pageSwitchScrollLockUntilRef.current = Date.now() + 640
         setActiveCategoryId(nextId)
       }
 
@@ -335,7 +376,7 @@ const Main: React.FC = () => {
       wheelLockRef.current = true
       window.setTimeout(() => {
         wheelLockRef.current = false
-      }, 680)
+      }, 720)
     }
 
     root.addEventListener('wheel', onWheel, { passive: true })
@@ -431,14 +472,15 @@ const Main: React.FC = () => {
   return (
     <div className={cn(styles.container)}>
       <WallpaperBackground />
+
+      {/* 搜索框 */}
+      <SearchBar />
+
       <div className={cn(styles.content)} ref={contentRef}>
         {/* 设置按钮 */}
         <div className={cn(styles.settingsButton)} onClick={() => onOpenSet()}>
           <SettingOutlined style={{ fontSize: 24, color: '#fff' }} />
         </div>
-
-        {/* 搜索框 */}
-        <SearchBar />
 
         <DndContext
           sensors={sensors}
@@ -449,7 +491,10 @@ const Main: React.FC = () => {
           onDragEnd={handleDragEnd}
         >
           <div
-            className={cn(styles.homePage, homePageMotion.tick > 0 && styles.homePageAnimating)}
+            className={cn(
+              styles.homePage,
+              homePageMotion.tick > 0 && styles.homePageAnimating
+            )}
             style={
               homePageMotion.tick > 0
                 ? {
@@ -466,7 +511,7 @@ const Main: React.FC = () => {
             }
           >
             {/* 应用图标网格 */}
-            <AppGrid />
+            <AppGrid key={activeCategoryId} />
           </div>
 
           {bottomBarVisible && <BottomBar activeCategoryId={activeCategoryId} />}
@@ -474,7 +519,7 @@ const Main: React.FC = () => {
           <DragOverlay dropAnimation={null} adjustScale={false}>
             {activeDockApp ? (
               <div className={cn(styles.dragOverlayItem)}>
-                {/^(https?:\/\/|data:image\/)/.test(activeDockApp.icon) ? (
+                {isImageIconSource(activeDockApp.icon) ? (
                   <img
                     className={cn(styles.dragOverlayImg)}
                     src={activeDockApp.icon}

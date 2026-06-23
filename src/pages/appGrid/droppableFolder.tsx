@@ -11,7 +11,7 @@ import cn from 'classnames'
 import styles from './appGrid.module.less'
 
 const animateLayoutChanges: AnimateLayoutChanges = (args) =>
-  defaultAnimateLayoutChanges({ ...args, wasDragging: true })
+  defaultAnimateLayoutChanges(args)
 
 interface DroppableFolderProps {
   folder: AppFolder

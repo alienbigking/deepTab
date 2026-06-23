@@ -39,6 +39,17 @@ export default {
 
   async getFeedbackList(): Promise<IFeedback[]> {
     try {
+      const token = await getToken()
+      if (token) {
+        try {
+          const response = await http<{ list?: IFeedback[] }>(buildUrl('/api/deepTab/feedback'))
+          const remoteList = Array.isArray(response.data?.list) ? response.data.list : []
+          return remoteList
+        } catch (remoteError) {
+          console.warn('获取远程反馈列表失败，使用本地列表:', remoteError)
+        }
+      }
+
       const result = await chrome.storage.local.get([STORAGE_KEY])
       return Array.isArray(result[STORAGE_KEY]) ? result[STORAGE_KEY] : []
     } catch (error) {

@@ -21,16 +21,44 @@ const priorityMeta: Record<NonNullable<ITodoItem['priority']>, { label: string; 
   low: { label: '低', color: 'blue' }
 }
 
+const todoWidgetCache: {
+  loaded: boolean
+  todos: ITodoItem[]
+  loadingPromise: Promise<ITodoItem[]> | null
+} = {
+  loaded: false,
+  todos: [],
+  loadingPromise: null
+}
+
 const TodoWidget: React.FC = () => {
   const [open, setOpen] = useState(false)
-  const [todos, setTodos] = useState<ITodoItem[]>([])
+  const [todos, setTodos] = useState<ITodoItem[]>(todoWidgetCache.todos)
   const [text, setText] = useState('')
   const [priority, setPriority] = useState<NonNullable<ITodoItem['priority']>>('medium')
   const [filter, setFilter] = useState<TodoFilter>('all')
 
-  const loadTodos = async () => {
-    const list = await widgetsContainerService.getTodoList()
-    setTodos(list)
+  const loadTodos = async (force = false) => {
+    if (!force && todoWidgetCache.loaded) {
+      setTodos(todoWidgetCache.todos)
+      return
+    }
+
+    if (!force && todoWidgetCache.loadingPromise) {
+      const list = await todoWidgetCache.loadingPromise
+      setTodos(list)
+      return
+    }
+
+    try {
+      todoWidgetCache.loadingPromise = widgetsContainerService.getTodoList()
+      const list = await todoWidgetCache.loadingPromise
+      todoWidgetCache.todos = list
+      todoWidgetCache.loaded = true
+      setTodos(list)
+    } finally {
+      todoWidgetCache.loadingPromise = null
+    }
   }
 
   useEffect(() => {
@@ -57,22 +85,22 @@ const TodoWidget: React.FC = () => {
       priority
     })
     setText('')
-    await loadTodos()
+    await loadTodos(true)
   }
 
   const toggleTodo = async (todo: ITodoItem) => {
     await widgetsContainerService.updateTodoItem(todo.id, { completed: !todo.completed })
-    await loadTodos()
+    await loadTodos(true)
   }
 
   const deleteTodo = async (id: string) => {
     await widgetsContainerService.deleteTodoItem(id)
-    await loadTodos()
+    await loadTodos(true)
   }
 
   const clearCompleted = async () => {
     await Promise.all(completedTodos.map((todo) => widgetsContainerService.deleteTodoItem(todo.id)))
-    await loadTodos()
+    await loadTodos(true)
   }
 
   const renderPriority = (todo: ITodoItem) => {

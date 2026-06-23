@@ -12,27 +12,11 @@ type RemoteWallpaperManifest = {
   dynamic?: Partial<IDynamicWallpaper>[]
 }
 
-type BingImage = {
-  url?: string
-  urlbase?: string
-  title?: string
-  copyright?: string
-}
-
-type PicsumImage = {
-  id: string
-  author: string
-  width: number
-  height: number
-  download_url: string
-}
-
 const WALLPAPER_IMAGE_CACHE_KEY = 'wallpaperRemoteImageCache'
-const WALLPAPER_DYNAMIC_CACHE_KEY = 'wallpaperRemoteDynamicCache'
+const WALLPAPER_DYNAMIC_CACHE_KEY = 'wallpaperRemoteDynamicCacheV2'
 const WALLPAPER_REMOTE_SOURCE_KEY = 'wallpaperRemoteSources'
 const syncTimeout = 10000
 const buildUrl = (path: string) => `${env.HOST_API_URL.replace(/\/$/, '')}${path}`
-const bingBaseUrl = 'https://www.bing.com'
 const publicManifestUrls = [
   buildUrl('/api/deepTab/wallpapers/manifest'),
   'https://deeptab.com/wallpapers/manifest.json'
@@ -121,14 +105,25 @@ const normalizeDynamicWallpaper = (
     id: item.id || fallbackId,
     type: 'dynamic',
     videoUrl: item.videoUrl,
-    thumbnail: item.thumbnail
+    thumbnail: item.thumbnail,
+    category: item.category || '其他',
+    title: item.title,
+    author: item.author,
+    source: item.source
   }
+}
+
+const getDedupeKey = <T extends { url?: string; videoUrl?: string; id: string }>(item: T) => {
+  if (item.videoUrl) {
+    return item.videoUrl.split('#')[0]
+  }
+  return item.url || item.id
 }
 
 const dedupeByUrl = <T extends { url?: string; videoUrl?: string; id: string }>(items: T[]) => {
   const seen = new Set<string>()
   return items.filter((item) => {
-    const key = item.url || item.videoUrl || item.id
+    const key = getDedupeKey(item)
     if (seen.has(key)) return false
     seen.add(key)
     return true
@@ -170,97 +165,6 @@ const fetchRemoteManifests = async () => {
   const results = await Promise.allSettled(urls.map((url) => fetchJson<RemoteWallpaperManifest>(url, 6000)))
   return results.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []))
 }
-
-const fetchBingImages = async (): Promise<IImageWallpaper[]> => {
-  const params = new URLSearchParams({
-    format: 'js',
-    idx: '0',
-    n: '8',
-    mkt: 'zh-CN'
-  })
-  const data = await fetchJson<{ images?: BingImage[] }>(
-    `${bingBaseUrl}/HPImageArchive.aspx?${params.toString()}`
-  )
-
-  return (data.images || [])
-    .map((item, index) => {
-      const fullUrl = item.url?.startsWith('http') ? item.url : `${bingBaseUrl}${item.url || ''}`
-      const thumbnailBase = item.urlbase ? `${bingBaseUrl}${item.urlbase}_640x360.jpg` : fullUrl
-      return normalizeImageWallpaper(
-        {
-          id: `bing-${index}-${item.urlbase || item.url || ''}`,
-          type: 'image',
-          url: fullUrl,
-          thumbnail: thumbnailBase,
-          category: '自然',
-          author: item.copyright || item.title || 'Bing',
-          source: 'Bing'
-        },
-        `bing-${index}`
-      )
-    })
-    .filter(Boolean) as IImageWallpaper[]
-}
-
-const fetchPicsumImages = async (): Promise<IImageWallpaper[]> => {
-  const page = Math.max(1, Math.floor(Date.now() / 86400000) % 25)
-  const data = await fetchJson<PicsumImage[]>(`https://picsum.photos/v2/list?page=${page}&limit=12`)
-
-  return data
-    .map((item) =>
-      normalizeImageWallpaper(
-        {
-          id: `picsum-${item.id}`,
-          type: 'image',
-          url: `https://picsum.photos/id/${item.id}/1920/1080`,
-          thumbnail: `https://picsum.photos/id/${item.id}/640/360`,
-          category: '其他',
-          author: item.author,
-          source: 'Picsum'
-        },
-        `picsum-${item.id}`
-      )
-    )
-    .filter(Boolean) as IImageWallpaper[]
-}
-
-const buildCategoryImageSeeds = (): IImageWallpaper[] => {
-  const categories = [
-    { category: '动物', query: 'animal' },
-    { category: '动物', query: 'dog' },
-    { category: '植物', query: 'plant' },
-    { category: '植物', query: 'flower' },
-    { category: '动漫', query: 'anime' },
-    { category: '动漫', query: 'illustration' },
-    { category: '街头', query: 'street' },
-    { category: '街头', query: 'city' }
-  ]
-
-  return categories.map((item, index) => ({
-    id: `loremflickr-${item.query}-${index}`,
-    type: 'image',
-    url: `https://loremflickr.com/1920/1080/${item.query}?lock=${index + 30}`,
-    thumbnail: `https://loremflickr.com/640/360/${item.query}?lock=${index + 30}`,
-    category: item.category,
-    author: 'LoremFlickr',
-    source: 'LoremFlickr'
-  }))
-}
-
-const dynamicFallbacks: IDynamicWallpaper[] = [
-  {
-    id: 'mdn-flower',
-    type: 'dynamic',
-    videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
-    thumbnail: 'https://loremflickr.com/640/360/flower?lock=101'
-  },
-  {
-    id: 'mdn-river',
-    type: 'dynamic',
-    videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/river.mp4',
-    thumbnail: 'https://loremflickr.com/640/360/river?lock=102'
-  }
-]
 
 const getCachedImages = () => getStorageValue<IImageWallpaper[]>(WALLPAPER_IMAGE_CACHE_KEY, [])
 const getCachedDynamic = () => getStorageValue<IDynamicWallpaper[]>(WALLPAPER_DYNAMIC_CACHE_KEY, [])
@@ -306,11 +210,9 @@ export default {
     const cached = await getCachedImages()
 
     try {
-      const [deeptabResult, manifestResult, bingResult, picsumResult] = await Promise.allSettled([
+      const [deeptabResult, manifestResult] = await Promise.allSettled([
         withTimeout(fetchDeepTabImages()),
-        fetchRemoteManifests(),
-        fetchBingImages(),
-        fetchPicsumImages()
+        fetchRemoteManifests()
       ])
 
       const manifestImages =
@@ -320,10 +222,7 @@ export default {
 
       const remoteImages = [
         ...(deeptabResult.status === 'fulfilled' ? deeptabResult.value : []),
-        ...manifestImages.map((item, index) => normalizeImageWallpaper(item, `manifest-image-${index}`)),
-        ...(bingResult.status === 'fulfilled' ? bingResult.value : []),
-        ...(picsumResult.status === 'fulfilled' ? picsumResult.value : []),
-        ...buildCategoryImageSeeds()
+        ...manifestImages.map((item, index) => normalizeImageWallpaper(item, `manifest-image-${index}`))
       ].filter(Boolean) as IImageWallpaper[]
 
       const next = dedupeByUrl(remoteImages)
@@ -335,7 +234,7 @@ export default {
       console.error('同步图片壁纸失败:', error)
     }
 
-    return cached
+    return dedupeByUrl(cached)
   },
 
   // 获取动态壁纸列表
@@ -367,7 +266,7 @@ export default {
       console.error('同步动态壁纸失败:', error)
     }
 
-    return cached.length > 0 ? cached : dynamicFallbacks
+    return dedupeByUrl(cached)
   },
 
   // 获取当前壁纸配置

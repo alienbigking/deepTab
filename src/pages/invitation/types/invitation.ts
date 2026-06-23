@@ -6,7 +6,7 @@ interface IInvitationRecord {
   id: string
   inviteeEmail: string
   inviteeStatus: 'pending' | 'registered' | 'subscribed'
-  inviteDate: string
+  inviteDate: string | number
   reward?: number
 }
 

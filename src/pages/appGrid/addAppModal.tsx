@@ -9,6 +9,7 @@ import AddAppModalWidgets from './addAppModalWidgets'
 import AddAppModalNav from './addAppModalNav'
 import useAppCategoryStore from '@/pages/appCategory/stores/appCategory'
 import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
+import { isImageIconSource } from './iconFallback'
 
 interface AddAppModalProps {
   open: boolean
@@ -376,7 +377,7 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
       form.setFieldsValue({
         name: editingApp.name,
         icon: editingApp.icon,
-        iconText: /^(https?:\/\/|data:image\/)/.test(editingApp.icon)
+        iconText: isImageIconSource(editingApp.icon)
           ? iconTextFromName(editingApp.name)
           : editingApp.icon.slice(0, 8),
         url: editingApp.url

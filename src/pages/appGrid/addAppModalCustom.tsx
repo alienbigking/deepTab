@@ -3,6 +3,7 @@ import type { FormInstance } from 'antd'
 import { Form, Input, Button, message } from 'antd'
 import cn from 'classnames'
 import styles from './addAppModalCustom.module.less'
+import { isImageIconSource } from './iconFallback'
 
 interface AddAppModalCustomProps {
   form: FormInstance
@@ -77,10 +78,10 @@ const AddAppModalCustom: React.FC<AddAppModalCustomProps> = ({
     reader.readAsDataURL(file)
   }
 
-  const isImageIcon = /^(https?:\/\/|data:image\/)/.test(String(iconValue || ''))
+  const isImageIcon = isImageIconSource(String(iconValue || ''))
   const iconCandidates = useMemo(() => {
     if (!isImageIcon) return []
-    if (/^data:image\//i.test(String(iconValue || ''))) return [String(iconValue)]
+    if (/^(data:image\/|src\/assets\/images\/)/i.test(String(iconValue || ''))) return [String(iconValue)]
     return Array.from(
       new Set([String(iconValue || ''), ...faviconUrlsFromInput(urlValue)].filter(Boolean))
     )
@@ -170,7 +171,7 @@ const AddAppModalCustom: React.FC<AddAppModalCustomProps> = ({
             {
               validator: (_, value) => {
                 const icon = String(form.getFieldValue('icon') || '')
-                if (/^(https?:\/\/|data:image\/)/.test(icon)) return Promise.resolve()
+                if (isImageIconSource(icon)) return Promise.resolve()
                 return String(value || '').trim()
                   ? Promise.resolve()
                   : Promise.reject(new Error('请输入图标文字'))
@@ -185,7 +186,7 @@ const AddAppModalCustom: React.FC<AddAppModalCustomProps> = ({
             showCount
             onChange={(event) => {
               const icon = String(form.getFieldValue('icon') || '')
-              if (!/^(https?:\/\/|data:image\/)/.test(icon)) {
+              if (!isImageIconSource(icon)) {
                 form.setFieldValue('icon', event.target.value)
               }
             }}

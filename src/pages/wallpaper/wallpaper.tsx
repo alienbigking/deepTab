@@ -35,7 +35,9 @@ const Wallpaper: React.FC = () => {
     selectedColor,
     setSelectedColor,
     featuredCategory,
-    setFeaturedCategory
+    setFeaturedCategory,
+    dynamicCategory,
+    setDynamicCategory
   } = useWallpaperStore()
 
   useEffect(() => {
@@ -104,6 +106,17 @@ const Wallpaper: React.FC = () => {
     if (featuredCategory === '全部') return featuredWallpapers
     return featuredWallpapers.filter((w) => w.category === featuredCategory)
   }, [featuredCategory, featuredWallpapers])
+
+  const dynamicCategories = useMemo(() => {
+    const base = ['全部', '动物', '植物', '动漫', '街头', '自然', '其他']
+    const remote = Array.from(new Set(dynamicWallpapers.map((w) => w.category))).filter(Boolean)
+    return Array.from(new Set([...base, ...remote]))
+  }, [dynamicWallpapers])
+
+  const filteredDynamicWallpapers = useMemo(() => {
+    if (dynamicCategory === '全部') return dynamicWallpapers
+    return dynamicWallpapers.filter((w) => w.category === dynamicCategory)
+  }, [dynamicCategory, dynamicWallpapers])
 
   const handleCategoryChange = async (category: string) => {
     setFeaturedCategory(category)
@@ -408,6 +421,20 @@ const Wallpaper: React.FC = () => {
         </div>
       )}
 
+      {activeTab === 'dynamic' && (
+        <div className={styles.categoryFilters}>
+          {dynamicCategories.map((category) => (
+            <div
+              key={category}
+              className={`${styles.categoryPill} ${dynamicCategory === category ? styles.active : ''}`}
+              onClick={() => setDynamicCategory(category)}
+            >
+              {category}
+            </div>
+          ))}
+        </div>
+      )}
+
       {activeTab === 'gradient' && (
         <div className={styles.colorFilters}>
           {colors.map((color) => (
@@ -492,12 +519,12 @@ const Wallpaper: React.FC = () => {
               <div className={styles.emptyWrap}>
                 <Spin />
               </div>
-            ) : dynamicWallpapers.length === 0 ? (
+            ) : filteredDynamicWallpapers.length === 0 ? (
               <div className={styles.emptyWrap}>
                 <Empty description='暂无动态壁纸' />
               </div>
             ) : (
-              dynamicWallpapers.map((wallpaper) => {
+              filteredDynamicWallpapers.map((wallpaper) => {
                 const selected =
                   config?.currentWallpaper?.type === 'dynamic' &&
                   (config.currentWallpaper as IDynamicWallpaper).id === wallpaper.id

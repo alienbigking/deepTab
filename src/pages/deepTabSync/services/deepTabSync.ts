@@ -13,7 +13,7 @@ const SYNC_KEYS = [
   'searchSettings',
   'widgetConfig',
   'todoList',
-  'bottomBarPins',
+  'bottom_bar_pins',
   'notificationSettings',
   'appSettings'
 ]
@@ -29,12 +29,16 @@ const storageToPayload = (storage: Record<string, any>): DeepTabSyncPayload => (
   searchSettings: storage.searchSettings,
   widgetConfig: storage.widgetConfig,
   todoList: storage.todoList,
-  bottomBarPins: storage.bottomBarPins,
+  bottomBarPins: storage.bottom_bar_pins,
   notificationSettings: storage.notificationSettings,
   appSettings: storage.appSettings
 })
 
 const payloadToStorage = (payload: DeepTabSyncPayload): Record<string, any> => {
+  const bottomBarPins =
+    payload.bottomBarPins ??
+    (payload as DeepTabSyncPayload & { bottom_bar_pins?: any }).bottom_bar_pins
+
   const entries: [string, any][] = [
     ['app_grid_data', payload.appGridData],
     ['app_grid_icon_settings', payload.appGridIconSettings],
@@ -46,7 +50,7 @@ const payloadToStorage = (payload: DeepTabSyncPayload): Record<string, any> => {
     ['searchSettings', payload.searchSettings],
     ['widgetConfig', payload.widgetConfig],
     ['todoList', payload.todoList],
-    ['bottomBarPins', payload.bottomBarPins],
+    ['bottom_bar_pins', bottomBarPins],
     ['notificationSettings', payload.notificationSettings],
     ['appSettings', payload.appSettings]
   ]

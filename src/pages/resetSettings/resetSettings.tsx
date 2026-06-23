@@ -185,7 +185,7 @@ const ResetSettings: React.FC = () => {
                 清空应用图标布局和自定义图标配置，恢复为默认推荐应用。
               </div>
               <div className={styles.actions}>
-                <Button danger onClick={confirmResetIcons}>
+                <Button className={styles.dangerOutlineButton} danger onClick={confirmResetIcons}>
                   重置图标
                 </Button>
               </div>

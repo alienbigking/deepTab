@@ -8,18 +8,42 @@ import styles from './widgets.module.less'
 import widgetsContainerService from './services/widgetsContainer'
 import type { IHotSearchData } from './types/widgetsContainer'
 
+const hotSearchWidgetCache: {
+  platformKey: string
+  modalPlatformKey: string
+  data: IHotSearchData | null
+  modalData: IHotSearchData | null
+  cache: Record<string, IHotSearchData>
+  hiddenPlatformKeys: string[]
+  configLoaded: boolean
+  initialLoaded: boolean
+  initialPromise: Promise<void> | null
+} = {
+  platformKey: 'baidu',
+  modalPlatformKey: 'baidu',
+  data: null,
+  modalData: null,
+  cache: {},
+  hiddenPlatformKeys: [],
+  configLoaded: false,
+  initialLoaded: false,
+  initialPromise: null
+}
+
 const HotSearchWidget: React.FC = () => {
   const platforms = useMemo(() => widgetsContainerService.getHotSearchPlatforms(), [])
-  const [platformKey, setPlatformKey] = useState('baidu')
-  const [data, setData] = useState<IHotSearchData | null>(null)
-  const [modalPlatformKey, setModalPlatformKey] = useState('baidu')
-  const [modalData, setModalData] = useState<IHotSearchData | null>(null)
-  const [cache, setCache] = useState<Record<string, IHotSearchData>>({})
+  const [platformKey, setPlatformKey] = useState(hotSearchWidgetCache.platformKey)
+  const [data, setData] = useState<IHotSearchData | null>(hotSearchWidgetCache.data)
+  const [modalPlatformKey, setModalPlatformKey] = useState(hotSearchWidgetCache.modalPlatformKey)
+  const [modalData, setModalData] = useState<IHotSearchData | null>(hotSearchWidgetCache.modalData)
+  const [cache, setCache] = useState<Record<string, IHotSearchData>>(hotSearchWidgetCache.cache)
   const [loading, setLoading] = useState(false)
   const [modalLoading, setModalLoading] = useState(false)
   const [open, setOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [hiddenPlatformKeys, setHiddenPlatformKeys] = useState<string[]>([])
+  const [hiddenPlatformKeys, setHiddenPlatformKeys] = useState<string[]>(
+    hotSearchWidgetCache.hiddenPlatformKeys
+  )
   const requestIdRef = useRef(0)
   const modalRequestIdRef = useRef(0)
   const settingsPanelRef = useRef<HTMLDivElement | null>(null)
@@ -43,19 +67,43 @@ const HotSearchWidget: React.FC = () => {
   const activeModalPlatform = visiblePlatforms[modalPlatformIndex] || visiblePlatforms[0]
 
   const loadWidgetConfig = async () => {
+    if (hotSearchWidgetCache.configLoaded) {
+      setHiddenPlatformKeys(hotSearchWidgetCache.hiddenPlatformKeys)
+      return
+    }
     const config = await widgetsContainerService.getWidgetConfig()
-    setHiddenPlatformKeys(config.hotSearchHiddenPlatforms || [])
+    const nextHiddenPlatformKeys = config.hotSearchHiddenPlatforms || []
+    hotSearchWidgetCache.hiddenPlatformKeys = nextHiddenPlatformKeys
+    hotSearchWidgetCache.configLoaded = true
+    setHiddenPlatformKeys(nextHiddenPlatformKeys)
   }
 
-  const loadHotSearch = async (nextPlatformKey = platformKey) => {
+  const setCachedHotSearch = (nextPlatformKey: string, result: IHotSearchData) => {
+    hotSearchWidgetCache.cache = { ...hotSearchWidgetCache.cache, [nextPlatformKey]: result }
+    hotSearchWidgetCache.data = result
+    hotSearchWidgetCache.platformKey = nextPlatformKey
+    hotSearchWidgetCache.initialLoaded = true
+    setCache(hotSearchWidgetCache.cache)
+    setData(result)
+  }
+
+  const loadHotSearch = async (nextPlatformKey = platformKey, force = false) => {
+    if (!force && hotSearchWidgetCache.cache[nextPlatformKey]) {
+      hotSearchWidgetCache.platformKey = nextPlatformKey
+      hotSearchWidgetCache.data = hotSearchWidgetCache.cache[nextPlatformKey]
+      hotSearchWidgetCache.initialLoaded = true
+      setCache(hotSearchWidgetCache.cache)
+      setData(hotSearchWidgetCache.cache[nextPlatformKey])
+      return
+    }
+
     const requestId = requestIdRef.current + 1
     requestIdRef.current = requestId
     setLoading(true)
     try {
       const result = await widgetsContainerService.getHotSearch(nextPlatformKey)
       if (requestIdRef.current === requestId) {
-        setCache((value) => ({ ...value, [nextPlatformKey]: result }))
-        setData(result)
+        setCachedHotSearch(nextPlatformKey, result)
       }
     } finally {
       if (requestIdRef.current === requestId) {
@@ -64,9 +112,17 @@ const HotSearchWidget: React.FC = () => {
     }
   }
 
-  const loadModalHotSearch = async (nextPlatformKey = modalPlatformKey) => {
-    if (cache[nextPlatformKey]) {
-      setModalData(cache[nextPlatformKey])
+  const loadModalHotSearch = async (nextPlatformKey = modalPlatformKey, force = false) => {
+    if (!force && hotSearchWidgetCache.cache[nextPlatformKey]) {
+      hotSearchWidgetCache.modalPlatformKey = nextPlatformKey
+      hotSearchWidgetCache.modalData = hotSearchWidgetCache.cache[nextPlatformKey]
+      setCache(hotSearchWidgetCache.cache)
+      setModalData(hotSearchWidgetCache.cache[nextPlatformKey])
+      return
+    }
+
+    if (hotSearchWidgetCache.cache[nextPlatformKey]) {
+      setModalData(hotSearchWidgetCache.cache[nextPlatformKey])
     }
 
     const requestId = modalRequestIdRef.current + 1
@@ -75,7 +131,15 @@ const HotSearchWidget: React.FC = () => {
     try {
       const result = await widgetsContainerService.getHotSearch(nextPlatformKey)
       if (modalRequestIdRef.current === requestId) {
-        setCache((value) => ({ ...value, [nextPlatformKey]: result }))
+        hotSearchWidgetCache.cache = { ...hotSearchWidgetCache.cache, [nextPlatformKey]: result }
+        hotSearchWidgetCache.modalPlatformKey = nextPlatformKey
+        hotSearchWidgetCache.modalData = result
+        if (nextPlatformKey === hotSearchWidgetCache.platformKey) {
+          hotSearchWidgetCache.data = result
+          hotSearchWidgetCache.initialLoaded = true
+          setData(result)
+        }
+        setCache(hotSearchWidgetCache.cache)
         setModalData(result)
       }
     } finally {
@@ -86,8 +150,33 @@ const HotSearchWidget: React.FC = () => {
   }
 
   useEffect(() => {
-    void loadWidgetConfig()
-    void loadHotSearch('baidu')
+    if (hotSearchWidgetCache.initialLoaded) {
+      setPlatformKey(hotSearchWidgetCache.platformKey)
+      setData(hotSearchWidgetCache.data)
+      setModalPlatformKey(hotSearchWidgetCache.modalPlatformKey)
+      setModalData(hotSearchWidgetCache.modalData)
+      setCache(hotSearchWidgetCache.cache)
+      setHiddenPlatformKeys(hotSearchWidgetCache.hiddenPlatformKeys)
+      return
+    }
+
+    if (!hotSearchWidgetCache.initialPromise) {
+      hotSearchWidgetCache.initialPromise = (async () => {
+        await loadWidgetConfig()
+        await loadHotSearch('baidu')
+      })().finally(() => {
+        hotSearchWidgetCache.initialPromise = null
+      })
+    }
+
+    void hotSearchWidgetCache.initialPromise.then(() => {
+      setPlatformKey(hotSearchWidgetCache.platformKey)
+      setData(hotSearchWidgetCache.data)
+      setModalPlatformKey(hotSearchWidgetCache.modalPlatformKey)
+      setModalData(hotSearchWidgetCache.modalData)
+      setCache(hotSearchWidgetCache.cache)
+      setHiddenPlatformKeys(hotSearchWidgetCache.hiddenPlatformKeys)
+    })
   }, [])
 
   useEffect(() => {
@@ -110,7 +199,8 @@ const HotSearchWidget: React.FC = () => {
     if (!activePlatform?.key) return
     if (platformKey === activePlatform.key) return
     setPlatformKey(activePlatform.key)
-    setData(cache[activePlatform.key] || null)
+    hotSearchWidgetCache.platformKey = activePlatform.key
+    setData(hotSearchWidgetCache.cache[activePlatform.key] || null)
     void loadHotSearch(activePlatform.key)
   }, [activePlatform?.key])
 
@@ -118,15 +208,18 @@ const HotSearchWidget: React.FC = () => {
     if (!activeModalPlatform?.key) return
     if (modalPlatformKey === activeModalPlatform.key) return
     setModalPlatformKey(activeModalPlatform.key)
-    setModalData(cache[activeModalPlatform.key] || null)
+    hotSearchWidgetCache.modalPlatformKey = activeModalPlatform.key
+    setModalData(hotSearchWidgetCache.cache[activeModalPlatform.key] || null)
     void loadModalHotSearch(activeModalPlatform.key)
   }, [activeModalPlatform?.key])
 
   const switchPlatform = (nextIndex: number) => {
     const nextPlatform = visiblePlatforms[(nextIndex + visiblePlatforms.length) % visiblePlatforms.length]
     setPlatformKey(nextPlatform.key)
-    if (cache[nextPlatform.key]) {
-      setData(cache[nextPlatform.key])
+    hotSearchWidgetCache.platformKey = nextPlatform.key
+    if (hotSearchWidgetCache.cache[nextPlatform.key]) {
+      hotSearchWidgetCache.data = hotSearchWidgetCache.cache[nextPlatform.key]
+      setData(hotSearchWidgetCache.cache[nextPlatform.key])
     } else {
       setData(null)
     }
@@ -135,8 +228,10 @@ const HotSearchWidget: React.FC = () => {
 
   const handlePlatformClick = (key: string) => {
     setModalPlatformKey(key)
-    if (cache[key]) {
-      setModalData(cache[key])
+    hotSearchWidgetCache.modalPlatformKey = key
+    if (hotSearchWidgetCache.cache[key]) {
+      hotSearchWidgetCache.modalData = hotSearchWidgetCache.cache[key]
+      setModalData(hotSearchWidgetCache.cache[key])
     } else {
       setModalData(null)
     }
@@ -146,6 +241,8 @@ const HotSearchWidget: React.FC = () => {
   const handleOpenModal = () => {
     setModalPlatformKey(platformKey)
     setModalData(data)
+    hotSearchWidgetCache.modalPlatformKey = platformKey
+    hotSearchWidgetCache.modalData = data
     setOpen(true)
   }
 
@@ -160,6 +257,8 @@ const HotSearchWidget: React.FC = () => {
     }
 
     setHiddenPlatformKeys(nextHidden)
+    hotSearchWidgetCache.hiddenPlatformKeys = nextHidden
+    hotSearchWidgetCache.configLoaded = true
     const config = await widgetsContainerService.getWidgetConfig()
     await widgetsContainerService.saveWidgetConfig({
       ...config,
@@ -307,7 +406,7 @@ const HotSearchWidget: React.FC = () => {
                     type='button'
                     className={modalLoading ? styles.refreshingToolbarButton : ''}
                     disabled={modalLoading}
-                    onClick={() => void loadModalHotSearch()}
+                    onClick={() => void loadModalHotSearch(modalPlatformKey, true)}
                   >
                     <ReloadOutlined spin={modalLoading} />
                   </button>

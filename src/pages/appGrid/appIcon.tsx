@@ -5,6 +5,7 @@ import { CloseCircleFilled, FolderFilled } from '@ant-design/icons'
 import cn from 'classnames'
 import styles from './appGrid.module.less'
 import type { AppNode, AppItem, AppFolder, IconSettings } from './types/appGrid'
+import { createFallbackIcon, isImageIconSource } from './iconFallback'
 
 interface AppIconProps {
   node: AppNode
@@ -40,16 +41,7 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
   const isFolder = node.type === 'folder'
   const folder = isFolder ? (node as AppFolder) : null
   const item = !isFolder ? (node as AppItem) : null
-  const isImageIcon = (icon?: string) => /^(https?:\/\/|data:image\/)/i.test(String(icon || ''))
-  const iconTextFromName = (value?: string) => {
-    const text = String(value || '').trim()
-    if (!text) return 'A'
-    const chinese = text.match(/[\u4e00-\u9fa5]/g)
-    if (chinese?.length) return chinese.slice(0, 2).join('')
-    const letters = text.replace(/[^a-z0-9]/gi, '').slice(0, 2)
-    return (letters || text.slice(0, 2)).toUpperCase()
-  }
-
+  const isImageIcon = isImageIconSource
   const renderImageIcon = (
     icon: string | undefined,
     className: string,
@@ -236,7 +228,7 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
                       renderImageIcon(
                         child.icon,
                         styles.folderCoverImg,
-                        iconTextFromName(child.name)
+                        <img className={styles.folderCoverImg} src={createFallbackIcon(child.name)} alt='' />
                       )
                     ) : (
                       child.icon
@@ -270,7 +262,7 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
               renderImageIcon(
                 item?.icon,
                 styles.iconImg,
-                iconTextFromName(item?.name)
+                <img className={styles.iconImg} src={createFallbackIcon(item?.name)} alt='' />
               )
             ) : (
               item?.icon

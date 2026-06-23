@@ -16,6 +16,7 @@ const Invitation: React.FC = () => {
   })
   const [records, setRecords] = useState<IInvitationRecord[]>([])
   const [email, setEmail] = useState('')
+  const [sending, setSending] = useState(false)
   const inviteLink = useMemo(() => `https://deeptab.com/invite?code=${stats.inviteCode}`, [stats.inviteCode])
 
   useEffect(() => {
@@ -42,23 +43,29 @@ const Invitation: React.FC = () => {
       return
     }
 
-    await invitationService.sendInvitation(value)
-    const record: IInvitationRecord = {
-      id: `invite_${Date.now()}`,
-      inviteeEmail: value,
-      inviteeStatus: 'pending',
-      inviteDate: new Date().toISOString()
+    setSending(true)
+    try {
+      const data = await invitationService.sendInvitation(value)
+      setRecords((prev) => [data.record, ...prev])
+      setStats(data.stats)
+      setEmail('')
+      message.success('邀请邮件已发送')
+    } catch (error: any) {
+      console.error('发送邀请邮件失败:', error)
+      message.error(error?.message || '发送邀请失败，请稍后再试')
+    } finally {
+      setSending(false)
     }
-    const nextRecords = [record, ...records]
-    const nextStats = {
-      ...stats,
-      totalInvites: stats.totalInvites + 1
+  }
+
+  const getStatusMeta = (status: IInvitationRecord['inviteeStatus']) => {
+    if (status === 'registered') {
+      return { text: '已注册', className: styles.statusRegistered }
     }
-    setRecords(nextRecords)
-    setStats(nextStats)
-    await chrome.storage.local.set({ invitationStats: nextStats, invitationRecords: nextRecords })
-    setEmail('')
-    message.success('邀请已记录')
+    if (status === 'subscribed') {
+      return { text: '已订阅', className: styles.statusSubscribed }
+    }
+    return { text: '待接受', className: styles.statusPending }
   }
 
   return (
@@ -93,8 +100,14 @@ const Invitation: React.FC = () => {
               onChange={(event) => setEmail(event.target.value)}
               placeholder='friend@example.com'
               className={styles.inviteInput}
+              disabled={sending}
             />
-            <Button type='primary' icon={<MailOutlined />} onClick={() => void sendInvitation()}>
+            <Button
+              type='primary'
+              icon={<MailOutlined />}
+              loading={sending}
+              onClick={() => void sendInvitation()}
+            >
               发送
             </Button>
           </div>
@@ -110,13 +123,13 @@ const Invitation: React.FC = () => {
             dataSource={records}
             locale={{ emptyText: '暂无邀请记录' }}
             renderItem={(item) => (
-              <List.Item>
+              <List.Item className={styles.recordItem}>
                 <List.Item.Meta
                   title={item.inviteeEmail}
                   description={new Date(item.inviteDate).toLocaleString()}
                 />
-                <Tag color={item.inviteeStatus === 'registered' ? 'success' : 'default'}>
-                  {item.inviteeStatus === 'registered' ? '已注册' : item.inviteeStatus === 'subscribed' ? '已订阅' : '待接受'}
+                <Tag className={cn(styles.statusTag, getStatusMeta(item.inviteeStatus).className)} bordered={false}>
+                  {getStatusMeta(item.inviteeStatus).text}
                 </Tag>
               </List.Item>
             )}

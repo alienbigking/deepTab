@@ -9,6 +9,18 @@ import styles from './widgets.module.less'
 import widgetsContainerService from './services/widgetsContainer'
 import type { IWeatherData } from './types/widgetsContainer'
 
+const weatherWidgetCache: {
+  city: string
+  data: IWeatherData | null
+  initialized: boolean
+  initialPromise: Promise<{ city: string; data: IWeatherData | null }> | null
+} = {
+  city: 'current-location',
+  data: null,
+  initialized: false,
+  initialPromise: null
+}
+
 const windDirectionText = (degree?: number) => {
   if (degree === undefined) return '--'
   const dirs = ['北', '东北', '东', '东南', '南', '西南', '西', '西北']
@@ -27,8 +39,8 @@ const getWeatherTheme = (weather?: IWeatherData | null) => {
 
 const WeatherWidget: React.FC = () => {
   const cities = useMemo(() => widgetsContainerService.getWeatherCities(), [])
-  const [data, setData] = useState<IWeatherData | null>(null)
-  const [city, setCity] = useState('current-location')
+  const [data, setData] = useState<IWeatherData | null>(weatherWidgetCache.data)
+  const [city, setCity] = useState(weatherWidgetCache.city)
   const [loading, setLoading] = useState(false)
   const [locating, setLocating] = useState(false)
   const [open, setOpen] = useState(false)
@@ -37,7 +49,12 @@ const WeatherWidget: React.FC = () => {
     setLoading(true)
     try {
       const weather = await widgetsContainerService.getWeather(nextCity)
+      weatherWidgetCache.city = nextCity
+      weatherWidgetCache.data = weather
+      weatherWidgetCache.initialized = true
       setData(weather)
+      setCity(nextCity)
+      return weather
     } finally {
       setLoading(false)
     }
@@ -61,6 +78,9 @@ const WeatherWidget: React.FC = () => {
         position.coords.latitude,
         position.coords.longitude
       )
+      weatherWidgetCache.city = 'current-location'
+      weatherWidgetCache.data = weather
+      weatherWidgetCache.initialized = true
       setData(weather)
       setCity('current-location')
       if (save) {
@@ -84,14 +104,38 @@ const WeatherWidget: React.FC = () => {
 
   useEffect(() => {
     const load = async () => {
-      const config = await widgetsContainerService.getWidgetConfig()
-      const nextCity = config.weatherCity || 'current-location'
-      setCity(nextCity)
-      if (nextCity === 'current-location' && !config.weatherCoords) {
-        await locateWeather(true)
+      if (weatherWidgetCache.initialized) {
+        setCity(weatherWidgetCache.city)
+        setData(weatherWidgetCache.data)
         return
       }
-      await loadWeather(nextCity)
+
+      if (weatherWidgetCache.initialPromise) {
+        const cached = await weatherWidgetCache.initialPromise
+        setCity(cached.city)
+        setData(cached.data)
+        return
+      }
+
+      weatherWidgetCache.initialPromise = (async () => {
+        const config = await widgetsContainerService.getWidgetConfig()
+        const nextCity = config.weatherCity || 'current-location'
+        setCity(nextCity)
+        if (nextCity === 'current-location' && !config.weatherCoords) {
+          await locateWeather(true)
+          return { city: weatherWidgetCache.city, data: weatherWidgetCache.data }
+        }
+        const weather = await loadWeather(nextCity)
+        return { city: nextCity, data: weather }
+      })()
+
+      try {
+        const cached = await weatherWidgetCache.initialPromise
+        setCity(cached.city)
+        setData(cached.data)
+      } finally {
+        weatherWidgetCache.initialPromise = null
+      }
     }
     void load()
   }, [])
