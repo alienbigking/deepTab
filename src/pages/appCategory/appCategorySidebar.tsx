@@ -81,6 +81,10 @@ const AppCategorySidebar: React.FC<AppCategorySidebarProps> = (props) => {
   const user = session?.user
   const avatar = avatarError ? '' : user?.avatar
 
+  const openProfileSettings = () => {
+    window.dispatchEvent(new CustomEvent('dt:openSettings', { detail: { menu: 'profile' } }))
+  }
+
   useEffect(() => {
     void init()
     void initAuth()
@@ -229,7 +233,19 @@ const AppCategorySidebar: React.FC<AppCategorySidebarProps> = (props) => {
         </div>
 
         <div className={cn(styles.bar)}>
-          <div className={cn(styles.avatar)}>
+          <div
+            className={cn(styles.avatar)}
+            role='button'
+            tabIndex={0}
+            title='个人信息'
+            onClick={openProfileSettings}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                openProfileSettings()
+              }
+            }}
+          >
             {avatar ? (
               <img src={avatar} alt={user?.nickname || user?.username || 'avatar'} onError={() => setAvatarError(true)} />
             ) : (

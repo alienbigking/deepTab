@@ -1,6 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Input, Space } from 'antd'
-import { CloseOutlined, DownOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
+import {
+  DeleteOutlined,
+  DownOutlined,
+  PlusOutlined,
+  SearchOutlined,
+  StarFilled,
+  StarOutlined
+} from '@ant-design/icons'
 import cn from 'classnames'
 import styles from './searchBar.module.less'
 import useSearchEngineStore from '../searchEngine/stores/searchEngine'
@@ -8,7 +15,7 @@ import generalSettingsService from '../generalSettings/services/generalSettings'
 import { defaultGeneralSettings } from '../generalSettings/stores/generalSettings'
 import searchBarService from './services/searchBar'
 import searchSuggestionService from './services/searchSuggestion'
-import type { ISearchHistoryItem } from './types/searchBar'
+import type { ISearchFavoriteItem, ISearchHistoryItem } from './types/searchBar'
 
 /**
  * 搜索框组件
@@ -22,6 +29,7 @@ const SearchBar: React.FC = () => {
   const [panelOpen, setPanelOpen] = useState(false)
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [history, setHistory] = useState<ISearchHistoryItem[]>([])
+  const [favorites, setFavorites] = useState<ISearchFavoriteItem[]>([])
   const [activeIndex, setActiveIndex] = useState(-1)
 
   const wrapRef = useRef<HTMLDivElement | null>(null)
@@ -235,6 +243,11 @@ const SearchBar: React.FC = () => {
     setHistory(list)
   }
 
+  const loadFavorites = async () => {
+    const list = await searchBarService.getFavoriteSearches()
+    setFavorites(list)
+  }
+
   const removeHistory = async (keyword: string) => {
     await searchBarService.removeSearchHistory(keyword)
     await loadHistory()
@@ -245,11 +258,38 @@ const SearchBar: React.FC = () => {
     setHistory([])
   }
 
+  const toggleFavorite = async (item: ISearchHistoryItem | ISearchFavoriteItem) => {
+    const keyword = String(item.keyword || '').trim()
+    if (!keyword) return
+
+    const exists = favorites.some((favorite) => favorite.keyword === keyword)
+    if (exists) {
+      await searchBarService.removeFavoriteSearch(keyword)
+    } else {
+      await searchBarService.saveFavoriteSearch({
+        keyword,
+        timestamp: Date.now(),
+        engineId: item.engineId || String(resolvedEngineId)
+      })
+    }
+
+    await loadFavorites()
+  }
+
+  const clearFavorites = async () => {
+    await searchBarService.clearFavoriteSearches()
+    setFavorites([])
+  }
+
   useEffect(() => {
     if (!panelOpen) return
-    if (!generalSettings.search.searchHistory) return
     if (searchValue.trim()) return
-    void loadHistory()
+    void loadFavorites()
+    if (generalSettings.search.searchHistory) {
+      void loadHistory()
+    } else {
+      setHistory([])
+    }
   }, [generalSettings.search.searchHistory, panelOpen, searchValue])
 
   useEffect(() => {
@@ -312,14 +352,13 @@ const SearchBar: React.FC = () => {
     }
 
     const trimmed = searchValue.trim()
-    const showHistory =
-      panelOpen && !trimmed && generalSettings.search.searchHistory && history.length > 0
     const showSuggestions =
       panelOpen && !!trimmed && generalSettings.search.searchSuggestions && suggestions.length > 0
 
-    const list = showSuggestions ? suggestions : showHistory ? history.map((it) => it.keyword) : []
+    const list = showSuggestions ? suggestions : []
     if (!list.length) {
       if (key === 'Escape') {
+        e.preventDefault()
         setPanelOpen(false)
         setActiveIndex(-1)
       }
@@ -361,8 +400,12 @@ const SearchBar: React.FC = () => {
     }
   }
 
-  const showHistoryPanel =
-    panelOpen && !searchValue.trim() && generalSettings.search.searchHistory && history.length > 0
+  const favoriteKeywordSet = useMemo(() => {
+    return new Set(favorites.map((item) => item.keyword))
+  }, [favorites])
+
+  const showCommonPanel = panelOpen && !searchValue.trim()
+  const showHistoryPanel = showCommonPanel && generalSettings.search.searchHistory
   const showSuggestPanel =
     panelOpen &&
     !!searchValue.trim() &&
@@ -409,7 +452,10 @@ const SearchBar: React.FC = () => {
             setPanelOpen(true)
             setActiveIndex(-1)
           }}
-          onPressEnter={(e) => handleSearch((e.target as HTMLInputElement).value)}
+          onPressEnter={(e) => {
+            if (activeIndex >= 0) return
+            handleSearch((e.target as HTMLInputElement).value)
+          }}
           onKeyDown={handleKeyDown}
         />
 
@@ -477,7 +523,7 @@ const SearchBar: React.FC = () => {
           </div>
         )}
 
-        {(showHistoryPanel || showSuggestPanel) && (
+        {(showCommonPanel || showSuggestPanel) && (
           <div
             className={styles.suggestPanel}
             data-dt-scroll-panel='1'
@@ -485,73 +531,161 @@ const SearchBar: React.FC = () => {
               e.preventDefault()
             }}
           >
-            <div className={styles.panelHeader}>
-              <div>{showHistoryPanel ? '搜索历史' : '搜索建议'}</div>
-
-              {showHistoryPanel && (
-                <div
-                  className={styles.panelActions}
-                  onClick={() => void clearHistory()}
-                  role='button'
-                  tabIndex={0}
-                >
-                  清空
+            {showSuggestPanel && (
+              <>
+                <div className={styles.panelHeader}>
+                  <div>搜索建议</div>
                 </div>
-              )}
-            </div>
 
-            <div className={styles.panelList}>
-              {showSuggestPanel &&
-                suggestions.map((text, idx) => (
-                  <div
-                    key={`${text}-${idx}`}
-                    className={cn(styles.panelItem, {
-                      [styles.panelItemActive]: idx === activeIndex
-                    })}
-                    onMouseEnter={() => setActiveIndex(idx)}
-                    onClick={() => {
-                      setSearchValue(text)
-                      handleSearch(text)
-                    }}
-                    role='button'
-                    tabIndex={0}
-                  >
-                    <div className={styles.panelItemText}>{text}</div>
-                  </div>
-                ))}
+                <div className={styles.panelList}>
+                  {suggestions.map((text, idx) => (
+                    <div
+                      key={`${text}-${idx}`}
+                      className={cn(styles.panelItem, {
+                        [styles.panelItemActive]: idx === activeIndex
+                      })}
+                      onMouseEnter={() => setActiveIndex(idx)}
+                      onClick={() => {
+                        setSearchValue(text)
+                        handleSearch(text)
+                      }}
+                      role='button'
+                      tabIndex={0}
+                    >
+                      <div className={styles.panelItemText}>{text}</div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
 
-              {showHistoryPanel &&
-                history.map((it, idx) => (
-                  <div
-                    key={`${it.keyword}-${it.timestamp}`}
-                    className={cn(styles.panelItem, {
-                      [styles.panelItemActive]: idx === activeIndex
-                    })}
-                    onMouseEnter={() => setActiveIndex(idx)}
-                    onClick={() => {
-                      setSearchValue(it.keyword)
-                      handleSearch(it.keyword)
-                    }}
-                    role='button'
-                    tabIndex={0}
-                  >
-                    <div className={styles.panelItemText}>{it.keyword}</div>
-                    <div className={styles.panelItemRight}>
-                      <span
-                        className={styles.panelItemDel}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          void removeHistory(it.keyword)
-                        }}
+            {showCommonPanel && (
+              <div className={styles.quickPanel}>
+                <div className={styles.quickSection}>
+                  <div className={styles.sectionHeader}>
+                    <div className={styles.sectionTitle}>常用搜索</div>
+                    {favorites.length > 0 && (
+                      <div
+                        className={styles.panelActions}
+                        onClick={() => void clearFavorites()}
                         role='button'
                         tabIndex={0}
                       >
-                        <CloseOutlined />
-                      </span>
-                    </div>
+                        清空
+                      </div>
+                    )}
                   </div>
-                ))}
-            </div>
+
+                  {favorites.length > 0 ? (
+                    <div className={styles.chipGrid}>
+                      {favorites.map((item) => (
+                        <div
+                          key={`${item.keyword}-${item.timestamp}`}
+                          className={styles.searchChip}
+                          onClick={() => {
+                            setSearchValue(item.keyword)
+                            handleSearch(item.keyword)
+                          }}
+                          role='button'
+                          tabIndex={0}
+                          title={item.keyword}
+                        >
+                          <span className={styles.searchChipLabel}>{item.keyword}</span>
+                          <span className={styles.searchChipActions}>
+                            <span
+                              className={cn(styles.searchChipAction, styles.searchChipActionActive)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                void toggleFavorite(item)
+                              }}
+                              role='button'
+                              tabIndex={0}
+                              title='移出常用搜索'
+                            >
+                              <StarFilled />
+                            </span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={styles.emptyTip}>点击历史记录右侧星标后，会出现在这里</div>
+                  )}
+                </div>
+
+                {showHistoryPanel && (
+                  <div className={styles.quickSection}>
+                    <div className={styles.sectionHeader}>
+                      <div className={styles.sectionTitle}>搜索历史</div>
+                      {history.length > 0 && (
+                        <div
+                          className={styles.panelActions}
+                          onClick={() => void clearHistory()}
+                          role='button'
+                          tabIndex={0}
+                        >
+                          清空
+                        </div>
+                      )}
+                    </div>
+
+                    {history.length > 0 ? (
+                      <div className={styles.chipGrid}>
+                        {history.map((item) => {
+                          const isFavorite = favoriteKeywordSet.has(item.keyword)
+
+                          return (
+                            <div
+                              key={`${item.keyword}-${item.timestamp}`}
+                              className={styles.searchChip}
+                              onClick={() => {
+                                setSearchValue(item.keyword)
+                                handleSearch(item.keyword)
+                              }}
+                              role='button'
+                              tabIndex={0}
+                              title={item.keyword}
+                            >
+                              <span className={styles.searchChipLabel}>{item.keyword}</span>
+                              <span className={styles.searchChipActions}>
+                                <span
+                                  className={cn(styles.searchChipAction, {
+                                    [styles.searchChipActionActive]: isFavorite
+                                  })}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    void toggleFavorite(item)
+                                  }}
+                                  role='button'
+                                  tabIndex={0}
+                                  title={isFavorite ? '移出常用搜索' : '加入常用搜索'}
+                                >
+                                  {isFavorite ? <StarFilled /> : <StarOutlined />}
+                                </span>
+                                <span
+                                  className={styles.searchChipAction}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    void removeHistory(item.keyword)
+                                  }}
+                                  role='button'
+                                  tabIndex={0}
+                                  title='删除历史记录'
+                                >
+                                  <DeleteOutlined />
+                                </span>
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <div className={styles.emptyTip}>暂时还没有搜索历史</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

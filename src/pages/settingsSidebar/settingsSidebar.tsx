@@ -34,6 +34,9 @@ import BackupRestore from '@/pages/backupRestore/backupRestore'
 import IconControl from '@/pages/iconControl/iconControl'
 import AuthModal from '@/pages/auth/authModal'
 import useAuthStore from '@/pages/auth/stores/auth'
+import LegalModal from '@/pages/legal/legalModal'
+import type { LegalDocumentType } from '@/pages/legal/legalDocuments'
+import Profile from '@/pages/profile/profile'
 
 interface SettingsSidebarProps {
   open: boolean
@@ -42,6 +45,7 @@ interface SettingsSidebarProps {
 }
 
 type MenuKey =
+  | 'profile'
   | 'subscription'
   | 'invitation'
   | 'settings'
@@ -65,6 +69,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
   const { message } = App.useApp()
   const [activeMenu, setActiveMenu] = useState<MenuKey>('wallpaper')
   const [authOpen, setAuthOpen] = useState(false)
+  const [legalType, setLegalType] = useState<LegalDocumentType | null>(null)
   const session = useAuthStore((s) => s.session)
   const initAuth = useAuthStore((s) => s.init)
   const logout = useAuthStore((s) => s.logout)
@@ -98,6 +103,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
     if (!openToMenu) return
 
     const keys = new Set<MenuKey>([
+      'profile',
       'subscription',
       'invitation',
       'settings',
@@ -120,6 +126,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
 
   // 菜单项
   const menuItems = [
+    { key: 'profile', icon: <UserOutlined />, label: '个人信息' },
     { key: 'subscription', icon: <CrownOutlined />, label: '订阅管理', badge: 'FREE' },
     { key: 'invitation', icon: <GiftOutlined />, label: '我的邀请' },
     { key: 'settings', icon: <SettingOutlined />, label: '常规设置' },
@@ -137,6 +144,8 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
 
   const renderContent = () => {
     switch (activeMenu) {
+      case 'profile':
+        return <Profile />
       case 'subscription':
         return <Subscription />
       case 'invitation':
@@ -246,8 +255,12 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
           <div className={cn(styles.bottomInfo)}>
             <div className={cn(styles.version)}>V2.2.22</div>
             <div className={cn(styles.links)}>
-              <span>用户协议</span>
-              <span>隐私政策</span>
+              <button type='button' onClick={() => setLegalType('terms')}>
+                用户协议
+              </button>
+              <button type='button' onClick={() => setLegalType('privacy')}>
+                隐私政策
+              </button>
             </div>
           </div>
         </div>
@@ -265,6 +278,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
         onChange={handleAvatarChange}
       />
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+      <LegalModal open={Boolean(legalType)} type={legalType || 'terms'} onClose={() => setLegalType(null)} />
     </Drawer>
   )
 }

@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react'
 import cn from 'classnames'
-import { Card, Descriptions, Alert } from 'antd'
+import { Card, Descriptions, Alert, Button, Space } from 'antd'
 import styles from './about.module.less'
 import generalSettingsService from '../generalSettings/services/generalSettings'
 import { defaultGeneralSettings } from '../generalSettings/stores/generalSettings'
+import LegalModal from '@/pages/legal/legalModal'
+import type { LegalDocumentType } from '@/pages/legal/legalDocuments'
 
 const About: React.FC = () => {
   const [showIcp, setShowIcp] = useState(defaultGeneralSettings.other.showIcp)
+  const [legalType, setLegalType] = useState<LegalDocumentType | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -44,6 +47,16 @@ const About: React.FC = () => {
           <Descriptions.Item label='作者'>deepTab Team</Descriptions.Item>
           <Descriptions.Item label='邮箱'>1260213657@qq.com</Descriptions.Item>
           <Descriptions.Item label='官网'>https://deeptab.com</Descriptions.Item>
+          <Descriptions.Item label='合规文档'>
+            <Space size={8} wrap>
+              <Button type='link' size='small' onClick={() => setLegalType('terms')}>
+                用户协议
+              </Button>
+              <Button type='link' size='small' onClick={() => setLegalType('privacy')}>
+                隐私政策
+              </Button>
+            </Space>
+          </Descriptions.Item>
           {showIcp && (
             <Descriptions.Item label='备案号'>
               <a
@@ -59,6 +72,16 @@ const About: React.FC = () => {
           <Descriptions.Item label='描述'>一款漂亮的新标签页插件</Descriptions.Item>
         </Descriptions>
       </Card>
+
+      <Card title='隐私与权限概览' className='dtSettingsCard' variant='borderless'>
+        <div className={styles.privacySummary}>
+          <p>Deep Tab 使用浏览器本地存储保存您的主页图标、壁纸、主题、搜索历史、小组件和偏好设置。</p>
+          <p>登录后，您可以选择将主页 icon、分类、Dock、设置、主题等配置同步到 Deep Tab 服务端。</p>
+          <p>天气、热搜、搜索建议和壁纸素材会按功能需要请求第三方服务；反馈附件、头像和邀请邮件由 Deep Tab 服务端处理。</p>
+        </div>
+      </Card>
+
+      <LegalModal open={Boolean(legalType)} type={legalType || 'terms'} onClose={() => setLegalType(null)} />
     </div>
   )
 }

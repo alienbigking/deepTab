@@ -4,76 +4,21 @@ import {
   IGradientWallpaper,
   IImageWallpaper,
   IDynamicWallpaper,
-  IWallpaperConfig
+  IWallpaperConfig,
+  IWallpaperPageResult
 } from '../types/wallpaper'
 
-type RemoteWallpaperManifest = {
-  images?: Partial<IImageWallpaper>[]
-  dynamic?: Partial<IDynamicWallpaper>[]
-}
-
-const WALLPAPER_IMAGE_CACHE_KEY = 'wallpaperRemoteImageCache'
-const WALLPAPER_DYNAMIC_CACHE_KEY = 'wallpaperRemoteDynamicCacheV2'
-const WALLPAPER_REMOTE_SOURCE_KEY = 'wallpaperRemoteSources'
-const syncTimeout = 10000
+const syncTimeout = 20000
 const buildUrl = (path: string) => `${env.HOST_API_URL.replace(/\/$/, '')}${path}`
-const publicManifestUrls = [
-  buildUrl('/api/deepTab/wallpapers/manifest'),
-  'https://deeptab.com/wallpapers/manifest.json'
-]
+
+type WallpaperPageParams = {
+  category?: string
+  page?: number
+  pageSize?: number
+}
 
 const isHttpUrl = (value: unknown): value is string => {
   return typeof value === 'string' && /^https?:\/\//i.test(value)
-}
-
-const withTimeout = async <T>(task: Promise<T>, timeout = syncTimeout): Promise<T> => {
-  const controller = new AbortController()
-  const timer = window.setTimeout(() => controller.abort(), timeout)
-  try {
-    return await task
-  } finally {
-    window.clearTimeout(timer)
-  }
-}
-
-const fetchJson = async <T>(url: string, timeout = syncTimeout): Promise<T> => {
-  const controller = new AbortController()
-  const timer = window.setTimeout(() => controller.abort(), timeout)
-
-  try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        Accept: 'application/json'
-      }
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
-    }
-
-    return (await response.json()) as T
-  } finally {
-    window.clearTimeout(timer)
-  }
-}
-
-const getStorageValue = async <T>(key: string, fallback: T): Promise<T> => {
-  try {
-    const result = await chrome.storage.local.get([key])
-    return (result[key] as T) || fallback
-  } catch (error) {
-    console.warn(`读取 ${key} 失败:`, error)
-    return fallback
-  }
-}
-
-const setStorageValue = async <T>(key: string, value: T) => {
-  try {
-    await chrome.storage.local.set({ [key]: value })
-  } catch (error) {
-    console.warn(`写入 ${key} 失败:`, error)
-  }
 }
 
 const normalizeImageWallpaper = (
@@ -98,8 +43,7 @@ const normalizeDynamicWallpaper = (
   item: Partial<IDynamicWallpaper>,
   fallbackId: string
 ): IDynamicWallpaper | null => {
-  if (!isHttpUrl(item.videoUrl)) return null
-  if (!isHttpUrl(item.thumbnail)) return null
+  if (!isHttpUrl(item.videoUrl) || !isHttpUrl(item.thumbnail)) return null
 
   return {
     id: item.id || fallbackId,
@@ -113,67 +57,28 @@ const normalizeDynamicWallpaper = (
   }
 }
 
-const getDedupeKey = <T extends { url?: string; videoUrl?: string; id: string }>(item: T) => {
-  if (item.videoUrl) {
-    return item.videoUrl.split('#')[0]
+const normalizePageResponse = <T>(
+  payload: unknown,
+  normalizeItem: (item: Partial<T>, fallbackId: string) => T | null
+): IWallpaperPageResult<T> => {
+  const raw = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : {}
+  const list = Array.isArray(raw.list) ? raw.list : []
+
+  return {
+    list: list
+      .map((item, index) => normalizeItem((item || {}) as Partial<T>, `wallpaper-${index}`))
+      .filter(Boolean) as T[],
+    page: typeof raw.page === 'number' ? raw.page : 1,
+    pageSize: typeof raw.pageSize === 'number' ? raw.pageSize : list.length,
+    hasMore: !!raw.hasMore,
+    category: typeof raw.category === 'string' ? raw.category : undefined
   }
-  return item.url || item.id
 }
-
-const dedupeByUrl = <T extends { url?: string; videoUrl?: string; id: string }>(items: T[]) => {
-  const seen = new Set<string>()
-  return items.filter((item) => {
-    const key = getDedupeKey(item)
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
-}
-
-const normalizeResponseList = <T>(data: unknown): T[] => {
-  if (Array.isArray(data)) return data as T[]
-  if (data && typeof data === 'object') {
-    const payload = data as { data?: unknown; list?: unknown; items?: unknown }
-    if (Array.isArray(payload.data)) return payload.data as T[]
-    if (Array.isArray(payload.list)) return payload.list as T[]
-    if (Array.isArray(payload.items)) return payload.items as T[]
-  }
-  return []
-}
-
-const fetchDeepTabImages = async () => {
-  const response = await http<Partial<IImageWallpaper>[]>(buildUrl('/api/deepTab/wallpapers/images'), {
-    timeout: syncTimeout
-  })
-  return normalizeResponseList<Partial<IImageWallpaper>>(response.data).map((item, index) =>
-    normalizeImageWallpaper(item, `deeptab-image-${index}`)
-  )
-}
-
-const fetchDeepTabDynamic = async () => {
-  const response = await http<Partial<IDynamicWallpaper>[]>(buildUrl('/api/deepTab/wallpapers/dynamic'), {
-    timeout: syncTimeout
-  })
-  return normalizeResponseList<Partial<IDynamicWallpaper>>(response.data).map((item, index) =>
-    normalizeDynamicWallpaper(item, `deeptab-dynamic-${index}`)
-  )
-}
-
-const fetchRemoteManifests = async () => {
-  const customUrls = await getStorageValue<string[]>(WALLPAPER_REMOTE_SOURCE_KEY, [])
-  const urls = Array.from(new Set([...customUrls, ...publicManifestUrls])).filter(isHttpUrl)
-  const results = await Promise.allSettled(urls.map((url) => fetchJson<RemoteWallpaperManifest>(url, 6000)))
-  return results.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []))
-}
-
-const getCachedImages = () => getStorageValue<IImageWallpaper[]>(WALLPAPER_IMAGE_CACHE_KEY, [])
-const getCachedDynamic = () => getStorageValue<IDynamicWallpaper[]>(WALLPAPER_DYNAMIC_CACHE_KEY, [])
 
 /**
  * wallpaper 服务层
  */
 export default {
-  // 获取渐变壁纸列表
   async getGradientWallpapers(): Promise<IGradientWallpaper[]> {
     const extractHexColors = (gradient: string) => {
       const matches = gradient.match(/#[0-9a-fA-F]{3,8}/g)
@@ -205,71 +110,40 @@ export default {
     }))
   },
 
-  // 获取图片壁纸列表
-  async getImageWallpapers(): Promise<IImageWallpaper[]> {
-    const cached = await getCachedImages()
-
-    try {
-      const [deeptabResult, manifestResult] = await Promise.allSettled([
-        withTimeout(fetchDeepTabImages()),
-        fetchRemoteManifests()
-      ])
-
-      const manifestImages =
-        manifestResult.status === 'fulfilled'
-          ? manifestResult.value.flatMap((manifest) => manifest.images || [])
-          : []
-
-      const remoteImages = [
-        ...(deeptabResult.status === 'fulfilled' ? deeptabResult.value : []),
-        ...manifestImages.map((item, index) => normalizeImageWallpaper(item, `manifest-image-${index}`))
-      ].filter(Boolean) as IImageWallpaper[]
-
-      const next = dedupeByUrl(remoteImages)
-      if (next.length > 0) {
-        await setStorageValue(WALLPAPER_IMAGE_CACHE_KEY, next)
-        return next
+  async getImageWallpapers(params: WallpaperPageParams = {}): Promise<IWallpaperPageResult<IImageWallpaper>> {
+    const response = await http<IWallpaperPageResult<Partial<IImageWallpaper>>>(
+      buildUrl('/api/deepTab/wallpapers/images'),
+      {
+        params: {
+          category: params.category,
+          page: params.page || 1,
+          pageSize: params.pageSize || 18
+        },
+        timeout: syncTimeout
       }
-    } catch (error) {
-      console.error('同步图片壁纸失败:', error)
-    }
+    )
 
-    return dedupeByUrl(cached)
+    return normalizePageResponse<IImageWallpaper>(response.data, normalizeImageWallpaper)
   },
 
-  // 获取动态壁纸列表
-  async getDynamicWallpapers(): Promise<IDynamicWallpaper[]> {
-    const cached = await getCachedDynamic()
-
-    try {
-      const [deeptabResult, manifestResult] = await Promise.allSettled([
-        withTimeout(fetchDeepTabDynamic()),
-        fetchRemoteManifests()
-      ])
-
-      const manifestDynamic =
-        manifestResult.status === 'fulfilled'
-          ? manifestResult.value.flatMap((manifest) => manifest.dynamic || [])
-          : []
-
-      const remoteDynamic = [
-        ...(deeptabResult.status === 'fulfilled' ? deeptabResult.value : []),
-        ...manifestDynamic.map((item, index) => normalizeDynamicWallpaper(item, `manifest-dynamic-${index}`))
-      ].filter(Boolean) as IDynamicWallpaper[]
-
-      const next = dedupeByUrl(remoteDynamic)
-      if (next.length > 0) {
-        await setStorageValue(WALLPAPER_DYNAMIC_CACHE_KEY, next)
-        return next
+  async getDynamicWallpapers(
+    params: WallpaperPageParams = {}
+  ): Promise<IWallpaperPageResult<IDynamicWallpaper>> {
+    const response = await http<IWallpaperPageResult<Partial<IDynamicWallpaper>>>(
+      buildUrl('/api/deepTab/wallpapers/dynamic'),
+      {
+        params: {
+          category: params.category,
+          page: params.page || 1,
+          pageSize: params.pageSize || 18
+        },
+        timeout: syncTimeout
       }
-    } catch (error) {
-      console.error('同步动态壁纸失败:', error)
-    }
+    )
 
-    return dedupeByUrl(cached)
+    return normalizePageResponse<IDynamicWallpaper>(response.data, normalizeDynamicWallpaper)
   },
 
-  // 获取当前壁纸配置
   async getWallpaperConfig(): Promise<IWallpaperConfig | null> {
     try {
       const result = await chrome.storage.local.get(['wallpaperConfig'])
@@ -280,7 +154,6 @@ export default {
     }
   },
 
-  // 保存壁纸配置
   async saveWallpaperConfig(config: IWallpaperConfig): Promise<void> {
     try {
       await chrome.storage.local.set({ wallpaperConfig: config })

@@ -32,6 +32,7 @@ import appGridService from './appGrid/services/appGrid'
 import useAppGridStore from './appGrid/stores/appGrid'
 import bottomBarService from './bottomBar/services/bottomBar'
 import useBottomBarStore from './bottomBar/stores/bottomBar'
+import RemoteNotificationBridge from './notification/RemoteNotificationBridge'
 import { BOTTOM_BAR_DROPPABLE_ID } from './bottomBar/bottomBar'
 import { MAIN_GRID_DROPPABLE_ID } from './appGrid/appGrid'
 import { isImageIconSource } from './appGrid/iconFallback'
@@ -591,6 +592,7 @@ const Main: React.FC = () => {
           </div>
         )}
 
+        <RemoteNotificationBridge />
         {appCategorySidebarVisible && <AppCategorySidebar position={appCategorySidebarPosition} />}
       </div>
     </div>

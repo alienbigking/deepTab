@@ -8,10 +8,13 @@ import type {
   IGradientWallpaper,
   IImageWallpaper,
   IDynamicWallpaper,
-  IWallpaperConfig
+  IWallpaperConfig,
+  IWallpaperPageResult
 } from './types/wallpaper'
 
 const WALLPAPER_BATCH_SIZE = 18
+const WALLPAPER_CATEGORIES = ['全部', '动物', '植物', '动漫', '街头', '城市', '科技', '天空', '海洋', '自然', '其他']
+const ANGLE_TICK_COUNT = 72
 
 /**
  * 壁纸选择组件
@@ -29,9 +32,15 @@ const Wallpaper: React.FC = () => {
   const [dynamicWallpapers, setDynamicWallpapers] = useState<IDynamicWallpaper[]>([])
   const [featuredLoading, setFeaturedLoading] = useState(false)
   const [dynamicLoading, setDynamicLoading] = useState(false)
+  const [featuredLoadingMore, setFeaturedLoadingMore] = useState(false)
+  const [dynamicLoadingMore, setDynamicLoadingMore] = useState(false)
   const [applyingWallpaperId, setApplyingWallpaperId] = useState('')
-  const [visibleFeaturedCount, setVisibleFeaturedCount] = useState(WALLPAPER_BATCH_SIZE)
-  const [visibleDynamicCount, setVisibleDynamicCount] = useState(WALLPAPER_BATCH_SIZE)
+  const [featuredPage, setFeaturedPage] = useState(0)
+  const [dynamicPage, setDynamicPage] = useState(0)
+  const [featuredHasMore, setFeaturedHasMore] = useState(true)
+  const [dynamicHasMore, setDynamicHasMore] = useState(true)
+  const featuredRequestIdRef = useRef(0)
+  const dynamicRequestIdRef = useRef(0)
   const {
     config,
     setConfig,
@@ -52,9 +61,15 @@ const Wallpaper: React.FC = () => {
   useEffect(() => {
     loadConfig()
     loadGradients()
-    loadFeaturedWallpapers()
-    loadDynamicWallpapers()
   }, [])
+
+  useEffect(() => {
+    loadFeaturedWallpapers({ page: 1, category: featuredCategory })
+  }, [featuredCategory])
+
+  useEffect(() => {
+    loadDynamicWallpapers({ page: 1, category: dynamicCategory })
+  }, [dynamicCategory])
 
   const loadConfig = async () => {
     const data = await wallpaperService.getWallpaperConfig()
@@ -80,78 +95,101 @@ const Wallpaper: React.FC = () => {
     setGradients(data)
   }
 
-  const loadFeaturedWallpapers = async () => {
-    setFeaturedLoading(true)
+  const mergeWallpaperPage = <T extends { id: string }>(current: T[], incoming: T[]) => {
+    const seen = new Set(current.map((item) => item.id))
+    return [...current, ...incoming.filter((item) => !seen.has(item.id))]
+  }
+
+  const loadFeaturedWallpapers = async ({
+    page,
+    category
+  }: {
+    page: number
+    category: string
+  }) => {
+    const requestId = ++featuredRequestIdRef.current
+    if (page === 1) setFeaturedLoading(true)
+    else setFeaturedLoadingMore(true)
+
     try {
-      const data = await wallpaperService.getImageWallpapers()
-      setFeaturedWallpapers(data)
+      const data: IWallpaperPageResult<IImageWallpaper> = await wallpaperService.getImageWallpapers({
+        page,
+        pageSize: WALLPAPER_BATCH_SIZE,
+        category: category === '全部' ? undefined : category
+      })
+
+      if (requestId !== featuredRequestIdRef.current) return
+
+      setFeaturedWallpapers((current) => (page === 1 ? data.list : mergeWallpaperPage(current, data.list)))
+      setFeaturedPage(data.page || page)
+      setFeaturedHasMore(data.hasMore)
+    } catch (error) {
+      if (requestId !== featuredRequestIdRef.current) return
+      console.error('加载静态壁纸失败:', error)
+      if (page === 1) setFeaturedWallpapers([])
+      setFeaturedHasMore(false)
     } finally {
-      setFeaturedLoading(false)
+      if (requestId !== featuredRequestIdRef.current) return
+      if (page === 1) setFeaturedLoading(false)
+      else setFeaturedLoadingMore(false)
     }
   }
 
-  const loadDynamicWallpapers = async () => {
-    setDynamicLoading(true)
+  const loadDynamicWallpapers = async ({
+    page,
+    category
+  }: {
+    page: number
+    category: string
+  }) => {
+    const requestId = ++dynamicRequestIdRef.current
+    if (page === 1) setDynamicLoading(true)
+    else setDynamicLoadingMore(true)
+
     try {
-      const data = await wallpaperService.getDynamicWallpapers()
-      setDynamicWallpapers(data)
+      const data: IWallpaperPageResult<IDynamicWallpaper> = await wallpaperService.getDynamicWallpapers({
+        page,
+        pageSize: WALLPAPER_BATCH_SIZE,
+        category: category === '全部' ? undefined : category
+      })
+
+      if (requestId !== dynamicRequestIdRef.current) return
+
+      setDynamicWallpapers((current) => (page === 1 ? data.list : mergeWallpaperPage(current, data.list)))
+      setDynamicPage(data.page || page)
+      setDynamicHasMore(data.hasMore)
+    } catch (error) {
+      if (requestId !== dynamicRequestIdRef.current) return
+      console.error('加载动态壁纸失败:', error)
+      if (page === 1) setDynamicWallpapers([])
+      setDynamicHasMore(false)
     } finally {
-      setDynamicLoading(false)
+      if (requestId !== dynamicRequestIdRef.current) return
+      if (page === 1) setDynamicLoading(false)
+      else setDynamicLoadingMore(false)
     }
   }
 
-  const featuredCategories = useMemo(() => {
-    const dynamic = Array.from(new Set(featuredWallpapers.map((w) => w.category))).filter(Boolean)
-    const merged = Array.from(new Set(['全部', ...dynamic]))
-    return merged
-  }, [featuredWallpapers])
-
-  const filteredFeaturedWallpapers = useMemo(() => {
-    if (featuredCategory === '全部') return featuredWallpapers
-    return featuredWallpapers.filter((w) => w.category === featuredCategory)
-  }, [featuredCategory, featuredWallpapers])
-
-  const visibleFeaturedWallpapers = useMemo(() => {
-    return filteredFeaturedWallpapers.slice(0, visibleFeaturedCount)
-  }, [filteredFeaturedWallpapers, visibleFeaturedCount])
-
-  const dynamicCategories = useMemo(() => {
-    const remote = Array.from(new Set(dynamicWallpapers.map((w) => w.category))).filter(Boolean)
-    return Array.from(new Set(['全部', ...remote]))
-  }, [dynamicWallpapers])
-
-  const filteredDynamicWallpapers = useMemo(() => {
-    if (dynamicCategory === '全部') return dynamicWallpapers
-    return dynamicWallpapers.filter((w) => w.category === dynamicCategory)
-  }, [dynamicCategory, dynamicWallpapers])
-
-  const visibleDynamicWallpapers = useMemo(() => {
-    return filteredDynamicWallpapers.slice(0, visibleDynamicCount)
-  }, [filteredDynamicWallpapers, visibleDynamicCount])
-
-  useEffect(() => {
-    setVisibleFeaturedCount(WALLPAPER_BATCH_SIZE)
-  }, [featuredCategory, featuredWallpapers])
-
-  useEffect(() => {
-    setVisibleDynamicCount(WALLPAPER_BATCH_SIZE)
-  }, [dynamicCategory, dynamicWallpapers])
+  const featuredCategories = WALLPAPER_CATEGORIES
+  const dynamicCategories = WALLPAPER_CATEGORIES
 
   const handleWallpaperScroll = (event: React.UIEvent<HTMLElement>) => {
     const target = event.currentTarget
     const nearBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 160
     if (!nearBottom) return
 
-    if (activeTab === 'featured') {
-      setVisibleFeaturedCount((count) =>
-        Math.min(count + WALLPAPER_BATCH_SIZE, filteredFeaturedWallpapers.length)
-      )
+    if (activeTab === 'featured' && featuredHasMore && !featuredLoading && !featuredLoadingMore) {
+      loadFeaturedWallpapers({
+        page: featuredPage + 1,
+        category: featuredCategory
+      })
     }
 
-    if (activeTab === 'dynamic') {
-      setVisibleDynamicCount((count) =>
-        Math.min(count + WALLPAPER_BATCH_SIZE, filteredDynamicWallpapers.length)
-      )
+    if (activeTab === 'dynamic' && dynamicHasMore && !dynamicLoading && !dynamicLoadingMore) {
+      loadDynamicWallpapers({
+        page: dynamicPage + 1,
+        category: dynamicCategory
+      })
     }
   }
 
@@ -304,6 +342,23 @@ const Wallpaper: React.FC = () => {
     if (selectedColor === 'all') return gradients
     return gradients.filter((g) => (g.colors || []).some((c) => matchColorKey(c, selectedColor)))
   }, [gradients, selectedColor])
+
+  const angleTicks = useMemo(() => {
+    const activeCount = Math.max(0, Math.round((angle / 360) * ANGLE_TICK_COUNT))
+
+    return Array.from({ length: ANGLE_TICK_COUNT }, (_, index) => {
+      const ratio = index / Math.max(ANGLE_TICK_COUNT - 1, 1)
+      const hue = 188 - ratio * 56
+      const major = index % 6 === 0
+      return {
+        angle: index * (360 / ANGLE_TICK_COUNT),
+        active: index < activeCount,
+        major,
+        radius: major ? 46.5 : 48,
+        color: `hsla(${hue}, 92%, ${66 - ratio * 8}%, ${0.78 + ratio * 0.22})`
+      }
+    })
+  }, [angle])
 
   const handleSelectGradient = async (wallpaper: IGradientWallpaper) => {
     const next: IWallpaperConfig = {
@@ -571,12 +626,12 @@ const Wallpaper: React.FC = () => {
               <div className={styles.emptyWrap}>
                 <Spin />
               </div>
-            ) : filteredFeaturedWallpapers.length === 0 ? (
+            ) : featuredWallpapers.length === 0 ? (
               <div className={styles.emptyWrap}>
                 <Empty description='暂无壁纸' />
               </div>
             ) : (
-              visibleFeaturedWallpapers.map((wallpaper) => {
+              featuredWallpapers.map((wallpaper) => {
                 const selected =
                   config?.currentWallpaper?.type === 'image' &&
                   (config.currentWallpaper as IImageWallpaper).id === wallpaper.id
@@ -604,6 +659,11 @@ const Wallpaper: React.FC = () => {
                   </div>
                 )
               })
+            )}
+            {!featuredLoading && featuredLoadingMore && (
+              <div className={styles.loadMoreWrap}>
+                <Spin size='small' />
+              </div>
             )}
           </div>
         )}
@@ -636,12 +696,12 @@ const Wallpaper: React.FC = () => {
               <div className={styles.emptyWrap}>
                 <Spin />
               </div>
-            ) : filteredDynamicWallpapers.length === 0 ? (
+            ) : dynamicWallpapers.length === 0 ? (
               <div className={styles.emptyWrap}>
                 <Empty description='暂无动态壁纸' />
               </div>
             ) : (
-              visibleDynamicWallpapers.map((wallpaper) => {
+              dynamicWallpapers.map((wallpaper) => {
                 const selected =
                   config?.currentWallpaper?.type === 'dynamic' &&
                   (config.currentWallpaper as IDynamicWallpaper).id === wallpaper.id
@@ -671,6 +731,11 @@ const Wallpaper: React.FC = () => {
                 )
               })
             )}
+            {!dynamicLoading && dynamicLoadingMore && (
+              <div className={styles.loadMoreWrap}>
+                <Spin size='small' />
+              </div>
+            )}
           </div>
         )}
         </div>
@@ -681,11 +746,30 @@ const Wallpaper: React.FC = () => {
           <div className={styles.controlItem}>
             <span className={styles.controlLabel}>角度</span>
             <div className={styles.controlBody}>
-              <div ref={angleDialRef} className={styles.angleDial} onPointerDown={startDialDrag}>
-                <div className={styles.angleDialValue}>{angle}°</div>
+              <div
+                ref={angleDialRef}
+                className={styles.angleDial}
+                onPointerDown={startDialDrag}
+              >
+                <div className={styles.angleTickTrack}>
+                  {angleTicks.map((tick) => (
+                    <span
+                      key={tick.angle}
+                      className={`${styles.angleTick} ${tick.major ? styles.major : ''} ${tick.active ? styles.active : ''}`}
+                      style={{
+                        transform: `translate(-50%, -50%) rotate(${tick.angle}deg) translateY(-${tick.radius}px)`,
+                        ...(tick.active ? { background: tick.color, boxShadow: `0 0 10px ${tick.color}` } : {})
+                      }}
+                    />
+                  ))}
+                </div>
+                <div className={styles.angleDialCenter}>
+                  <div className={styles.angleDialValue}>{angle}°</div>
+                  <div className={styles.angleDialUnit}>ANGLE</div>
+                </div>
                 <div
                   className={styles.angleKnob}
-                  style={{ transform: `rotate(${angle}deg) translateY(-44px) rotate(-${angle}deg)` }}
+                  style={{ transform: `translate(-50%, -50%) rotate(${angle}deg) translateY(-34px) rotate(-${angle}deg)` }}
                 />
               </div>
             </div>

@@ -12,6 +12,13 @@ interface ISearchHistoryItem {
   engineId: SearchEngine
 }
 
+// 常用搜索项
+interface ISearchFavoriteItem {
+  keyword: string
+  timestamp: number
+  engineId: SearchEngine
+}
+
 // 搜索设置
 interface ISearchSettings {
   defaultEngine: SearchEngine
@@ -19,4 +26,4 @@ interface ISearchSettings {
   maxHistoryCount: number
 }
 
-export { SearchEngine, ISearchHistoryItem, ISearchSettings }
+export { SearchEngine, ISearchHistoryItem, ISearchFavoriteItem, ISearchSettings }

@@ -139,6 +139,7 @@ const ResetSettings: React.FC = () => {
             'wallpaperConfig',
             'searchEngineConfig',
             'searchHistory',
+            'favoriteSearches',
             'searchSettings',
             'bottom_bar_pins',
             'app_categories',

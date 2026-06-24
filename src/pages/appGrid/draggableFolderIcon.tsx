@@ -34,6 +34,7 @@ const DraggableFolderIcon: React.FC<DraggableFolderIconProps> = ({
     height: iconSettings.size,
     borderRadius: iconSettings.radius,
     opacity: iconSettings.opacity / 100,
+    background: icon.iconBg || 'var(--dt-app-icon-bg)',
     cursor: isDragging ? 'grabbing' : 'grab'
   }
 

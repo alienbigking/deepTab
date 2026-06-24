@@ -87,7 +87,7 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
     height: iconSettings.size,
     borderRadius: iconSettings.radius,
     opacity: iconSettings.opacity / 100,
-    background: !isImageIcon(node.icon) ? node.iconBg || undefined : undefined
+    background: node.iconBg || 'var(--dt-app-icon-bg)'
   }
 
   const appNameStyle: React.CSSProperties = {

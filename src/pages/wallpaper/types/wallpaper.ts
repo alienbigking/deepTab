@@ -37,6 +37,14 @@ export interface IDynamicWallpaper {
   source?: string
 }
 
+export interface IWallpaperPageResult<T> {
+  list: T[]
+  page: number
+  pageSize: number
+  hasMore: boolean
+  category?: string
+}
+
 // 壁纸配置
 export interface IWallpaperConfig {
   currentWallpaper: IGradientWallpaper | IImageWallpaper | IDynamicWallpaper
