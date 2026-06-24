@@ -11,6 +11,8 @@ import type {
   IWallpaperConfig
 } from './types/wallpaper'
 
+const WALLPAPER_BATCH_SIZE = 18
+
 /**
  * 壁纸选择组件
  */
@@ -27,6 +29,9 @@ const Wallpaper: React.FC = () => {
   const [dynamicWallpapers, setDynamicWallpapers] = useState<IDynamicWallpaper[]>([])
   const [featuredLoading, setFeaturedLoading] = useState(false)
   const [dynamicLoading, setDynamicLoading] = useState(false)
+  const [applyingWallpaperId, setApplyingWallpaperId] = useState('')
+  const [visibleFeaturedCount, setVisibleFeaturedCount] = useState(WALLPAPER_BATCH_SIZE)
+  const [visibleDynamicCount, setVisibleDynamicCount] = useState(WALLPAPER_BATCH_SIZE)
   const {
     config,
     setConfig,
@@ -96,9 +101,8 @@ const Wallpaper: React.FC = () => {
   }
 
   const featuredCategories = useMemo(() => {
-    const base = ['全部', '动物', '植物', '动漫', '街头', '自然', '其他']
     const dynamic = Array.from(new Set(featuredWallpapers.map((w) => w.category))).filter(Boolean)
-    const merged = Array.from(new Set([...base, ...dynamic]))
+    const merged = Array.from(new Set(['全部', ...dynamic]))
     return merged
   }, [featuredWallpapers])
 
@@ -107,16 +111,49 @@ const Wallpaper: React.FC = () => {
     return featuredWallpapers.filter((w) => w.category === featuredCategory)
   }, [featuredCategory, featuredWallpapers])
 
+  const visibleFeaturedWallpapers = useMemo(() => {
+    return filteredFeaturedWallpapers.slice(0, visibleFeaturedCount)
+  }, [filteredFeaturedWallpapers, visibleFeaturedCount])
+
   const dynamicCategories = useMemo(() => {
-    const base = ['全部', '动物', '植物', '动漫', '街头', '自然', '其他']
     const remote = Array.from(new Set(dynamicWallpapers.map((w) => w.category))).filter(Boolean)
-    return Array.from(new Set([...base, ...remote]))
+    return Array.from(new Set(['全部', ...remote]))
   }, [dynamicWallpapers])
 
   const filteredDynamicWallpapers = useMemo(() => {
     if (dynamicCategory === '全部') return dynamicWallpapers
     return dynamicWallpapers.filter((w) => w.category === dynamicCategory)
   }, [dynamicCategory, dynamicWallpapers])
+
+  const visibleDynamicWallpapers = useMemo(() => {
+    return filteredDynamicWallpapers.slice(0, visibleDynamicCount)
+  }, [filteredDynamicWallpapers, visibleDynamicCount])
+
+  useEffect(() => {
+    setVisibleFeaturedCount(WALLPAPER_BATCH_SIZE)
+  }, [featuredCategory, featuredWallpapers])
+
+  useEffect(() => {
+    setVisibleDynamicCount(WALLPAPER_BATCH_SIZE)
+  }, [dynamicCategory, dynamicWallpapers])
+
+  const handleWallpaperScroll = (event: React.UIEvent<HTMLElement>) => {
+    const target = event.currentTarget
+    const nearBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 160
+    if (!nearBottom) return
+
+    if (activeTab === 'featured') {
+      setVisibleFeaturedCount((count) =>
+        Math.min(count + WALLPAPER_BATCH_SIZE, filteredFeaturedWallpapers.length)
+      )
+    }
+
+    if (activeTab === 'dynamic') {
+      setVisibleDynamicCount((count) =>
+        Math.min(count + WALLPAPER_BATCH_SIZE, filteredDynamicWallpapers.length)
+      )
+    }
+  }
 
   const handleCategoryChange = async (category: string) => {
     setFeaturedCategory(category)
@@ -136,6 +173,49 @@ const Wallpaper: React.FC = () => {
   const saveConfig = async (next: IWallpaperConfig) => {
     setConfig(next)
     await wallpaperService.saveWallpaperConfig(next)
+  }
+
+  const preloadWallpaperImage = (url: string) => {
+    return new Promise<void>((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => resolve()
+      img.onerror = () => reject(new Error('图片加载失败'))
+      img.src = url
+    })
+  }
+
+  const preloadWallpaperVideo = (url: string) => {
+    return new Promise<void>((resolve, reject) => {
+      const video = document.createElement('video')
+      const cleanup = () => {
+        video.removeAttribute('src')
+        video.load()
+      }
+      const timer = window.setTimeout(() => {
+        cleanup()
+        reject(new Error('视频加载超时'))
+      }, 15000)
+      video.preload = 'auto'
+      video.muted = true
+      video.playsInline = true
+      video.onloadeddata = () => {
+        window.clearTimeout(timer)
+        cleanup()
+        resolve()
+      }
+      video.oncanplay = () => {
+        window.clearTimeout(timer)
+        cleanup()
+        resolve()
+      }
+      video.onerror = () => {
+        window.clearTimeout(timer)
+        cleanup()
+        reject(new Error('视频加载失败'))
+      }
+      video.src = url
+      video.load()
+    })
   }
 
   const applyAngleToGradient = (gradient: string, nextAngle: number) => {
@@ -283,16 +363,38 @@ const Wallpaper: React.FC = () => {
   }
 
   const handleSelectFeaturedWallpaper = async (wallpaper: IImageWallpaper) => {
+    if (applyingWallpaperId) return
+
+    const loadingKey = `image:${wallpaper.id}`
+    setApplyingWallpaperId(loadingKey)
+    try {
+      await preloadWallpaperImage(wallpaper.url)
+    } catch (error) {
+      console.warn('预加载静态壁纸失败，继续应用:', error)
+    }
     const next: IWallpaperConfig = {
       currentWallpaper: wallpaper,
       brightness,
       blur,
       featuredCategory: featuredCategory || wallpaper.category
     }
-    await saveConfig(next)
+    try {
+      await saveConfig(next)
+    } finally {
+      setApplyingWallpaperId((current) => (current === loadingKey ? '' : current))
+    }
   }
 
   const handleSelectDynamicWallpaper = async (wallpaper: IDynamicWallpaper) => {
+    if (applyingWallpaperId) return
+
+    const loadingKey = `dynamic:${wallpaper.id}`
+    setApplyingWallpaperId(loadingKey)
+    try {
+      await preloadWallpaperVideo(wallpaper.videoUrl)
+    } catch (error) {
+      console.warn('预加载动态壁纸失败，继续应用:', error)
+    }
     const next: IWallpaperConfig = {
       currentWallpaper: wallpaper,
       brightness: config?.brightness ?? brightness,
@@ -301,7 +403,11 @@ const Wallpaper: React.FC = () => {
       dynamicMuted,
       dynamicPaused
     }
-    await saveConfig(next)
+    try {
+      await saveConfig(next)
+    } finally {
+      setApplyingWallpaperId((current) => (current === loadingKey ? '' : current))
+    }
   }
 
   const handleAngleAfterChange = async (value: number) => {
@@ -453,7 +559,11 @@ const Wallpaper: React.FC = () => {
         </div>
       )}
 
-      <SimpleBar className={`${styles.wallpaperMain} dtPrettyScrollbar`} autoHide>
+      <SimpleBar
+        className={`${styles.wallpaperMain} dtPrettyScrollbar`}
+        autoHide
+        scrollableNodeProps={{ onScroll: handleWallpaperScroll }}
+      >
         <div className={styles.wallpaperMainInner}>
         {activeTab === 'featured' && (
           <div className={styles.imageGrid}>
@@ -466,15 +576,16 @@ const Wallpaper: React.FC = () => {
                 <Empty description='暂无壁纸' />
               </div>
             ) : (
-              filteredFeaturedWallpapers.map((wallpaper) => {
+              visibleFeaturedWallpapers.map((wallpaper) => {
                 const selected =
                   config?.currentWallpaper?.type === 'image' &&
                   (config.currentWallpaper as IImageWallpaper).id === wallpaper.id
+                const applying = applyingWallpaperId === `image:${wallpaper.id}`
 
                 return (
                   <div
                     key={wallpaper.id}
-                    className={`${styles.imageCard} ${selected ? styles.selected : ''}`}
+                    className={`${styles.imageCard} ${selected ? styles.selected : ''} ${applying ? styles.applying : ''}`}
                     onClick={() => handleSelectFeaturedWallpaper(wallpaper)}
                   >
                     <img
@@ -484,6 +595,12 @@ const Wallpaper: React.FC = () => {
                       loading='lazy'
                       onError={handleThumbError}
                     />
+                    {applying && (
+                      <div className={styles.loadingMask}>
+                        <Spin size='small' />
+                        <span>加载中...</span>
+                      </div>
+                    )}
                   </div>
                 )
               })
@@ -524,15 +641,16 @@ const Wallpaper: React.FC = () => {
                 <Empty description='暂无动态壁纸' />
               </div>
             ) : (
-              filteredDynamicWallpapers.map((wallpaper) => {
+              visibleDynamicWallpapers.map((wallpaper) => {
                 const selected =
                   config?.currentWallpaper?.type === 'dynamic' &&
                   (config.currentWallpaper as IDynamicWallpaper).id === wallpaper.id
+                const applying = applyingWallpaperId === `dynamic:${wallpaper.id}`
 
                 return (
                   <div
                     key={wallpaper.id}
-                    className={`${styles.dynamicCard} ${selected ? styles.selected : ''}`}
+                    className={`${styles.dynamicCard} ${selected ? styles.selected : ''} ${applying ? styles.applying : ''}`}
                     onClick={() => handleSelectDynamicWallpaper(wallpaper)}
                   >
                     <img
@@ -543,6 +661,12 @@ const Wallpaper: React.FC = () => {
                       onError={handleThumbError}
                     />
                     <div className={styles.playBadge} />
+                    {applying && (
+                      <div className={styles.loadingMask}>
+                        <Spin size='small' />
+                        <span>加载中...</span>
+                      </div>
+                    )}
                   </div>
                 )
               })

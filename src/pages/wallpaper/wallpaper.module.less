@@ -220,6 +220,10 @@
     pointer-events: none;
     z-index: 1;
   }
+
+  &.applying {
+    cursor: wait;
+  }
 }
 
 .dynamicGrid {
@@ -259,6 +263,10 @@
     pointer-events: none;
     z-index: 1;
   }
+
+  &.applying {
+    cursor: wait;
+  }
 }
 
 .playBadge {
@@ -290,6 +298,31 @@
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.loadingMask {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.96);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  background:
+    radial-gradient(circle at 50% 44%, rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0.52)),
+    rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+
+  :global {
+    .ant-spin-dot-item {
+      background-color: rgba(255, 255, 255, 0.95);
+    }
+  }
 }
 
 .emptyWrap {
