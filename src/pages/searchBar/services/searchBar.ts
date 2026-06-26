@@ -1,4 +1,5 @@
 import { ISearchFavoriteItem, ISearchHistoryItem, ISearchSettings } from '../types/searchBar'
+import requestDeepTabAutoSync from '@/pages/deepTabSync/services/autoSync'
 
 const SEARCH_HISTORY_KEY = 'searchHistory'
 const SEARCH_FAVORITE_KEY = 'favoriteSearches'
@@ -177,6 +178,7 @@ export default {
   async saveSearchSettings(settings: ISearchSettings): Promise<void> {
     try {
       await chrome.storage.local.set({ [SEARCH_SETTINGS_KEY]: settings })
+      requestDeepTabAutoSync('searchSettings')
     } catch (error) {
       console.error('保存搜索设置失败:', error)
     }

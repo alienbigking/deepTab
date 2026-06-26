@@ -1,4 +1,5 @@
 import type { AppCategory, CategoryIconKey } from '../types/appCategory'
+import requestDeepTabAutoSync from '@/pages/deepTabSync/services/autoSync'
 
 const STORAGE_KEY = 'app_categories'
 const BUILTIN_CATEGORY_IDS = new Set(['home', 'ai', 'design', 'dev', 'shop'])
@@ -68,6 +69,7 @@ export default {
   async saveCategories(categories: AppCategory[]): Promise<void> {
     try {
       await chrome.storage.local.set({ [STORAGE_KEY]: categories })
+      requestDeepTabAutoSync('appCategories')
     } catch (error) {
       console.error('保存分类失败:', error)
       throw error

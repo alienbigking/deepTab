@@ -211,6 +211,21 @@ const Main: React.FC = () => {
   }, [])
 
   useEffect(() => {
+    const onAutoSyncSuccess = () => {
+      message.success({
+        key: 'deepTab-auto-sync-success',
+        content: '已同步',
+        duration: 1.6
+      })
+    }
+
+    window.addEventListener('dt:autoSyncSuccess', onAutoSyncSuccess)
+    return () => {
+      window.removeEventListener('dt:autoSyncSuccess', onAutoSyncSuccess)
+    }
+  }, [message])
+
+  useEffect(() => {
     void initCategories()
 
     const load = async () => {

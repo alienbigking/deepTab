@@ -39,6 +39,7 @@ interface NotificationProviderProps {
 
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({ children }) => {
   const [items, setItems] = useState<NotificationItem[]>([])
+  const [pausedIds, setPausedIds] = useState<Set<string>>(() => new Set())
   const timersRef = useRef<
     Map<string, { timer: number; startedAt: number; remaining: number }>
   >(new Map())
@@ -49,6 +50,11 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       window.clearTimeout(current.timer)
       timersRef.current.delete(id)
     }
+    setPausedIds((prev) => {
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
     setItems((prev) => prev.filter((item) => item.id !== id))
   }, [])
 
@@ -74,12 +80,22 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       ...current,
       remaining: Math.max(0, current.remaining - (Date.now() - current.startedAt))
     })
+    setPausedIds((prev) => {
+      const next = new Set(prev)
+      next.add(id)
+      return next
+    })
   }, [])
 
   const resumeTimer = useCallback(
     (id: string) => {
       const current = timersRef.current.get(id)
       if (!current) return
+      setPausedIds((prev) => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
       startTimer(id, Math.max(1000, current.remaining))
     },
     [startTimer]
@@ -111,7 +127,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
               [styles.success]: item.type === 'success',
               [styles.error]: item.type === 'error',
               [styles.warning]: item.type === 'warning',
-              [styles.info]: item.type === 'info'
+              [styles.info]: item.type === 'info',
+              [styles.paused]: pausedIds.has(item.id)
             })}
             onMouseEnter={() => pauseTimer(item.id)}
             onMouseLeave={() => resumeTimer(item.id)}
@@ -140,6 +157,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
                   {item.actionText}
                 </button>
               )}
+            </div>
+            <div className={styles.progress}>
+              <span
+                className={styles.progressBar}
+                style={{ animationDuration: `${item.duration || 10000}ms` }}
+              />
             </div>
           </div>
         ))}

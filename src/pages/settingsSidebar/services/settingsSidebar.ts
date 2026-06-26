@@ -1,4 +1,5 @@
 import { IAppSettings } from '../types/settingsSidebar'
+import requestDeepTabAutoSync from '@/pages/deepTabSync/services/autoSync'
 
 /**
  * settingsSidebar 服务层
@@ -47,6 +48,7 @@ export default {
   async saveAppSettings(settings: IAppSettings): Promise<void> {
     try {
       await chrome.storage.local.set({ appSettings: settings })
+      requestDeepTabAutoSync('appSettings')
     } catch (error) {
       console.error('保存应用设置失败:', error)
     }
@@ -56,6 +58,7 @@ export default {
   async resetAppSettings(): Promise<void> {
     try {
       await chrome.storage.local.remove(['appSettings'])
+      requestDeepTabAutoSync('appSettingsReset')
     } catch (error) {
       console.error('重置应用设置失败:', error)
     }

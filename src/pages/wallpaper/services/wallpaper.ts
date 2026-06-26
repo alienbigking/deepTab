@@ -7,6 +7,7 @@ import {
   IWallpaperConfig,
   IWallpaperPageResult
 } from '../types/wallpaper'
+import requestDeepTabAutoSync from '@/pages/deepTabSync/services/autoSync'
 
 const syncTimeout = 20000
 const buildUrl = (path: string) => `${env.HOST_API_URL.replace(/\/$/, '')}${path}`
@@ -157,6 +158,7 @@ export default {
   async saveWallpaperConfig(config: IWallpaperConfig): Promise<void> {
     try {
       await chrome.storage.local.set({ wallpaperConfig: config })
+      requestDeepTabAutoSync('wallpaperConfig')
     } catch (error) {
       console.error('保存壁纸配置失败:', error)
     }

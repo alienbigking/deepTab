@@ -1,4 +1,5 @@
 import type { BottomBarPins } from '../types/bottomBar'
+import requestDeepTabAutoSync from '@/pages/deepTabSync/services/autoSync'
 
 const STORAGE_KEY = 'bottom_bar_pins'
 
@@ -14,7 +15,10 @@ const storageUtils = {
 
   async saveLocal(data: BottomBarPins): Promise<void> {
     return new Promise((resolve) => {
-      chrome.storage.local.set({ [STORAGE_KEY]: data }, resolve)
+      chrome.storage.local.set({ [STORAGE_KEY]: data }, () => {
+        requestDeepTabAutoSync('bottomBar')
+        resolve()
+      })
     })
   }
 }

@@ -835,9 +835,11 @@
     min-width: 0;
     padding: 7px 8px;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.44);
-    border: none;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
+    background: rgba(255, 255, 255, 0.64);
+    border: 1px solid rgba(255, 255, 255, 0.52);
+    box-shadow:
+      0 10px 24px rgba(55, 116, 176, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.62);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -869,9 +871,15 @@
     min-width: 0;
     padding: 6px 8px;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.42);
-    border: none;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(245, 251, 255, 0.58));
+    border: 1px solid rgba(255, 255, 255, 0.62);
+    box-shadow:
+      0 10px 26px rgba(55, 116, 176, 0.1),
+      0 2px 8px rgba(55, 116, 176, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.74);
+    backdrop-filter: blur(10px) saturate(140%);
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -881,14 +889,14 @@
   span {
     font-size: 11px;
     line-height: 1.1;
-    color: rgba(0, 0, 0, 0.58);
+    color: rgba(18, 35, 52, 0.58);
   }
 
   strong {
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: rgba(0, 0, 0, 0.72);
+    color: rgba(18, 35, 52, 0.78);
     font-size: 13px;
     line-height: 1.15;
     font-weight: 700;
@@ -1960,9 +1968,12 @@
 
   .weatherCompactForecast div,
   .weatherCompactMetrics div {
-    background: rgba(99, 174, 255, 0.22);
-    border: none;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    background:
+      linear-gradient(180deg, rgba(99, 174, 255, 0.28), rgba(28, 65, 112, 0.2));
+    border: 1px solid rgba(178, 218, 255, 0.16);
+    box-shadow:
+      0 10px 26px rgba(0, 0, 0, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
   .weatherCompactForecast span,

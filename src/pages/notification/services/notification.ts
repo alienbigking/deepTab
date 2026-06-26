@@ -1,4 +1,5 @@
 import { INotificationSettings, INotificationItem } from '../types/notification'
+import requestDeepTabAutoSync from '@/pages/deepTabSync/services/autoSync'
 
 export default {
   async getNotificationSettings(): Promise<INotificationSettings> {
@@ -26,6 +27,7 @@ export default {
   async saveNotificationSettings(settings: INotificationSettings): Promise<void> {
     try {
       await chrome.storage.local.set({ notificationSettings: settings })
+      requestDeepTabAutoSync('notificationSettings')
     } catch (error) {
       console.error('保存通知设置失败:', error)
     }

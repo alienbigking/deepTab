@@ -7,6 +7,7 @@ import {
   ITodoItem,
   IWidgetConfig
 } from '../types/widgetsContainer'
+import requestDeepTabAutoSync from '@/pages/deepTabSync/services/autoSync'
 
 const HOT_SEARCH_API =
   process.env.HOT_SEARCH_API_URL || 'https://api.zxki.cn/api/jhrs?type={platform}'
@@ -532,6 +533,7 @@ export default {
     try {
       const list = await this.getTodoList()
       await chrome.storage.local.set({ todoList: [...list, item] })
+      requestDeepTabAutoSync('todoList')
     } catch (error) {
       console.error('保存待办事项失败:', error)
     }
@@ -542,6 +544,7 @@ export default {
       const list = await this.getTodoList()
       const newList = list.map((item) => (item.id === id ? { ...item, ...updates } : item))
       await chrome.storage.local.set({ todoList: newList })
+      requestDeepTabAutoSync('todoList')
     } catch (error) {
       console.error('更新待办事项失败:', error)
     }
@@ -551,6 +554,7 @@ export default {
     try {
       const list = await this.getTodoList()
       await chrome.storage.local.set({ todoList: list.filter((item) => item.id !== id) })
+      requestDeepTabAutoSync('todoList')
     } catch (error) {
       console.error('删除待办事项失败:', error)
     }
@@ -585,6 +589,7 @@ export default {
   async saveWidgetConfig(config: IWidgetConfig): Promise<void> {
     try {
       await chrome.storage.local.set({ widgetConfig: config })
+      requestDeepTabAutoSync('widgetConfig')
     } catch (error) {
       console.error('保存小组件配置失败:', error)
     }

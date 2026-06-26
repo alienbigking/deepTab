@@ -4,6 +4,7 @@ import deepTabNotificationService from './services/deepTabNotification'
 import type { DeepTabRemoteNotification } from './services/deepTabNotification'
 
 const pollInterval = 60 * 1000
+const initialPollDelay = 3 * 1000
 
 const clampDuration = (seconds?: number) => {
   const value = Number(seconds) || 10
@@ -16,6 +17,7 @@ const RemoteNotificationBridge: React.FC = () => {
 
   useEffect(() => {
     let disposed = false
+    let firstTimer: number | undefined
     let timer: number | undefined
 
     const showList = async (list: DeepTabRemoteNotification[]) => {
@@ -50,11 +52,16 @@ const RemoteNotificationBridge: React.FC = () => {
       }
     }
 
-    void load()
+    firstTimer = window.setTimeout(() => {
+      void load()
+    }, initialPollDelay)
     timer = window.setInterval(load, pollInterval)
 
     return () => {
       disposed = true
+      if (firstTimer) {
+        window.clearTimeout(firstTimer)
+      }
       if (timer) {
         window.clearInterval(timer)
       }

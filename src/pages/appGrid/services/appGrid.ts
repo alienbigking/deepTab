@@ -12,6 +12,7 @@ import type {
   IconSettings
 } from '../types/appGrid'
 import { defaultApps } from '../initData'
+import requestDeepTabAutoSync from '@/pages/deepTabSync/services/autoSync'
 
 // ========== 本地存储工具 ==========
 const STORAGE_KEY = 'app_grid_data'
@@ -44,6 +45,7 @@ const storageUtils = {
           reject(err)
           return
         }
+        requestDeepTabAutoSync('appGrid')
         resolve()
       })
     })
@@ -77,6 +79,7 @@ const storageUtils = {
           reject(err)
           return
         }
+        requestDeepTabAutoSync('appGridIconSettings')
         resolve()
       })
     })
