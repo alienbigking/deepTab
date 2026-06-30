@@ -1,0 +1,92 @@
+.createFolderModalRoot {
+  :global {
+    .ant-modal-mask {
+      background: rgba(0, 0, 0, 0.25) !important;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+
+    .ant-modal-content {
+      background: var(--dt-settings-card-bg) !important;
+      border: 1px solid var(--dt-settings-card-border);
+      border-radius: 18px;
+      box-shadow: var(--dt-settings-card-shadow);
+      backdrop-filter: var(--dt-settings-card-backdrop);
+      -webkit-backdrop-filter: var(--dt-settings-card-backdrop);
+      color: var(--dt-settings-card-text);
+      overflow: hidden;
+      transform: translate3d(0, 0, 0);
+      animation: none !important;
+      transition: none !important;
+    }
+
+    .ant-modal-header,
+    .ant-modal-body,
+    .ant-modal-footer {
+      background: transparent !important;
+    }
+
+    .ant-modal-header {
+      border-bottom: 0;
+      padding: 18px 24px 8px;
+    }
+
+    .ant-modal-title {
+      color: var(--dt-settings-strong-text);
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .ant-modal-close {
+      color: var(--dt-settings-card-muted);
+      border-radius: 12px;
+      transition:
+        background 0.2s ease,
+        color 0.2s ease;
+    }
+
+    .ant-modal-close:hover {
+      color: var(--dt-settings-card-text);
+      background: var(--dt-settings-hover-bg);
+    }
+
+    .ant-modal-body {
+      animation: none !important;
+      transition: none !important;
+    }
+
+    .ant-input {
+      height: 44px;
+      color: var(--dt-settings-card-text);
+      background: var(--dt-settings-hover-bg);
+      border-color: var(--dt-settings-card-border);
+      border-radius: 12px;
+      box-shadow: none;
+    }
+
+    .ant-input::placeholder {
+      color: var(--dt-settings-card-muted);
+    }
+
+    .ant-input:hover,
+    .ant-input:focus {
+      border-color: rgba(59, 130, 246, 0.72);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16);
+    }
+
+    .ant-btn-primary,
+    .ant-btn-primary span {
+      color: #fff !important;
+    }
+  }
+}
+
+.createFolderModal {
+  :global {
+    .ant-modal {
+      transform: translate3d(0, 0, 0);
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+}

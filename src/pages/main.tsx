@@ -107,6 +107,55 @@ const Main: React.FC = () => {
     }
   }
 
+  const handlePageContextMenu = (event: React.MouseEvent) => {
+    const target = event.target as HTMLElement | null
+    if (
+      target?.closest('input, textarea, [contenteditable="true"], [role="textbox"]')
+    ) {
+      return
+    }
+
+    if (event.defaultPrevented) return
+
+    event.preventDefault()
+
+    window.dispatchEvent(
+      new CustomEvent('dt:openAppGridBlankMenu', {
+        detail: {
+          x: event.clientX,
+          y: event.clientY
+        }
+      })
+    )
+  }
+
+  const handlePageClick = (event: React.MouseEvent) => {
+    const target = event.target as HTMLElement | null
+    if (!target) return
+
+    const isInteractiveTarget = target.closest(
+      [
+        'input',
+        'textarea',
+        'button',
+        'a',
+        '[contenteditable="true"]',
+        '[role="button"]',
+        '[role="textbox"]',
+        '[data-app-grid-id]',
+        '.ant-modal-root',
+        '.ant-drawer',
+        '.ant-dropdown',
+        '.ant-popover',
+        '.ant-select-dropdown'
+      ].join(', ')
+    )
+
+    if (isInteractiveTarget) return
+
+    window.dispatchEvent(new CustomEvent('dt:cancelAppGridEditMode'))
+  }
+
   const [appCategorySidebarVisible, setAppCategorySidebarVisible] = useState(
     defaultGeneralSettings.controlBar.sidebar !== 'alwaysHide'
   )
@@ -486,7 +535,11 @@ const Main: React.FC = () => {
   }
 
   return (
-    <div className={cn(styles.container)}>
+    <div
+      className={cn(styles.container)}
+      onClick={handlePageClick}
+      onContextMenu={handlePageContextMenu}
+    >
       <WallpaperBackground />
 
       {/* 搜索框 */}

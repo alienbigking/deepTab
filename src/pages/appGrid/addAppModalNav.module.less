@@ -22,11 +22,12 @@
   font-size: 12px;
   line-height: 1.5;
   cursor: pointer;
+  color: #fff;
 }
 
 .categoryItemActive {
-  background: rgba(24, 144, 255, 0.12);
-  color: #1890ff;
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
 }
 
 .subTabsRow {
@@ -40,6 +41,43 @@
 
     .ant-tabs-tab {
       padding: 4px 8px;
+      color: rgba(255, 255, 255, 0.82);
+    }
+
+    .ant-tabs-tab-active .ant-tabs-tab-btn {
+      color: #fff !important;
+      font-weight: 600;
+    }
+
+    .ant-tabs-ink-bar {
+      background: #fff;
+    }
+  }
+}
+
+:global(html[data-theme='dark']) {
+  .categoryItem {
+    color: #fff;
+  }
+
+  .categoryItemActive {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.16);
+  }
+
+  .subTabsRow {
+    :global {
+      .ant-tabs-tab {
+        color: rgba(255, 255, 255, 0.82);
+      }
+
+      .ant-tabs-tab-active .ant-tabs-tab-btn {
+        color: #fff !important;
+      }
+
+      .ant-tabs-ink-bar {
+        background: #fff;
+      }
     }
   }
 }

@@ -4,20 +4,13 @@ export default {
   async getRelatedApps(): Promise<IRelatedApp[]> {
     return [
       {
-        id: 'deep-tab',
-        name: 'Deep Tab',
-        description: '当前正在使用的新标签页插件，支持快捷入口、壁纸、组件和云同步。',
-        icon: 'DT',
-        url: 'https://deeptab.com',
-        category: '效率'
-      },
-      {
-        id: 'unbounded-social',
-        name: 'Unbounded Social',
-        description: 'Deep Tab 后端账号与云同步服务所属项目。',
-        icon: 'US',
-        url: 'https://unbounded.social',
-        category: '服务'
+        id: 'auto-refresh',
+        name: 'autoRefresh',
+        description:
+          '一款轻量级浏览器自动刷新插件，支持按标签页设置刷新间隔、快捷时间预设、指定开始时间、一键暂停或恢复，以及最大刷新次数限制，适合监控页面状态、定时刷新数据看板和保持网页内容更新。',
+        icon: 'AR',
+        url: 'https://deeptab.com/auto-refresh',
+        category: '效率工具'
       }
     ]
   }

@@ -1,5 +1,33 @@
 .container {
   margin-top: 12px;
+
+  :global {
+    .ant-input-group .ant-input,
+    .ant-input-group-addon {
+      height: 32px;
+      box-sizing: border-box;
+    }
+
+    .ant-input-group-addon {
+      padding: 0;
+      vertical-align: top;
+      line-height: 30px;
+    }
+
+    .ant-input-group-addon .ant-btn-link,
+    .ant-input-group-addon .ant-btn-link span {
+      color: #fff !important;
+    }
+
+    .ant-input-group-addon .ant-btn-link {
+      height: 30px;
+      padding: 0 15px;
+      line-height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
 }
 
 .row {
@@ -33,6 +61,13 @@
   margin-top: 12px;
 }
 
+.previewItem {
+  width: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .iconCard {
   width: 80px;
   height: 80px;
@@ -43,10 +78,25 @@
   font-size: 32px;
   background: rgba(255, 255, 255, 0.95);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  text-align: center;
 }
 
 .imageIconCard {
   background: rgba(255, 255, 255, 0.95);
+}
+
+.iconTextPreview {
+  max-width: 68px;
+  max-height: 68px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  word-break: break-all;
+  line-height: 1.08;
+  font-size: clamp(18px, calc(36px - 2.8px * var(--dt-icon-text-length, 1)), 34px);
+  color: #fff;
 }
 
 .previewImg {
@@ -66,12 +116,16 @@
   justify-content: center;
   font-size: 24px;
   color: rgba(0, 0, 0, 0.4);
+  cursor: pointer;
 }
 
 .typeLabel {
   margin-top: 4px;
   font-size: 12px;
   color: rgba(0, 0, 0, 0.45);
+  width: 100%;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .actions {

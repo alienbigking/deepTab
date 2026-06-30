@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useDndMonitor, useDroppable, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext } from '@dnd-kit/sortable'
-import { App, Button } from 'antd'
+import { App } from 'antd'
 import cn from 'classnames'
 import styles from './appGrid.module.less'
 import DroppableFolder from './droppableFolder'
@@ -17,8 +17,15 @@ import TodoWidget from '@/pages/widgetsContainer/todoWidget'
 import HotSearchWidget from '@/pages/widgetsContainer/hotSearchWidget'
 import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 import appGridService from './services/appGrid'
+import wallpaperService from '@/pages/wallpaper/services/wallpaper'
 import useAppGridStore from './stores/appGrid'
 import type { AppNode, AppItem, AppFolder, ContextMenuState, WidgetKind } from './types/appGrid'
+import type {
+  IDynamicWallpaper,
+  IGradientWallpaper,
+  IImageWallpaper,
+  IWallpaperConfig
+} from '@/pages/wallpaper/types/wallpaper'
 import { initDefaultApps } from './initData'
 import { isImageIconSource } from './iconFallback'
 import { useNotification } from '@/common/ui'
@@ -224,8 +231,44 @@ const AppGrid: React.FC = () => {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isEditMode])
 
+  useEffect(() => {
+    const handleCancelEditMode = () => setIsEditMode(false)
+    window.addEventListener('dt:cancelAppGridEditMode', handleCancelEditMode)
+    return () => window.removeEventListener('dt:cancelAppGridEditMode', handleCancelEditMode)
+  }, [])
+
+  const openBlankContextMenu = (x: number, y: number) => {
+    setContextMenuData({
+      visible: true,
+      x,
+      y,
+      appId: '',
+      appType: 'blank'
+    })
+  }
+
+  useEffect(() => {
+    const handleOpenBlankMenu = (event: Event) => {
+      const detail = (event as CustomEvent<{ x?: number; y?: number }>).detail
+      openBlankContextMenu(detail?.x || window.innerWidth / 2, detail?.y || window.innerHeight / 2)
+    }
+
+    window.addEventListener('dt:openAppGridBlankMenu', handleOpenBlankMenu)
+    return () => window.removeEventListener('dt:openAppGridBlankMenu', handleOpenBlankMenu)
+  }, [])
+
   const handleContainerClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && isEditMode) {
+    if (!isEditMode) return
+
+    const target = e.target as HTMLElement
+    const isInteractiveTarget =
+      target.closest(`.${styles.appIcon}`) ||
+      target.closest(`.${styles.droppableWidget}`) ||
+      target.closest(`.${styles.deleteFloatingBtn}`) ||
+      target.closest('.ant-modal-root') ||
+      target.closest('.ant-dropdown')
+
+    if (!isInteractiveTarget) {
       setIsEditMode(false)
     }
   }
@@ -236,16 +279,8 @@ const AppGrid: React.FC = () => {
 
     const target = e.target as HTMLElement
     const isAppIcon = target.closest(`.${styles.appIcon}`)
-    const isAddButton = target.closest(`.${styles.addBtnWrapper}`)
-
-    if (!isAppIcon && !isAddButton) {
-      setContextMenuData({
-        visible: true,
-        x: e.clientX,
-        y: e.clientY,
-        appId: '',
-        appType: 'blank'
-      })
+    if (!isAppIcon) {
+      openBlankContextMenu(e.clientX, e.clientY)
     }
   }
 
@@ -413,6 +448,126 @@ const AppGrid: React.FC = () => {
     } catch (error) {
       message.error('移入失败')
     }
+  }
+
+  const downloadFile = async (url: string, filename: string) => {
+    const response = await fetch(url, { credentials: 'omit' })
+    if (!response.ok) throw new Error('download failed')
+
+    const blob = await response.blob()
+    const objectUrl = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = objectUrl
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+  }
+
+  const handleDownloadWallpaper = async () => {
+    closeContextMenu()
+
+    try {
+      const config = await wallpaperService.getWallpaperConfig()
+      const current = config?.currentWallpaper
+      if (!current) {
+        message.warning('当前没有可下载的壁纸')
+        return
+      }
+
+      if (current.type === 'gradient') {
+        message.info('渐变背景不是图片文件，暂不支持下载')
+        return
+      }
+
+      const sourceUrl =
+        current.type === 'image'
+          ? (current as IImageWallpaper).url
+          : (current as IDynamicWallpaper).videoUrl
+      const extension = current.type === 'image' ? 'jpg' : 'mp4'
+      const filename = `deeptab-wallpaper-${Date.now()}.${extension}`
+      await downloadFile(sourceUrl, filename)
+      message.success('壁纸下载已开始')
+    } catch (error) {
+      console.error('下载壁纸失败:', error)
+      message.error('下载壁纸失败，请稍后重试')
+    }
+  }
+
+  const mergeWallpaperConfig = (
+    previous: IWallpaperConfig | null,
+    currentWallpaper: IWallpaperConfig['currentWallpaper']
+  ): IWallpaperConfig => ({
+    currentWallpaper,
+    brightness: previous?.brightness ?? 100,
+    blur: previous?.blur ?? 0,
+    featuredCategory: previous?.featuredCategory,
+    gradientAngle: previous?.gradientAngle,
+    saturation: previous?.saturation ?? 100,
+    dynamicMuted: previous?.dynamicMuted ?? true,
+    dynamicPaused: previous?.dynamicPaused ?? false
+  })
+
+  const pickRandomItem = <T,>(items: T[], excludeId?: string) => {
+    const candidates = items.filter((item) => {
+      const id = (item as { id?: string }).id
+      return !excludeId || id !== excludeId
+    })
+    const list = candidates.length ? candidates : items
+    return list[Math.floor(Math.random() * list.length)]
+  }
+
+  const handleRandomWallpaper = async () => {
+    closeContextMenu()
+
+    try {
+      const config = await wallpaperService.getWallpaperConfig()
+      const current = config?.currentWallpaper
+
+      if (current?.type === 'dynamic') {
+        const result = await wallpaperService.getDynamicWallpapers({
+          category: (current as IDynamicWallpaper).category,
+          page: Math.floor(Math.random() * 5) + 1,
+          pageSize: 18
+        })
+        const next = pickRandomItem(result.list, current.id)
+        if (next) {
+          await wallpaperService.saveWallpaperConfig(mergeWallpaperConfig(config, next))
+          message.success('已随机切换动态壁纸')
+          return
+        }
+      }
+
+      if (current?.type === 'image') {
+        const result = await wallpaperService.getImageWallpapers({
+          category: (current as IImageWallpaper).category,
+          page: Math.floor(Math.random() * 5) + 1,
+          pageSize: 18
+        })
+        const next = pickRandomItem(result.list, current.id)
+        if (next) {
+          await wallpaperService.saveWallpaperConfig(mergeWallpaperConfig(config, next))
+          message.success('已随机切换静态壁纸')
+          return
+        }
+      }
+
+      const gradients = await wallpaperService.getGradientWallpapers()
+      const nextGradient = pickRandomItem(gradients, (current as IGradientWallpaper | undefined)?.id)
+      if (nextGradient) {
+        await wallpaperService.saveWallpaperConfig(mergeWallpaperConfig(config, nextGradient))
+        message.success('已随机切换渐变背景')
+      }
+    } catch (error) {
+      console.error('随机壁纸失败:', error)
+      message.error('随机壁纸失败，请稍后重试')
+    }
+  }
+
+  const handleEditHome = () => {
+    closeContextMenu()
+    setIsEditMode(true)
   }
 
   const handleFolderClick = (folder: AppFolder) => {
@@ -702,14 +857,6 @@ const AppGrid: React.FC = () => {
         onClick={handleContainerClick}
         onContextMenu={handleContainerContextMenu}
       >
-        {isEditMode && (
-          <div className={styles.addBtnWrapper}>
-            <Button onClick={() => setIsEditMode(false)} size='small' className={cn(styles.doneBtn)}>
-              完成
-            </Button>
-          </div>
-        )}
-
         <SortableContext
           items={visibleApps.map((app) => app.id)}
           strategy={delayedReorderStrategy}
@@ -731,6 +878,7 @@ const AppGrid: React.FC = () => {
                   kind={widgetKind}
                   isEditMode={isEditMode}
                   gridGap={iconSettings.spacing}
+                  onDelete={handleDelete}
                   onContextMenu={handleContextMenu}
                 />
               ) : node.type === 'folder' ? (
@@ -778,6 +926,9 @@ const AppGrid: React.FC = () => {
               setEditingApp(null)
               setAddModalOpen(true)
             }}
+            onDownloadWallpaper={handleDownloadWallpaper}
+            onRandomWallpaper={handleRandomWallpaper}
+            onEditHome={handleEditHome}
           />
         )}
 

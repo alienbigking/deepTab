@@ -321,36 +321,6 @@ const iconTextFromName = (value: string) => {
   return (letters || text.slice(0, 8)).toUpperCase()
 }
 
-const decodeHtmlText = (value: string) => {
-  const textarea = document.createElement('textarea')
-  textarea.innerHTML = value
-  return textarea.value.replace(/\s+/g, ' ').trim()
-}
-
-const getWebsiteTitle = async (value: string) => {
-  const normalized = normalizeUrl(value)
-  if (!normalized || normalized.startsWith('deeptab://')) return ''
-  const controller = new AbortController()
-  const timer = window.setTimeout(() => controller.abort(), 5000)
-
-  try {
-    const response = await fetch(normalized, {
-      method: 'GET',
-      signal: controller.signal,
-      credentials: 'omit'
-    })
-    if (!response.ok) return ''
-    const html = await response.text()
-    const siteNameMatch = html.match(/<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']+)["'][^>]*>/i)
-    const titleMatch =
-      html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["'][^>]*>/i) ||
-      html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)
-    return decodeHtmlText(siteNameMatch?.[1] || titleMatch?.[1] || '')
-  } finally {
-    window.clearTimeout(timer)
-  }
-}
-
 const AddAppModal: React.FC<AddAppModalProps> = (props) => {
   const { open = false, editingApp = null, onClose, onSuccess } = props
   const [form] = Form.useForm()
@@ -452,18 +422,12 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
 
     setAutoFilling(true)
     try {
-      const title = await getWebsiteTitle(url)
+      const resolvedIcon = await resolveFaviconIcon(url)
       if (autoFillIdRef.current !== requestId) return
-      const latestName = String(form.getFieldValue('name') || '').trim()
-      const canOverwriteName = !latestName || latestName === fallbackName || latestName === lastAutoNameRef.current
-      if (title && canOverwriteName) {
-        form.setFieldValue('name', title)
-        form.setFieldValue('iconText', iconTextFromName(title))
-        lastAutoNameRef.current = title
-      }
-      if (manual) message.success(title ? '已获取网站信息' : '已获取网站图标')
+      if (resolvedIcon) form.setFieldValue('icon', resolvedIcon)
+      if (manual) message.success('已获取网站图标')
     } catch (error) {
-      if (manual) message.info('已获取网站图标，网站名称读取失败')
+      if (manual) message.info('已使用默认网站图标')
     } finally {
       if (autoFillIdRef.current === requestId) setAutoFilling(false)
     }

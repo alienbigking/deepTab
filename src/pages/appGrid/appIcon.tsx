@@ -199,24 +199,21 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
       {...(disableDrag ? {} : attributes)}
       {...(disableDrag || isFolder ? {} : listeners)}
     >
-      {/* 删除按钮 - 直接触发父组件的删除确认逻辑 */}
-      {isEditMode && (
-        <div className={styles.deleteBtnWrapper}>
-          <div
-            className={styles.deleteBtn}
+      {/* 图标 */}
+      <div className={styles.iconWrapper} style={iconWrapperStyle}>
+        {isEditMode && (
+          <button
+            type='button'
+            className={styles.deleteFloatingBtn}
             onClick={(e) => {
-              // 阻止冒泡,避免触发图标点击/拖拽
               e.stopPropagation()
               onDelete(node.id)
             }}
+            aria-label='删除'
           >
             <CloseCircleFilled />
-          </div>
-        </div>
-      )}
-
-      {/* 图标 */}
-      <div className={styles.iconWrapper} style={iconWrapperStyle}>
+          </button>
+        )}
         {isFolder ? (
           <>
             {/* 文件夹封面 - 显示最多4个子图标 */}

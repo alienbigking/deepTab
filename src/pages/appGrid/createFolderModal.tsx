@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Modal, Input, message } from 'antd'
 import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
+import styles from './createFolderModal.module.less'
 
 interface CreateFolderModalProps {
   visible: boolean
@@ -40,6 +41,8 @@ const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
       okText='创建'
       cancelText='取消'
       centered
+      rootClassName={styles.createFolderModalRoot}
+      className={styles.createFolderModal}
       maskTransitionName={modalMaskTransitionName}
       maskStyle={modalMaskStyle}
     >

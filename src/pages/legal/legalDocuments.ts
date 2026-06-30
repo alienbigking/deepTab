@@ -64,8 +64,7 @@ export const legalDocuments: Record<LegalDocumentType, LegalDocument> = {
         items: [
           'storage 与 unlimitedStorage：用于保存您的本地配置、搜索历史、常用搜索、待办、壁纸和主题等数据。',
           'tabs：用于在您点击主页图标、热搜链接或相关入口时打开、更新浏览器标签页。',
-          'topSites 与 bookmarks：用于在相关功能中读取常访问网站或书签，帮助您更便捷地添加快捷入口；我们不会在后台持续收集完整浏览历史。',
-          'host permissions：用于请求 Deep Tab 服务端、搜索建议、天气、热搜、壁纸素材、网站标题及 favicon 等资源；我们不会读取、修改或出售您访问网页的正文内容。'
+          'host permissions：用于请求 Deep Tab 服务端、搜索建议、天气、热搜、壁纸素材及 favicon 等资源；我们不会读取、修改或出售您访问网页的正文内容。'
         ]
       },
       {
@@ -149,9 +148,7 @@ export const legalDocuments: Record<LegalDocumentType, LegalDocument> = {
           'storage：用于在浏览器本地保存配置、搜索历史、常用搜索、待办、壁纸、主题、会话等数据。',
           'unlimitedStorage：用于支持高清壁纸、图标、附件预览或较多配置项的本地保存，降低浏览器默认配额不足的影响。',
           'tabs：用于在您点击快捷入口、热搜或外部链接时创建或更新标签页。',
-          'topSites：用于在您主动添加或管理快捷入口时提供常访问网站参考。',
-          'bookmarks：用于在您主动使用相关功能时读取书签，便于添加快捷入口。',
-          'host permissions：用于访问 Deep Tab 服务端、Pexels/壁纸资源、Bing 搜索建议、Open-Meteo 天气、热搜接口、网站标题、favicon 和您主动配置的网站资源。'
+          'host permissions：用于访问 Deep Tab 服务端、Bing 搜索建议、Open-Meteo 天气、地理编码、热搜接口及 favicon 资源。壁纸素材通过 Deep Tab 服务端统一接口提供给前端。'
         ]
       },
       {

@@ -195,7 +195,7 @@ const AddAppModalCustom: React.FC<AddAppModalCustomProps> = ({
       </div>
 
       <div className={styles.previewRow}>
-        <div>
+        <div className={styles.previewItem}>
           <div
             className={cn(styles.iconCard, isImageIcon && styles.imageIconCard)}
             style={{ backgroundColor: isImageIcon ? undefined : iconColor }}
@@ -211,14 +211,19 @@ const AddAppModalCustom: React.FC<AddAppModalCustomProps> = ({
                 onError={() => setPreviewIconIndex((index) => index + 1)}
               />
             ) : (
-              iconText
+              <span
+                className={styles.iconTextPreview}
+                style={{ '--dt-icon-text-length': iconText.length } as React.CSSProperties}
+              >
+                {iconText}
+              </span>
             )}
           </div>
           <div className={styles.typeLabel}>
             {isImageIcon && activePreviewIcon ? '网站图标' : '文字图标'}
           </div>
         </div>
-        <div>
+        <div className={styles.previewItem}>
           <div className={styles.uploadCard} onClick={() => fileInputRef.current?.click()}>
             +
           </div>

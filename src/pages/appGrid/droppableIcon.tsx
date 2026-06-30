@@ -116,23 +116,21 @@ const DroppableIcon: React.FC<DroppableIconProps> = ({
       {...attributes}
       {...listeners}
     >
-      {/* 删除按钮 */}
-      {isEditMode && (
-        <div className={styles.deleteBtnWrapper}>
-          <div
-            className={styles.deleteBtn}
+      {/* 图标 - 点击打开链接 */}
+      <div className={styles.iconWrapper} style={iconWrapperStyle} onClick={handleClick}>
+        {isEditMode && (
+          <button
+            type='button'
+            className={styles.deleteFloatingBtn}
             onClick={(e) => {
               e.stopPropagation()
               onDelete(icon.id)
             }}
+            aria-label='删除'
           >
             <CloseCircleFilled />
-          </div>
-        </div>
-      )}
-
-      {/* 图标 - 点击打开链接 */}
-      <div className={styles.iconWrapper} style={iconWrapperStyle} onClick={handleClick}>
+          </button>
+        )}
         <span className={styles.iconEmoji}>
           {isImageIcon ? (
             <img

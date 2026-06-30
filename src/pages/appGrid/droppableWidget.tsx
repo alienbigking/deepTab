@@ -10,6 +10,7 @@ import CalendarWidget from '@/pages/widgetsContainer/calendarWidget'
 import WeatherWidget from '@/pages/widgetsContainer/weatherWidget'
 import TodoWidget from '@/pages/widgetsContainer/todoWidget'
 import HotSearchWidget from '@/pages/widgetsContainer/hotSearchWidget'
+import { CloseCircleFilled } from '@ant-design/icons'
 import type { AppItem, WidgetKind } from './types/appGrid'
 import styles from './appGrid.module.less'
 
@@ -21,6 +22,7 @@ interface DroppableWidgetProps {
   kind: WidgetKind
   isEditMode: boolean
   gridGap: number
+  onDelete: (id: string) => void
   onContextMenu: (e: React.MouseEvent, id: string, nodeType: 'widget') => void
 }
 
@@ -38,6 +40,7 @@ const DroppableWidget: React.FC<DroppableWidgetProps> = ({
   kind,
   isEditMode,
   gridGap,
+  onDelete,
   onContextMenu
 }) => {
   const { attributes, listeners, setNodeRef, transform, isDragging, isOver } = useSortable({
@@ -87,6 +90,20 @@ const DroppableWidget: React.FC<DroppableWidgetProps> = ({
       {...attributes}
       {...listeners}
     >
+      {isEditMode && (
+        <button
+          type='button'
+          className={styles.deleteFloatingBtn}
+          onClick={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            onDelete(widget.id)
+          }}
+          aria-label='删除小组件'
+        >
+          <CloseCircleFilled />
+        </button>
+      )}
       {widgetComponentMap[kind]}
     </div>
   )

@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react'
-import { Dropdown, message } from 'antd'
+import { createPortal } from 'react-dom'
+import { Dropdown } from 'antd'
 import type { MenuProps } from 'antd'
 import {
   FolderOpenOutlined,
@@ -8,11 +9,14 @@ import {
   DeleteOutlined,
   PlusOutlined,
   AppstoreAddOutlined,
-  FolderOutlined
+  FolderOutlined,
+  DownloadOutlined,
+  BgColorsOutlined,
+  LayoutOutlined
 } from '@ant-design/icons'
 import cn from 'classnames'
 import styles from './contextMenu.module.less'
-import type { AppNode, AppItem, AppFolder } from './types/appGrid'
+import type { AppFolder } from './types/appGrid'
 
 interface ContextMenuProps {
   visible: boolean
@@ -29,6 +33,9 @@ interface ContextMenuProps {
   allFolders?: AppFolder[] // 用于"移动到文件夹"子菜单
   onCreateFolderRequested?: () => void // 新增：请求创建文件夹
   onAddAppRequested?: () => void
+  onDownloadWallpaper?: () => void
+  onRandomWallpaper?: () => void
+  onEditHome?: () => void
 }
 
 const ContextMenu: React.FC<ContextMenuProps> = (props) => {
@@ -46,8 +53,15 @@ const ContextMenu: React.FC<ContextMenuProps> = (props) => {
     onClose,
     allFolders = [],
     onCreateFolderRequested,
-    onAddAppRequested
+    onAddAppRequested,
+    onDownloadWallpaper,
+    onRandomWallpaper,
+    onEditHome
   } = props
+  const menuWidth = 220
+  const menuHeight = nodeType === 'blank' ? 268 : nodeType === 'item' ? 236 : 128
+  const menuX = Math.min(Math.max(x + 8, 8), window.innerWidth - menuWidth - 8)
+  const menuY = Math.min(Math.max(y + 8, 8), window.innerHeight - menuHeight - 8)
 
   // 点击外部关闭菜单
   useEffect(() => {
@@ -97,17 +111,34 @@ const ContextMenu: React.FC<ContextMenuProps> = (props) => {
 
     // 创建文件夹（只在空白区域显示）
     if (nodeType === 'blank') {
-      items.push({
-        key: 'add-app',
-        label: '添加应用',
-        icon: <AppstoreAddOutlined />
-      })
-
-      items.push({
-        key: 'create-folder',
-        label: '创建文件夹',
-        icon: <PlusOutlined />
-      })
+      items.push(
+        {
+          key: 'add-app',
+          label: '添加应用',
+          icon: <AppstoreAddOutlined />
+        },
+        {
+          key: 'create-folder',
+          label: '创建文件夹',
+          icon: <PlusOutlined />
+        },
+        { type: 'divider' },
+        {
+          key: 'download-wallpaper',
+          label: '下载当前壁纸',
+          icon: <DownloadOutlined />
+        },
+        {
+          key: 'random-wallpaper',
+          label: '随机壁纸',
+          icon: <BgColorsOutlined />
+        },
+        {
+          key: 'edit-home',
+          label: '编辑主页',
+          icon: <LayoutOutlined />
+        }
+      )
     }
 
     // 如果是普通图标，显示"移动到文件夹"子菜单
@@ -173,6 +204,15 @@ const ContextMenu: React.FC<ContextMenuProps> = (props) => {
         console.log('执行: 添加应用')
         onAddAppRequested?.()
         break
+      case 'download-wallpaper':
+        onDownloadWallpaper?.()
+        break
+      case 'random-wallpaper':
+        onRandomWallpaper?.()
+        break
+      case 'edit-home':
+        onEditHome?.()
+        break
       case 'edit':
         console.log('执行: 编辑')
         onEdit()
@@ -187,21 +227,16 @@ const ContextMenu: React.FC<ContextMenuProps> = (props) => {
     }
   }
 
-  if (!visible) {
-    console.log('ContextMenu: visible = false, 不渲染')
-    return null
-  }
+  if (!visible) return null
 
-  console.log('ContextMenu 渲染:', { visible, x, y, menuItemsCount: menuItems.length })
-
-  return (
+  return createPortal(
     <div
       className={cn(styles.contextMenuWrapper)}
       style={{
         position: 'fixed',
-        left: `${x}px`,
-        top: `${y}px`,
-        zIndex: 1000
+        left: `${menuX}px`,
+        top: `${menuY}px`,
+        zIndex: 1200
       }}
     >
       <Dropdown
@@ -209,11 +244,13 @@ const ContextMenu: React.FC<ContextMenuProps> = (props) => {
         open={true}
         trigger={['click']}
         placement='bottomLeft'
+        transitionName=''
         getPopupContainer={(trigger) => trigger.parentElement || document.body}
       >
         <div style={{ width: 1, height: 1, cursor: 'pointer' }} />
       </Dropdown>
-    </div>
+    </div>,
+    document.body
   )
 }
 
