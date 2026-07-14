@@ -58,7 +58,7 @@ const DroppableIcon: React.FC<DroppableIconProps> = ({
     height: iconSettings.size,
     borderRadius: iconSettings.radius,
     opacity: iconSettings.opacity / 100,
-    background: icon.iconBg || 'var(--dt-app-icon-bg)'
+    background: isImageIconSource(icon.icon) ? 'var(--dt-app-icon-bg)' : icon.iconBg || 'var(--dt-app-icon-bg)'
   }
 
   const appNameStyle: React.CSSProperties = {

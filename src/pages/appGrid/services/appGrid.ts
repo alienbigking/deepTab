@@ -145,7 +145,39 @@ export default {
    */
   async delete(id: string): Promise<void> {
     const nodes = await storageUtils.getLocal()
-    const filteredNodes = nodes.filter((node) => node.id !== id)
+    let changed = false
+
+    const filteredNodes = nodes
+      .map((node) => {
+        if (node.id === id) {
+          changed = true
+          return null
+        }
+
+        if (node.type !== 'folder') return node
+
+        const nextChildren = node.children.filter((child) => child.id !== id)
+        if (nextChildren.length === node.children.length) return node
+
+        changed = true
+        return {
+          ...node,
+          children: nextChildren,
+          updatedAt: new Date().toISOString(),
+          syncStatus: 'pending' as const
+        }
+      })
+      .filter((node): node is AppNode => Boolean(node))
+      .filter((node) => node.type !== 'folder' || node.children.length > 0)
+      .map((node, index) => ({
+        ...node,
+        order: index,
+        updatedAt: changed ? new Date().toISOString() : node.updatedAt,
+        syncStatus: changed ? ('pending' as const) : node.syncStatus
+      }))
+
+    if (!changed) return
+
     await storageUtils.saveLocal(filteredNodes)
   },
 

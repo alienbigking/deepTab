@@ -998,7 +998,7 @@ export const GridDragOverlayContent: React.FC = () => {
     height: iconSettings.size,
     borderRadius: iconSettings.radius,
     opacity: iconSettings.opacity / 100,
-    background: dragActiveNode.iconBg || 'var(--dt-app-icon-bg)'
+    background: isImageIcon ? 'var(--dt-app-icon-bg)' : dragActiveNode.iconBg || 'var(--dt-app-icon-bg)'
   }
 
   return (

@@ -7,6 +7,7 @@ import useAppGridStore from '@/pages/appGrid/stores/appGrid'
 import useBottomBarStore from '@/pages/bottomBar/stores/bottomBar'
 import useAppCategoryStore from '@/pages/appCategory/stores/appCategory'
 import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
+import requestDeepTabAutoSync from '@/pages/deepTabSync/services/autoSync'
 
 const storageRemove = (keys: string[]) => {
   return new Promise<void>((resolve, reject) => {
@@ -54,7 +55,7 @@ const ResetSettings: React.FC = () => {
     window.location.reload()
   }
 
-  const resetIcons = async (showSuccess = true, shouldReload = true) => {
+  const resetIcons = async (showSuccess = true, shouldReload = true, shouldSync = true) => {
     const hide = message.loading('正在重置图标...', 0)
     try {
       let beforeCount = 0
@@ -71,6 +72,9 @@ const ResetSettings: React.FC = () => {
       setApps(storedApps)
       resetIconSettings()
       setActiveCategoryId('home')
+      if (shouldSync) {
+        await requestDeepTabAutoSync('resetIcons')
+      }
 
       try {
         const verify = await storageGet<{ app_grid_data?: unknown }>(['app_grid_data'])
@@ -151,11 +155,12 @@ const ResetSettings: React.FC = () => {
             'notifications'
           ])
 
-          await resetIcons(false, false)
+          await resetIcons(false, false, false)
           resetIconSettings()
           setPinnedAppIds([])
           setActiveCategoryId('home')
           await initCategories()
+          await requestDeepTabAutoSync('resetAll')
 
           message.success('所有设置已恢复默认', 1, () => {
             reloadToNewtab()

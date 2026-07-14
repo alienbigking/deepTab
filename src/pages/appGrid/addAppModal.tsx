@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Modal, Form, Input, message, Select, Empty } from 'antd'
+import { App, Modal, Form, Input, Select, Empty } from 'antd'
 import type { Apps, AddAppParams } from './types/appGrid'
 import appGridService from './services/appGrid'
 import styles from './addAppModal.module.less'
@@ -323,6 +323,7 @@ const iconTextFromName = (value: string) => {
 
 const AddAppModal: React.FC<AddAppModalProps> = (props) => {
   const { open = false, editingApp = null, onClose, onSuccess } = props
+  const { message } = App.useApp()
   const [form] = Form.useForm()
   const [activeSidebar, setActiveSidebar] = useState<AddAppModalSidebarMode>('nav')
   const [activeSubTab, setActiveSubTab] = useState<AppSort>('today')
@@ -350,13 +351,15 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
         iconText: isImageIconSource(editingApp.icon)
           ? iconTextFromName(editingApp.name)
           : editingApp.icon.slice(0, 8),
-        url: editingApp.url
+        url: editingApp.url,
+        iconBgMode: editingApp.iconBg ? 'custom' : 'theme'
       })
       setIconColor(editingApp.iconBg || '#1890ff')
       setTargetCategoryId(editingApp.categoryId || 'home')
       setActiveSidebar('custom')
     } else if (open) {
       form.resetFields()
+      form.setFieldsValue({ iconBgMode: 'theme' })
       setActiveSidebar('nav')
       setActiveSubTab('today')
       setIconColor('#1890ff')
@@ -476,18 +479,21 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
     setSaving(true)
     try {
       const values = await form.validateFields()
-      const { iconText: _iconText, ...appValues } = values
+      const { iconText: _iconText, iconBgMode: _iconBgMode, ...appValues } = values
       const icon = String(values.icon || '').trim()
       const name = displayNameFromValues(values.name, values.url)
       const iconText = iconTextFromName(values.iconText || name)
       const resolvedIcon = /^https?:\/\//i.test(icon)
         ? await resolveFaviconIcon(values.url)
         : icon
+      const finalIcon = resolvedIcon || iconText
+      const useCustomIconBg = values.iconBgMode === 'custom'
+      const finalIconBg = isImageIconSource(finalIcon) || !useCustomIconBg ? undefined : iconColor
       const payload = {
         ...appValues,
         name,
-        icon: resolvedIcon || iconText,
-        iconBg: iconColor,
+        icon: finalIcon,
+        iconBg: finalIconBg,
         url: normalizeUrl(values.url),
         categoryId: targetCategoryId
       }
@@ -509,6 +515,7 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
         onClose()
       } else {
         form.resetFields()
+        form.setFieldsValue({ iconBgMode: 'theme' })
         setIconColor('#1890ff')
       }
     } catch (error) {

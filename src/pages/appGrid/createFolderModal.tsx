@@ -43,6 +43,7 @@ const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
       centered
       rootClassName={styles.createFolderModalRoot}
       className={styles.createFolderModal}
+      transitionName=''
       maskTransitionName={modalMaskTransitionName}
       maskStyle={modalMaskStyle}
     >

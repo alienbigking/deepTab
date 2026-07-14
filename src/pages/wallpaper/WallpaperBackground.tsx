@@ -9,9 +9,15 @@ import type {
 
 const DEFAULT_GRADIENT = 'linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #ff8c42 100%)'
 
-const WallpaperBackground: React.FC = () => {
-  const [config, setConfig] = useState<IWallpaperConfig | null>(null)
-  const [displayConfig, setDisplayConfig] = useState<IWallpaperConfig | null>(null)
+interface WallpaperBackgroundProps {
+  initialConfig?: IWallpaperConfig | null
+}
+
+const WallpaperBackground: React.FC<WallpaperBackgroundProps> = ({ initialConfig }) => {
+  const [config, setConfig] = useState<IWallpaperConfig | null>(initialConfig || null)
+  const [displayConfig, setDisplayConfig] = useState<IWallpaperConfig | null>(
+    initialConfig || null
+  )
   const [videoReady, setVideoReady] = useState(false)
   const [videoError, setVideoError] = useState(false)
   const [autoplayBlocked, setAutoplayBlocked] = useState(false)

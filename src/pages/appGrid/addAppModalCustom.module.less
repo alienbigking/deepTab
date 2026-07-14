@@ -1,4 +1,6 @@
 .container {
+  --dt-app-icon-bg: rgba(10, 18, 30, 0.82);
+
   margin-top: 12px;
 
   :global {
@@ -30,10 +32,54 @@
   }
 }
 
+:global(html[data-theme='light']) {
+  .container {
+    --dt-app-icon-bg: rgba(255, 255, 255, 0.95);
+  }
+}
+
+:global(html[data-theme='dark']) {
+  .container {
+    --dt-app-icon-bg: rgba(10, 18, 30, 0.82);
+  }
+}
+
 .row {
   display: flex;
   gap: 16px;
   margin-top: 8px;
+}
+
+.backgroundMode {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modeSegment {
+  width: max-content;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--dt-settings-hover-bg);
+
+  :global {
+    .ant-segmented-item {
+      border-radius: 999px;
+      color: var(--dt-settings-card-muted);
+    }
+
+    .ant-segmented-item-selected {
+      color: var(--dt-settings-card-text);
+      background: rgba(255, 255, 255, 0.18);
+      box-shadow: none;
+    }
+
+    .ant-segmented-thumb {
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.18);
+      box-shadow: none;
+    }
+  }
 }
 
 .colors {
@@ -54,11 +100,41 @@
   border-color: #1890ff;
 }
 
+.customColorButton {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  background: conic-gradient(
+    #ff3b30 0 12.5%,
+    #ff9500 12.5% 25%,
+    #ffcc00 25% 37.5%,
+    #34c759 37.5% 50%,
+    #00c7be 50% 62.5%,
+    #007aff 62.5% 75%,
+    #af52de 75% 87.5%,
+    #ff2d55 87.5% 100%
+  );
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.customColorButtonActive {
+  box-shadow: 0 0 0 2px #1890ff;
+}
+
 .previewRow {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-top: 12px;
+  flex-wrap: wrap;
 }
 
 .previewItem {
@@ -66,6 +142,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  cursor: pointer;
+}
+
+.previewItemDisabled {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .iconCard {
@@ -80,10 +162,33 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   overflow: hidden;
   text-align: center;
+  border: 2px solid transparent;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
+}
+
+.iconCardActive {
+  border-color: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 0 0 3px rgba(24, 144, 255, 0.35),
+    0 10px 24px rgba(0, 0, 0, 0.18);
 }
 
 .imageIconCard {
   background: rgba(255, 255, 255, 0.95);
+}
+
+.iconCardFailed {
+  background: rgba(255, 255, 255, 0.32);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.iconFailedText {
+  font-size: 30px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .iconTextPreview {

@@ -42,6 +42,7 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
   const folder = isFolder ? (node as AppFolder) : null
   const item = !isFolder ? (node as AppItem) : null
   const isImageIcon = isImageIconSource
+  const nodeHasImageIcon = !isFolder && isImageIcon(item?.icon)
   const renderImageIcon = (
     icon: string | undefined,
     className: string,
@@ -87,7 +88,7 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
     height: iconSettings.size,
     borderRadius: iconSettings.radius,
     opacity: iconSettings.opacity / 100,
-    background: node.iconBg || 'var(--dt-app-icon-bg)'
+    background: nodeHasImageIcon ? 'var(--dt-app-icon-bg)' : node.iconBg || 'var(--dt-app-icon-bg)'
   }
 
   const appNameStyle: React.CSSProperties = {

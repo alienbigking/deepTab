@@ -1,60 +1,54 @@
-import deepTabSyncService from './deepTabSync'
+import {
+  DEEP_TAB_SYNC_PENDING_KEY,
+  DEEP_TAB_SYNC_CONFLICT,
+  DEEP_TAB_SYNC_REQUEST,
+  DEEP_TAB_SYNC_SUCCESS,
+  type DeepTabSyncMessage,
+  type DeepTabSyncPendingState
+} from './syncProtocol'
 
-const debounceDelay = 1500
-const notifyMinInterval = 5000
+let listenerRegistered = false
 
-let syncTimer: number | undefined
-let syncing = false
-let pending = false
-let lastNotifyAt = 0
+const registerSuccessListener = () => {
+  if (listenerRegistered) return
+  listenerRegistered = true
 
-const hasAuthToken = async () => {
-  try {
-    const result = await chrome.storage.local.get(['token'])
-    return Boolean(result.token)
-  } catch (error) {
-    console.warn('检查同步登录状态失败:', error)
-    return false
-  }
+  chrome.runtime.onMessage.addListener((message: DeepTabSyncMessage) => {
+    if (message?.type === DEEP_TAB_SYNC_SUCCESS) {
+      window.dispatchEvent(
+        new CustomEvent('dt:autoSyncSuccess', { detail: { source: message.source } })
+      )
+    }
+    if (message?.type === DEEP_TAB_SYNC_CONFLICT) {
+      window.dispatchEvent(
+        new CustomEvent('dt:autoSyncConflict', { detail: { source: message.source } })
+      )
+    }
+  })
 }
 
-const runSync = async (source?: string) => {
-  if (syncing) {
-    pending = true
-    return
-  }
+export const requestDeepTabAutoSync = (source?: string): Promise<void> => {
+  registerSuccessListener()
 
-  const canSync = await hasAuthToken()
-  if (!canSync) return
-
-  syncing = true
-  try {
-    await deepTabSyncService.uploadLocalToCloud()
-    const now = Date.now()
-    if (now - lastNotifyAt >= notifyMinInterval) {
-      lastNotifyAt = now
-      window.dispatchEvent(new CustomEvent('dt:autoSyncSuccess', { detail: { source } }))
+  const request = async () => {
+    const previous = await chrome.storage.local.get([DEEP_TAB_SYNC_PENDING_KEY])
+    const current = previous[DEEP_TAB_SYNC_PENDING_KEY] as DeepTabSyncPendingState | undefined
+    const pending: DeepTabSyncPendingState = {
+      source: current?.source || source,
+      requestedAt: Date.now(),
+      retryCount: current?.retryCount || 0
     }
-  } catch (error) {
-    console.warn(`DeepTab 自动同步失败${source ? `(${source})` : ''}:`, error)
-  } finally {
-    syncing = false
-    if (pending) {
-      pending = false
-      requestDeepTabAutoSync('pending')
+    await chrome.storage.local.set({ [DEEP_TAB_SYNC_PENDING_KEY]: pending })
+
+    const message: DeepTabSyncMessage = { type: DEEP_TAB_SYNC_REQUEST, source }
+    try {
+      await chrome.runtime.sendMessage(message)
+    } catch (error) {
+      console.warn('DeepTab 同步请求已保存，将在后台恢复后继续:', error)
     }
   }
-}
 
-export const requestDeepTabAutoSync = (source?: string) => {
-  if (syncTimer) {
-    window.clearTimeout(syncTimer)
-  }
-
-  syncTimer = window.setTimeout(() => {
-    syncTimer = undefined
-    void runSync(source)
-  }, debounceDelay)
+  return request()
 }
 
 export default requestDeepTabAutoSync

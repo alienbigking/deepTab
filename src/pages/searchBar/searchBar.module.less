@@ -379,25 +379,26 @@ html[data-theme='dark'] {
   align-items: center;
   gap: 6px;
   height: 32px;
-  padding: 0 10px;
+  padding: 0 6px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(10px);
+  background: transparent;
   cursor: pointer;
   user-select: none;
-  transition: all 0.2s;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.12);
   }
 }
 
 html[data-theme='dark'] {
   .engineTrigger {
-    background: rgba(0, 0, 0, 0.28);
+    background: transparent;
 
     &:hover {
-      background: rgba(0, 0, 0, 0.35);
+      background: rgba(255, 255, 255, 0.1);
     }
   }
 }

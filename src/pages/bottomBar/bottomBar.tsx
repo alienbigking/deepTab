@@ -34,9 +34,6 @@ const DockSortableItem: React.FC<DockItemProps> = (props) => {
   const { app, onOpen, onRemove, onEdit } = props
   const [iconLoadFailed, setIconLoadFailed] = useState(false)
 
-  // 只允许普通图标在底部栏，文件夹不支持
-  if (app.type !== 'item') return null
-
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: getDockSortableId(app.id),
     data: {

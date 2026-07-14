@@ -1,6 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Card, Checkbox, Modal, Spin, Tooltip, message } from 'antd'
-import { LeftOutlined, ReloadOutlined, RightOutlined, SettingFilled } from '@ant-design/icons'
+import {
+  LeftOutlined,
+  ReloadOutlined,
+  RightOutlined,
+  SettingFilled,
+  StepBackwardFilled,
+  StepForwardFilled
+} from '@ant-design/icons'
 import SimpleBar from 'simplebar-react'
 import addAppModalStyles from '@/pages/appGrid/addAppModal.module.less'
 import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
@@ -41,6 +48,7 @@ const HotSearchWidget: React.FC = () => {
   const [modalLoading, setModalLoading] = useState(false)
   const [open, setOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [compactPage, setCompactPage] = useState(0)
   const [hiddenPlatformKeys, setHiddenPlatformKeys] = useState<string[]>(
     hotSearchWidgetCache.hiddenPlatformKeys
   )
@@ -215,6 +223,7 @@ const HotSearchWidget: React.FC = () => {
 
   const switchPlatform = (nextIndex: number) => {
     const nextPlatform = visiblePlatforms[(nextIndex + visiblePlatforms.length) % visiblePlatforms.length]
+    setCompactPage(0)
     setPlatformKey(nextPlatform.key)
     hotSearchWidgetCache.platformKey = nextPlatform.key
     if (hotSearchWidgetCache.cache[nextPlatform.key]) {
@@ -318,7 +327,21 @@ const HotSearchWidget: React.FC = () => {
     modalData?.platform.key === activeModalPlatform.key && modalData?.updatedAt
       ? new Date(modalData.updatedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
       : '--:--'
-  const compactItems = displayItems.slice(0, 5)
+  const compactPageSize = 5
+  const compactPageCount = Math.max(1, Math.ceil(displayItems.length / compactPageSize))
+  const normalizedCompactPage = compactPage % compactPageCount
+  const compactItems = displayItems.slice(
+    normalizedCompactPage * compactPageSize,
+    normalizedCompactPage * compactPageSize + compactPageSize
+  )
+
+  useEffect(() => {
+    setCompactPage(0)
+  }, [activePlatform.key, data?.updatedAt])
+
+  const switchCompactPage = (direction: -1 | 1) => {
+    setCompactPage((value) => (value + direction + compactPageCount) % compactPageCount)
+  }
 
   return (
     <>
@@ -334,28 +357,54 @@ const HotSearchWidget: React.FC = () => {
             <div className={styles.hotSearchCompactHeader}>
               <button
                 type='button'
+                className={styles.hotSearchSourceNav}
                 onClick={(event) => {
                   event.stopPropagation()
                   switchPlatform(platformIndex - 1)
                 }}
+                aria-label='切换上一个热搜来源'
+              >
+                <StepBackwardFilled />
+              </button>
+              <button
+                type='button'
+                className={styles.hotSearchPageNav}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  switchCompactPage(-1)
+                }}
+                aria-label='查看上一组热搜'
               >
                 <LeftOutlined />
               </button>
               <strong>{activePlatform.shortName}</strong>
               <button
                 type='button'
+                className={styles.hotSearchPageNav}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  switchCompactPage(1)
+                }}
+                aria-label='查看下一组热搜'
+              >
+                <RightOutlined />
+              </button>
+              <button
+                type='button'
+                className={styles.hotSearchSourceNav}
                 onClick={(event) => {
                   event.stopPropagation()
                   switchPlatform(platformIndex + 1)
                 }}
+                aria-label='切换下一个热搜来源'
               >
-                <RightOutlined />
+                <StepForwardFilled />
               </button>
             </div>
             <div className={styles.hotSearchCompactList}>
               {compactItems.map((item, index) => (
                 <div key={`${activePlatform.key}_${item.id}`} className={styles.hotSearchCompactItem}>
-                  <span>{index + 1}</span>
+                  <span>{normalizedCompactPage * compactPageSize + index + 1}</span>
                   <strong>{item.title}</strong>
                   <em>{item.hot}</em>
                 </div>

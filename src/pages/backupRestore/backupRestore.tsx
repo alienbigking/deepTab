@@ -15,6 +15,90 @@ interface BackupPayload {
   wallpaperConfig?: IWallpaperConfig | null
 }
 
+const MAX_BACKUP_FILE_SIZE = 2 * 1024 * 1024
+const MAX_APP_COUNT = 500
+const MAX_FOLDER_CHILDREN = 50
+
+const requiredText = (value: unknown, field: string, maxLength: number) => {
+  const text = String(value || '').trim()
+  if (!text || text.length > maxLength) {
+    throw new Error(`${field}无效`)
+  }
+  return text
+}
+
+const optionalText = (value: unknown, maxLength: number) => {
+  if (value === undefined || value === null || value === '') return undefined
+  const text = String(value).trim()
+  if (text.length > maxLength) throw new Error('备份字段过长')
+  return text
+}
+
+const normalizeUrl = (value: unknown) => {
+  const url = requiredText(value, '应用链接', 2048)
+  if (/^deeptab:\/\/widget\/(calendar|weather|todo|hotSearch)$/.test(url)) return url
+  const parsed = new URL(url)
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error('备份中包含不安全的应用链接')
+  }
+  return parsed.toString()
+}
+
+const normalizeBackupItem = (raw: any, fallbackOrder: number): AppNode => {
+  if (!raw || typeof raw !== 'object') throw new Error('应用数据无效')
+
+  const base = {
+    id: requiredText(raw.id, '应用 ID', 120),
+    name: requiredText(raw.name, '应用名称', 100),
+    icon: requiredText(raw.icon, '应用图标', 512 * 1024),
+    iconBg: optionalText(raw.iconBg, 100),
+    order: Number.isFinite(raw.order) ? Number(raw.order) : fallbackOrder,
+    categoryId: optionalText(raw.categoryId, 100),
+    widgetSpan: raw.widgetSpan === 2 || raw.widgetSpan === 4 ? raw.widgetSpan : undefined,
+    createdAt: optionalText(raw.createdAt, 64),
+    updatedAt: optionalText(raw.updatedAt, 64),
+    syncStatus: 'pending' as const
+  }
+
+  if (raw.type === 'folder') {
+    if (!Array.isArray(raw.children) || raw.children.length > MAX_FOLDER_CHILDREN) {
+      throw new Error('文件夹内容无效或数量超过限制')
+    }
+    return {
+      ...base,
+      type: 'folder',
+      coverIcon: optionalText(raw.coverIcon, 512 * 1024),
+      children: raw.children.map((child: any, index: number) => {
+        const normalized = normalizeBackupItem({ ...child, type: 'item' }, index)
+        if (normalized.type !== 'item') throw new Error('文件夹子项无效')
+        return normalized
+      })
+    }
+  }
+
+  return {
+    ...base,
+    type: 'item',
+    url: normalizeUrl(raw.url)
+  }
+}
+
+const normalizeBackupApps = (rawApps: unknown[]): AppNode[] => {
+  if (rawApps.length > MAX_APP_COUNT) throw new Error('应用数量超过限制')
+  const apps = rawApps.map((app, index) => normalizeBackupItem(app, index))
+  const ids = new Set<string>()
+  apps.forEach((node) => {
+    const nodeIds = [node.id, ...(node.type === 'folder' ? node.children.map((item) => item.id) : [])]
+    nodeIds.forEach((id) => {
+      if (ids.has(id)) throw new Error('备份中包含重复的应用 ID')
+      ids.add(id)
+    })
+  })
+  return apps
+    .sort((a, b) => a.order - b.order)
+    .map((app, index) => ({ ...app, order: index }))
+}
+
 const BackupRestore: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const { apps, setApps, iconSettings, setIconSettings } = useAppGridStore()
@@ -118,6 +202,9 @@ const BackupRestore: React.FC = () => {
     if (!file) return
 
     try {
+      if (file.size > MAX_BACKUP_FILE_SIZE) {
+        throw new Error('备份文件不能超过 2MB')
+      }
       const text = await file.text()
       const data = JSON.parse(text) as Partial<BackupPayload>
 
@@ -125,19 +212,7 @@ const BackupRestore: React.FC = () => {
         throw new Error('invalid backup file')
       }
 
-      const normalizedApps = data.apps
-        .map((app: any, index: number) => {
-          // 兼容旧数据：如果没有 type 字段，则转为 AppItem
-          if (!app.type) {
-            return { ...app, type: 'item' as const, url: app.url || '' }
-          }
-          return app
-        })
-        .map((app, index) => ({
-          ...app,
-          order: typeof app.order === 'number' ? app.order : index
-        }))
-        .sort((a, b) => a.order - b.order)
+      const normalizedApps = normalizeBackupApps(data.apps)
 
       await appGridService.saveAll(normalizedApps)
       setApps(normalizedApps)
@@ -156,9 +231,9 @@ const BackupRestore: React.FC = () => {
       }
 
       message.success(`导入成功，共 ${normalizedApps.length} 个应用`)
-    } catch (error) {
+    } catch (error: any) {
       console.error('导入失败:', error)
-      message.error('导入失败，文件格式不正确')
+      message.error(error?.message || '导入失败，文件格式不正确')
     } finally {
       event.target.value = ''
     }

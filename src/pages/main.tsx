@@ -22,6 +22,7 @@ import SettingsSidebar from './settingsSidebar/settingsSidebar'
 import { App } from 'antd'
 import { SettingOutlined } from '@ant-design/icons'
 import WallpaperBackground from './wallpaper/WallpaperBackground'
+import type { IWallpaperConfig } from './wallpaper/types/wallpaper'
 import generalSettingsService from './generalSettings/services/generalSettings'
 import { defaultGeneralSettings } from './generalSettings/stores/generalSettings'
 import { AppCategorySidebar } from './appCategory'
@@ -77,7 +78,11 @@ const pageCollisionDetection: CollisionDetection = (args) => {
  * 新标签页主组件
  * 实现类似 macOS 风格的标签页界面
  */
-const Main: React.FC = () => {
+interface MainProps {
+  initialWallpaperConfig?: IWallpaperConfig | null
+}
+
+const Main: React.FC<MainProps> = ({ initialWallpaperConfig }) => {
   const { message } = App.useApp()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsMenu, setSettingsMenu] = useState<string | undefined>(undefined)
@@ -268,9 +273,19 @@ const Main: React.FC = () => {
       })
     }
 
+    const onAutoSyncConflict = () => {
+      message.warning({
+        key: 'deepTab-auto-sync-conflict',
+        content: '检测到云端配置已更新，请在“备份与恢复”中选择上传或恢复',
+        duration: 5
+      })
+    }
+
     window.addEventListener('dt:autoSyncSuccess', onAutoSyncSuccess)
+    window.addEventListener('dt:autoSyncConflict', onAutoSyncConflict)
     return () => {
       window.removeEventListener('dt:autoSyncSuccess', onAutoSyncSuccess)
+      window.removeEventListener('dt:autoSyncConflict', onAutoSyncConflict)
     }
   }, [message])
 
@@ -540,16 +555,21 @@ const Main: React.FC = () => {
       onClick={handlePageClick}
       onContextMenu={handlePageContextMenu}
     >
-      <WallpaperBackground />
+      <WallpaperBackground initialConfig={initialWallpaperConfig} />
 
       {/* 搜索框 */}
       <SearchBar />
 
       <div className={cn(styles.content)} ref={contentRef}>
         {/* 设置按钮 */}
-        <div className={cn(styles.settingsButton)} onClick={() => onOpenSet()}>
+        <button
+          type='button'
+          className={cn(styles.settingsButton)}
+          aria-label='打开 Deep Tab 设置'
+          onClick={() => onOpenSet()}
+        >
           <SettingOutlined style={{ fontSize: 24, color: '#fff' }} />
-        </div>
+        </button>
 
         <DndContext
           sensors={sensors}

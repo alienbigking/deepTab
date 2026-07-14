@@ -129,9 +129,10 @@ const Wallpaper: React.FC = () => {
       if (page === 1) setFeaturedWallpapers([])
       setFeaturedHasMore(false)
     } finally {
-      if (requestId !== featuredRequestIdRef.current) return
-      if (page === 1) setFeaturedLoading(false)
-      else setFeaturedLoadingMore(false)
+      if (requestId === featuredRequestIdRef.current) {
+        if (page === 1) setFeaturedLoading(false)
+        else setFeaturedLoadingMore(false)
+      }
     }
   }
 
@@ -164,9 +165,10 @@ const Wallpaper: React.FC = () => {
       if (page === 1) setDynamicWallpapers([])
       setDynamicHasMore(false)
     } finally {
-      if (requestId !== dynamicRequestIdRef.current) return
-      if (page === 1) setDynamicLoading(false)
-      else setDynamicLoadingMore(false)
+      if (requestId === dynamicRequestIdRef.current) {
+        if (page === 1) setDynamicLoading(false)
+        else setDynamicLoadingMore(false)
+      }
     }
   }
 

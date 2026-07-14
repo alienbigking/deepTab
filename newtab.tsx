@@ -11,8 +11,23 @@ import enUS from 'antd/locale/en_US'
 import { useTranslation } from 'react-i18next'
 import { AppUIProvider } from './src/common/ui'
 import useThemeStore from './src/pages/theme/stores/theme'
+import type { IWallpaperConfig } from './src/pages/wallpaper/types/wallpaper'
 
-const NewTabApp: React.FC = () => {
+interface NewTabAppProps {
+  initialWallpaperConfig?: IWallpaperConfig | null
+}
+
+const loadInitialWallpaperConfig = async (): Promise<IWallpaperConfig | null> => {
+  try {
+    const result = await chrome.storage.local.get(['wallpaperConfig'])
+    return (result.wallpaperConfig as IWallpaperConfig) || null
+  } catch (error) {
+    console.error('初始化读取 wallpaperConfig 失败:', error)
+    return null
+  }
+}
+
+const NewTabApp: React.FC<NewTabAppProps> = ({ initialWallpaperConfig }) => {
   const { i18n } = useTranslation()
   const locale = i18n.language === 'zh' ? zhCN : enUS
   const { antdThemeMode, dataTheme, init } = useThemeStore()
@@ -34,12 +49,17 @@ const NewTabApp: React.FC = () => {
         }}
       >
         <App>
-          <Main />
+          <Main initialWallpaperConfig={initialWallpaperConfig} />
         </App>
       </ConfigProvider>
     </AppUIProvider>
   )
 }
 
-const root = createRoot(document.getElementById('root') as HTMLElement)
-root.render(<NewTabApp />)
+const bootstrap = async () => {
+  const initialWallpaperConfig = await loadInitialWallpaperConfig()
+  const root = createRoot(document.getElementById('root') as HTMLElement)
+  root.render(<NewTabApp initialWallpaperConfig={initialWallpaperConfig} />)
+}
+
+void bootstrap()

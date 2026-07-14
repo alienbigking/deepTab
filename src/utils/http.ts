@@ -12,12 +12,29 @@ interface RequestOptions {
 }
 
 interface ResponseData<T = any> {
-  code?: number
+  code?: number | string
   status?: number
   data?: T
   msg?: string
   message?: string
 }
+
+export interface HttpError {
+  code: number | string
+  message: string
+  data: unknown
+  isHttpError: true
+}
+
+export const isHttpError = (error: unknown): error is HttpError => {
+  return Boolean(error && typeof error === 'object' && (error as HttpError).isHttpError)
+}
+
+const createHttpError = (
+  code: number | string,
+  message: string,
+  data: unknown = null
+): HttpError => ({ code, message, data, isHttpError: true })
 
 /**
  * 构建 URL 查询参数
@@ -55,7 +72,7 @@ const http = async <T = any>(
     headers = {},
     params,
     data,
-    timeout = 180000
+    timeout = 20000
   } = options
 
   // 构建完整 URL
@@ -88,21 +105,25 @@ const http = async <T = any>(
     fetchOptions.body = JSON.stringify(data)
   }
 
-  try {
-    // 创建超时控制
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), timeout)
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeout)
 
+  try {
     // 发起请求
     const response = await fetch(fullUrl, {
       ...fetchOptions,
       signal: controller.signal
     })
 
-    clearTimeout(timeoutId)
-
-    // 解析响应
-    const responseData = await response.json()
+    const responseText = await response.text()
+    let responseData: ResponseData<T> = {}
+    if (responseText) {
+      try {
+        responseData = JSON.parse(responseText) as ResponseData<T>
+      } catch {
+        throw createHttpError(response.status || -1, '服务端返回了无法解析的数据', responseText)
+      }
+    }
 
     // 处理 HTTP 错误状态
     if (!response.ok) {
@@ -126,38 +147,36 @@ const http = async <T = any>(
           break
       }
 
-      return Promise.reject({
-        code: response.status,
-        message: responseData.message || responseData.msg || '请求失败',
-        data: responseData
-      })
+      throw createHttpError(
+        response.status,
+        responseData.message || responseData.msg || '请求失败',
+        responseData
+      )
     }
 
     if (responseData && typeof responseData.status === 'number' && responseData.status !== 0) {
-      return Promise.reject({
-        code: responseData.status,
-        message: responseData.message || responseData.msg || '请求失败',
-        data: responseData.data
-      })
+      throw createHttpError(
+        responseData.status,
+        responseData.message || responseData.msg || '请求失败',
+        responseData.data
+      )
     }
 
     return responseData
   } catch (error: any) {
     console.error('请求异常:', error)
 
-    if (error.name === 'AbortError') {
-      return Promise.reject({
-        code: -1,
-        message: '请求超时',
-        data: null
-      })
+    if (isHttpError(error)) {
+      throw error
     }
 
-    return Promise.reject({
-      code: -1,
-      message: error.message || '网络错误',
-      data: null
-    })
+    if (error.name === 'AbortError') {
+      throw createHttpError(-1, '请求超时')
+    }
+
+    throw createHttpError(-1, error.message || '网络错误')
+  } finally {
+    clearTimeout(timeoutId)
   }
 }
 

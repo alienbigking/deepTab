@@ -1,6 +1,10 @@
 import { env } from '@/config/env'
 import http from '@/utils/http'
 import type { DeepTabSyncPayload, DeepTabSyncRecord } from '../types/deepTabSync'
+import {
+  DEEP_TAB_SYNC_CLOUD_UPDATED_AT_KEY,
+  DEEP_TAB_SYNC_CONFLICT_KEY
+} from './syncProtocol'
 
 const SYNC_KEYS = [
   'app_grid_data',
@@ -59,6 +63,14 @@ const payloadToStorage = (payload: DeepTabSyncPayload): Record<string, any> => {
 
 const buildUrl = (path: string) => `${env.HOST_API_URL.replace(/\/$/, '')}${path}`
 
+const rememberCloudRecord = async (record: DeepTabSyncRecord | null) => {
+  if (!record) return
+  await chrome.storage.local.set({
+    [DEEP_TAB_SYNC_CLOUD_UPDATED_AT_KEY]: Number(record.updateDate) || Date.now()
+  })
+  await chrome.storage.local.remove([DEEP_TAB_SYNC_CONFLICT_KEY])
+}
+
 export default {
   async collectLocalPayload(): Promise<DeepTabSyncPayload> {
     const storage = await chrome.storage.local.get(SYNC_KEYS)
@@ -85,7 +97,21 @@ export default {
         payload
       }
     })
-    return response.data?.syncData || null
+    const record = response.data?.syncData || null
+    await rememberCloudRecord(record)
+    return record
+  },
+
+  async hasCloudConflict(): Promise<boolean> {
+    const [cloud, localState] = await Promise.all([
+      this.getCloudSync(),
+      chrome.storage.local.get([DEEP_TAB_SYNC_CLOUD_UPDATED_AT_KEY])
+    ])
+    if (!cloud) return false
+
+    const knownUpdateDate = Number(localState[DEEP_TAB_SYNC_CLOUD_UPDATED_AT_KEY]) || 0
+    if (!knownUpdateDate) return true
+    return Number(cloud.updateDate) > knownUpdateDate
   },
 
   async uploadLocalToCloud(): Promise<DeepTabSyncRecord | null> {
@@ -93,11 +119,14 @@ export default {
     return this.saveCloudSync(payload)
   },
 
-  async downloadCloudToLocal(): Promise<DeepTabSyncRecord | null> {
-    const syncData = await this.getCloudSync()
+  async downloadCloudToLocal(
+    existingRecord?: DeepTabSyncRecord | null
+  ): Promise<DeepTabSyncRecord | null> {
+    const syncData = existingRecord === undefined ? await this.getCloudSync() : existingRecord
     if (syncData?.payload) {
       await this.applyPayloadToLocal(syncData.payload)
     }
+    await rememberCloudRecord(syncData)
     return syncData
   }
 }

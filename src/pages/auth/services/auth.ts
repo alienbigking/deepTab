@@ -1,5 +1,6 @@
 import { env } from '@/config/env'
-import http from '@/utils/http'
+import http, { isHttpError } from '@/utils/http'
+import requestDeepTabAutoSync from '@/pages/deepTabSync/services/autoSync'
 import type { AuthSession, LoginParams, RegisterParams } from '../types/auth'
 
 const TOKEN_KEY = 'token'
@@ -58,9 +59,14 @@ export default {
       await this.saveSession(nextSession)
       return nextSession
     } catch (error) {
-      console.warn('远端会话校验失败，已清除本地会话:', error)
-      await this.clearSession()
-      return null
+      if (isHttpError(error) && error.code === 401) {
+        console.warn('远端会话已失效，已清除本地会话')
+        await this.clearSession()
+        return null
+      }
+
+      console.warn('远端会话暂时无法校验，保留本地登录状态:', error)
+      return session
     }
   },
 
@@ -108,6 +114,7 @@ export default {
       }
     }
     await this.saveSession(session)
+    void requestDeepTabAutoSync('login')
     return session
   },
 
