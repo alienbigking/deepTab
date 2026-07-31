@@ -5,11 +5,12 @@ import { LoginOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons'
 import AuthModal from '@/pages/auth/authModal'
 import useAuthStore from '@/pages/auth/stores/auth'
 import styles from './profile.module.less'
-
-const getDisplayValue = (value?: string) => value || '未设置'
+import { useTranslation } from 'react-i18next'
 
 const Profile: React.FC = () => {
   const { message } = App.useApp()
+  const { t } = useTranslation()
+  const getDisplayValue = (value?: string) => value || t('profile.notSet', { defaultValue: 'Not set' })
   const session = useAuthStore((s) => s.session)
   const initAuth = useAuthStore((s) => s.init)
   const logout = useAuthStore((s) => s.logout)
@@ -18,7 +19,7 @@ const Profile: React.FC = () => {
   const [authOpen, setAuthOpen] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement | null>(null)
   const user = session?.user
-  const displayName = user?.nickname || user?.username || user?.userIdentifier || 'Deep Tab 用户'
+  const displayName = user?.nickname || user?.username || user?.userIdentifier || t('sidebar.user')
   const accountId = user?.userId || user?.id || user?.userIdentifier
 
   const handleAvatarChange: React.ChangeEventHandler<HTMLInputElement> = async (event) => {
@@ -26,16 +27,16 @@ const Profile: React.FC = () => {
     event.target.value = ''
     if (!file) return
     if (!file.type.startsWith('image/')) {
-      message.warning('请选择图片文件')
+      message.warning(t('profile.imageRequired', { defaultValue: 'Choose an image file' }))
       return
     }
 
     try {
       await uploadAvatar(file)
-      message.success('头像已更新')
+      message.success(t('profile.avatarUpdated', { defaultValue: 'Avatar updated' }))
     } catch (error) {
       console.error('上传头像失败:', error)
-      message.error('头像上传失败，请稍后再试')
+      message.error(t('profile.avatarFailed', { defaultValue: 'Could not upload the avatar' }))
     }
   }
 
@@ -46,7 +47,7 @@ const Profile: React.FC = () => {
 
   const handleLogout = async () => {
     await logout()
-    message.success('已退出登录')
+    message.success(t('profile.signedOut', { defaultValue: 'Signed out' }))
   }
 
   return (
@@ -58,19 +59,19 @@ const Profile: React.FC = () => {
           </div>
           <div className={cn(styles.heroInfo)}>
             <div className={cn(styles.titleRow)}>
-              <h2>{session ? displayName : '未登录'}</h2>
-              <Tag color={session ? 'success' : 'default'}>{session ? '已登录' : '游客模式'}</Tag>
+              <h2>{session ? displayName : t('sidebar.guest')}</h2>
+              <Tag color={session ? 'success' : 'default'}>{session ? t('sidebar.signedIn') : t('profile.guestMode', { defaultValue: 'Guest mode' })}</Tag>
             </div>
             <p>
               {session
-                ? '这里展示您的 DeepTab 账号基础信息，头像和资料会用于同步、反馈与邀请等功能。'
-                : '登录后可同步主页 icon、分类、Dock、设置和主题等个人配置。'}
+                ? t('profile.signedInDescription', { defaultValue: 'Your profile is used for sync, feedback, and invitations.' })
+                : t('profile.guestDescription', { defaultValue: 'Sign in to sync shortcuts, categories, Dock, settings, and themes.' })}
             </p>
             <div className={cn(styles.actions)}>
               {session ? (
                 <>
                   <Button loading={isAuthLoading} onClick={() => avatarInputRef.current?.click()}>
-                    更换头像
+                    {t('sidebar.changeAvatar')}
                   </Button>
                   <Button
                     className={styles.logoutBtn}
@@ -78,12 +79,12 @@ const Profile: React.FC = () => {
                     danger
                     onClick={() => void handleLogout()}
                   >
-                    退出登录
+                    {t('sidebar.logout')}
                   </Button>
                 </>
               ) : (
                 <Button type='primary' icon={<LoginOutlined />} onClick={() => setAuthOpen(true)}>
-                  登录 / 注册
+                  {t('sidebar.loginRegister')}
                 </Button>
               )}
             </div>
@@ -91,32 +92,32 @@ const Profile: React.FC = () => {
         </div>
       </Card>
 
-      <Card title='基本信息' className='dtSettingsCard' variant='borderless'>
+      <Card title={t('profile.basicInfo', { defaultValue: 'Basic information' })} className='dtSettingsCard' variant='borderless'>
         <Descriptions
           column={1}
           styles={{
             label: { whiteSpace: 'nowrap' }
           }}
         >
-          <Descriptions.Item label='昵称'>{getDisplayValue(user?.nickname)}</Descriptions.Item>
-          <Descriptions.Item label='用户名'>{getDisplayValue(user?.username)}</Descriptions.Item>
-          <Descriptions.Item label='账号标识'>{getDisplayValue(user?.userIdentifier)}</Descriptions.Item>
-          <Descriptions.Item label='用户 ID'>{getDisplayValue(accountId)}</Descriptions.Item>
-          <Descriptions.Item label='邮箱'>{getDisplayValue(user?.email)}</Descriptions.Item>
-          <Descriptions.Item label='手机号'>{getDisplayValue(user?.mobile)}</Descriptions.Item>
-          <Descriptions.Item label='身份类型'>{getDisplayValue(user?.identityType)}</Descriptions.Item>
-          <Descriptions.Item label='账号状态'>{getDisplayValue(user?.status)}</Descriptions.Item>
+          <Descriptions.Item label={t('profile.nickname', { defaultValue: 'Nickname' })}>{getDisplayValue(user?.nickname)}</Descriptions.Item>
+          <Descriptions.Item label={t('profile.username', { defaultValue: 'Username' })}>{getDisplayValue(user?.username)}</Descriptions.Item>
+          <Descriptions.Item label={t('profile.identifier', { defaultValue: 'Account identifier' })}>{getDisplayValue(user?.userIdentifier)}</Descriptions.Item>
+          <Descriptions.Item label={t('profile.userId', { defaultValue: 'User ID' })}>{getDisplayValue(accountId)}</Descriptions.Item>
+          <Descriptions.Item label={t('profile.email', { defaultValue: 'Email' })}>{getDisplayValue(user?.email)}</Descriptions.Item>
+          <Descriptions.Item label={t('profile.phone', { defaultValue: 'Phone' })}>{getDisplayValue(user?.mobile)}</Descriptions.Item>
+          <Descriptions.Item label={t('profile.identityType', { defaultValue: 'Identity type' })}>{getDisplayValue(user?.identityType)}</Descriptions.Item>
+          <Descriptions.Item label={t('profile.status', { defaultValue: 'Account status' })}>{getDisplayValue(user?.status)}</Descriptions.Item>
         </Descriptions>
       </Card>
 
-      <Card title='同步能力' className='dtSettingsCard' variant='borderless'>
+      <Card title={t('profile.syncFeatures', { defaultValue: 'Synced data' })} className='dtSettingsCard' variant='borderless'>
         <div className={cn(styles.syncList)}>
-          <span>主页 icon</span>
-          <span>分类</span>
+          <span>{t('profile.homeIcons', { defaultValue: 'Home icons' })}</span>
+          <span>{t('profile.categories', { defaultValue: 'Categories' })}</span>
           <span>Dock</span>
-          <span>设置</span>
-          <span>主题</span>
-          <span>个人资料</span>
+          <span>{t('common.settings')}</span>
+          <span>{t('sidebar.theme')}</span>
+          <span>{t('sidebar.profile')}</span>
         </div>
       </Card>
 

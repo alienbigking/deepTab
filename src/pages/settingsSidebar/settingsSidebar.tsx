@@ -37,6 +37,7 @@ import useAuthStore from '@/pages/auth/stores/auth'
 import LegalModal from '@/pages/legal/legalModal'
 import type { LegalDocumentType } from '@/pages/legal/legalDocuments'
 import Profile from '@/pages/profile/profile'
+import { useTranslation } from 'react-i18next'
 
 interface SettingsSidebarProps {
   open: boolean
@@ -67,6 +68,7 @@ type MenuKey =
 const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
   const { open = false, onClose, openToMenu } = props
   const { message } = App.useApp()
+  const { t, i18n } = useTranslation()
   const [activeMenu, setActiveMenu] = useState<MenuKey>('wallpaper')
   const [authOpen, setAuthOpen] = useState(false)
   const [legalType, setLegalType] = useState<LegalDocumentType | null>(null)
@@ -77,8 +79,8 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
   const isAuthLoading = useAuthStore((s) => s.isLoading)
   const user = session?.user
   const avatarInputRef = useRef<HTMLInputElement | null>(null)
-  const userName = user?.nickname || user?.username || user?.userIdentifier || 'Deep Tab 用户'
-  const userSubText = user?.email || user?.mobile || user?.userIdentifier || '已登录'
+  const userName = user?.nickname || user?.username || user?.userIdentifier || t('sidebar.user')
+  const userSubText = user?.email || user?.mobile || user?.userIdentifier || t('sidebar.signedIn')
 
   const handleAvatarChange: React.ChangeEventHandler<HTMLInputElement> = async (event) => {
     const file = event.target.files?.[0]
@@ -87,10 +89,10 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
     if (!file.type.startsWith('image/')) return
     try {
       await uploadAvatar(file)
-      message.success('头像已更新')
+      message.success(t('sidebar.avatarUpdated', { defaultValue: 'Avatar updated' }))
     } catch (error) {
       console.error('上传头像失败:', error)
-      message.error('头像上传失败，请稍后再试')
+      message.error(t('sidebar.avatarFailed', { defaultValue: 'Could not upload the avatar' }))
     }
   }
 
@@ -126,20 +128,20 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
 
   // 菜单项
   const menuItems = [
-    { key: 'profile', icon: <UserOutlined />, label: '个人信息' },
-    { key: 'subscription', icon: <CrownOutlined />, label: '订阅管理', badge: 'FREE' },
-    { key: 'invitation', icon: <GiftOutlined />, label: '我的邀请' },
-    { key: 'settings', icon: <SettingOutlined />, label: '常规设置' },
-    { key: 'wallpaper', icon: <BgColorsOutlined />, label: '壁纸' },
-    { key: 'theme', icon: <SkinOutlined />, label: '主题切换' },
-    { key: 'search', icon: <SearchOutlined />, label: '搜索引擎' },
-    { key: 'notification', icon: <BellOutlined />, label: '消息通知' },
-    { key: 'reset', icon: <ReloadOutlined />, label: '重置设置' },
-    { key: 'backup', icon: <CloudSyncOutlined />, label: '备份与恢复' },
-    { key: 'iconControl', icon: <AppstoreAddOutlined />, label: '图标控制' },
-    { key: 'about', icon: <InfoCircleOutlined />, label: '关于我们' },
-    { key: 'apps', icon: <AppstoreOutlined />, label: '相关应用' },
-    { key: 'feedback', icon: <MessageOutlined />, label: '投诉与反馈' }
+    { key: 'profile', icon: <UserOutlined />, label: t('sidebar.profile') },
+    { key: 'subscription', icon: <CrownOutlined />, label: t('sidebar.subscription'), badge: 'FREE' },
+    { key: 'invitation', icon: <GiftOutlined />, label: t('sidebar.invitation') },
+    { key: 'settings', icon: <SettingOutlined />, label: t('sidebar.general') },
+    { key: 'wallpaper', icon: <BgColorsOutlined />, label: t('sidebar.wallpaper') },
+    { key: 'theme', icon: <SkinOutlined />, label: t('sidebar.theme') },
+    { key: 'search', icon: <SearchOutlined />, label: t('sidebar.searchEngine') },
+    { key: 'notification', icon: <BellOutlined />, label: t('sidebar.notification') },
+    { key: 'reset', icon: <ReloadOutlined />, label: t('sidebar.reset') },
+    { key: 'backup', icon: <CloudSyncOutlined />, label: t('sidebar.backup') },
+    { key: 'iconControl', icon: <AppstoreAddOutlined />, label: t('sidebar.iconControl') },
+    { key: 'about', icon: <InfoCircleOutlined />, label: t('sidebar.about') },
+    { key: 'apps', icon: <AppstoreOutlined />, label: t('sidebar.relatedApps') },
+    { key: 'feedback', icon: <MessageOutlined />, label: t('sidebar.feedback') }
   ]
 
   const renderContent = () => {
@@ -175,7 +177,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
       default:
         return (
           <div className={styles.placeholderContent}>
-            <p>功能开发中...</p>
+            <p>{t('sidebar.developing', { defaultValue: 'Coming soon...' })}</p>
           </div>
         )
     }
@@ -183,7 +185,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
 
   return (
     <Drawer
-      placement='left'
+      placement={i18n.dir() === 'rtl' ? 'right' : 'left'}
       onClose={onClose}
       open={open}
       width={1000}
@@ -204,8 +206,8 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
                 trigger={['click']}
                 menu={{
                   items: [
-                    { key: 'avatar', label: isAuthLoading ? '上传中...' : '更换头像' },
-                    { key: 'logout', label: '退出登录' }
+                    { key: 'avatar', label: isAuthLoading ? t('sidebar.uploading') : t('sidebar.changeAvatar') },
+                    { key: 'logout', label: t('sidebar.logout') }
                   ],
                   onClick: async ({ key }) => {
                     if (key === 'avatar') {
@@ -226,9 +228,9 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
             ) : (
               <div className={cn(styles.userProfile)}>
                 <Avatar size={48} icon={<UserOutlined />} />
-                <span className={cn(styles.userName)}>未登录</span>
+                <span className={cn(styles.userName)}>{t('sidebar.guest')}</span>
                 <Button type='primary' size='small' onClick={() => setAuthOpen(true)}>
-                  登录 / 注册
+                  {t('sidebar.loginRegister')}
                 </Button>
               </div>
             )}
@@ -256,10 +258,10 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
             <div className={cn(styles.version)}>V2.2.22</div>
             <div className={cn(styles.links)}>
               <button type='button' onClick={() => setLegalType('terms')}>
-                用户协议
+                {t('sidebar.terms')}
               </button>
               <button type='button' onClick={() => setLegalType('privacy')}>
-                隐私政策
+                {t('sidebar.privacy')}
               </button>
             </div>
           </div>

@@ -1,14 +1,15 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import Main from './src/pages/main'
-import './src/i18n'
+import { initializeAppLanguage } from './src/i18n'
+import './src/i18n/dayjsLocale'
 import './global.less'
 import './src/common/modalMotion.css'
 import 'simplebar-react/dist/simplebar.min.css'
 import { App, ConfigProvider, theme as antdTheme } from 'antd'
-import zhCN from 'antd/locale/zh_CN'
-import enUS from 'antd/locale/en_US'
 import { useTranslation } from 'react-i18next'
+import { getAntdLocale } from './src/i18n/antdLocale'
+import { isRtlLanguage } from './src/i18n/types'
 import { AppUIProvider } from './src/common/ui'
 import useThemeStore from './src/pages/theme/stores/theme'
 import type { IWallpaperConfig } from './src/pages/wallpaper/types/wallpaper'
@@ -29,7 +30,7 @@ const loadInitialWallpaperConfig = async (): Promise<IWallpaperConfig | null> =>
 
 const NewTabApp: React.FC<NewTabAppProps> = ({ initialWallpaperConfig }) => {
   const { i18n } = useTranslation()
-  const locale = i18n.language === 'zh' ? zhCN : enUS
+  const locale = getAntdLocale(i18n.resolvedLanguage)
   const { antdThemeMode, dataTheme, init } = useThemeStore()
 
   React.useEffect(() => {
@@ -44,6 +45,7 @@ const NewTabApp: React.FC<NewTabAppProps> = ({ initialWallpaperConfig }) => {
     <AppUIProvider>
       <ConfigProvider
         locale={locale}
+        direction={isRtlLanguage(i18n.resolvedLanguage) ? 'rtl' : 'ltr'}
         theme={{
           algorithm: antdThemeMode === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm
         }}
@@ -57,6 +59,7 @@ const NewTabApp: React.FC<NewTabAppProps> = ({ initialWallpaperConfig }) => {
 }
 
 const bootstrap = async () => {
+  await initializeAppLanguage()
   const initialWallpaperConfig = await loadInitialWallpaperConfig()
   const root = createRoot(document.getElementById('root') as HTMLElement)
   root.render(<NewTabApp initialWallpaperConfig={initialWallpaperConfig} />)

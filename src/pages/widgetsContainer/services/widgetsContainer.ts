@@ -50,15 +50,15 @@ const weatherCities: IWeatherCity[] = [
 ]
 
 const weatherText = (code: number) => {
-  if ([0].includes(code)) return { condition: '晴', icon: '☀️' }
-  if ([1, 2].includes(code)) return { condition: '少云', icon: '🌤️' }
-  if ([3].includes(code)) return { condition: '阴', icon: '☁️' }
-  if ([45, 48].includes(code)) return { condition: '雾', icon: '🌫️' }
-  if ([51, 53, 55, 56, 57].includes(code)) return { condition: '毛毛雨', icon: '🌦️' }
-  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return { condition: '雨', icon: '🌧️' }
-  if ([71, 73, 75, 77, 85, 86].includes(code)) return { condition: '雪', icon: '❄️' }
-  if ([95, 96, 99].includes(code)) return { condition: '雷雨', icon: '⛈️' }
-  return { condition: '多云', icon: '🌤️' }
+  if ([0].includes(code)) return { condition: 'clear', icon: '☀️' }
+  if ([1, 2].includes(code)) return { condition: 'partlyCloudy', icon: '🌤️' }
+  if ([3].includes(code)) return { condition: 'overcast', icon: '☁️' }
+  if ([45, 48].includes(code)) return { condition: 'fog', icon: '🌫️' }
+  if ([51, 53, 55, 56, 57].includes(code)) return { condition: 'drizzle', icon: '🌦️' }
+  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return { condition: 'rain', icon: '🌧️' }
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return { condition: 'snow', icon: '❄️' }
+  if ([95, 96, 99].includes(code)) return { condition: 'thunderstorm', icon: '⛈️' }
+  return { condition: 'cloudy', icon: '🌤️' }
 }
 
 const cityAliases: Record<string, string> = {
@@ -113,19 +113,6 @@ const resolveCityNameByCoords = async (latitude: number, longitude: number, fall
   }
 }
 
-const shortWeekday = (dateText: string, index: number) => {
-  if (index === 0) return '今天'
-  if (index === 1) return '明天'
-  const date = new Date(dateText)
-  return ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][date.getDay()]
-}
-
-const shortMonthDay = (dateText: string) => {
-  const date = new Date(dateText)
-  if (Number.isNaN(date.getTime())) return ''
-  return `${date.getDate()}号`
-}
-
 const formatHour = (time: string) => {
   const date = new Date(time)
   return `${String(date.getHours()).padStart(2, '0')}:00`
@@ -134,7 +121,8 @@ const formatHour = (time: string) => {
 const fallbackWeather = (city: string): IWeatherData => ({
   temperature: 20,
   apparentTemperature: 21,
-  condition: '晴',
+  condition: 'clear',
+  weatherCode: 0,
   icon: '☀️',
   city,
   updatedAt: new Date().toISOString(),
@@ -149,7 +137,7 @@ const fallbackWeather = (city: string): IWeatherData => ({
   sunrise: '06:12',
   sunset: '18:42',
   hourly: [
-    { time: '现在', icon: '☀️', temperature: 20, precipitationProbability: 10 },
+    { time: 'now', icon: '☀️', temperature: 20, precipitationProbability: 10 },
     { time: '+1h', icon: '🌤️', temperature: 21, precipitationProbability: 12 },
     { time: '+2h', icon: '🌤️', temperature: 22, precipitationProbability: 8 },
     { time: '+3h', icon: '☁️', temperature: 21, precipitationProbability: 15 },
@@ -157,11 +145,11 @@ const fallbackWeather = (city: string): IWeatherData => ({
     { time: '+5h', icon: '🌧️', temperature: 19, precipitationProbability: 36 }
   ],
   forecast: [
-    { day: '今天', icon: '☀️', condition: '晴', temperature: 24, minTemperature: 16, precipitationProbability: 10 },
-    { day: '明天', icon: '🌤️', condition: '少云', temperature: 25, minTemperature: 17, precipitationProbability: 12 },
-    { day: '周三', icon: '🌧️', condition: '雨', temperature: 21, minTemperature: 15, precipitationProbability: 62 },
-    { day: '周四', icon: '☁️', condition: '阴', temperature: 22, minTemperature: 14, precipitationProbability: 30 },
-    { day: '周五', icon: '☀️', condition: '晴', temperature: 26, minTemperature: 17, precipitationProbability: 8 }
+    { day: new Date().toISOString(), icon: '☀️', condition: 'clear', weatherCode: 0, temperature: 24, minTemperature: 16, precipitationProbability: 10 },
+    { day: new Date(Date.now() + 86400000).toISOString(), icon: '🌤️', condition: 'partlyCloudy', weatherCode: 1, temperature: 25, minTemperature: 17, precipitationProbability: 12 },
+    { day: new Date(Date.now() + 172800000).toISOString(), icon: '🌧️', condition: 'rain', weatherCode: 61, temperature: 21, minTemperature: 15, precipitationProbability: 62 },
+    { day: new Date(Date.now() + 259200000).toISOString(), icon: '☁️', condition: 'overcast', weatherCode: 3, temperature: 22, minTemperature: 14, precipitationProbability: 30 },
+    { day: new Date(Date.now() + 345600000).toISOString(), icon: '☀️', condition: 'clear', weatherCode: 0, temperature: 26, minTemperature: 17, precipitationProbability: 8 }
   ]
 })
 
@@ -405,6 +393,7 @@ const fetchWeatherByCity = async (picked: IWeatherCity): Promise<IWeatherData> =
     temperature: Math.round(Number(data?.current?.temperature_2m || 0)),
     apparentTemperature: Math.round(Number(data?.current?.apparent_temperature || 0)),
     condition: current.condition,
+    weatherCode: Number(data?.current?.weather_code || 0),
     icon: current.icon,
     city: picked.name,
     cityKey: picked.key,
@@ -423,7 +412,7 @@ const fetchWeatherByCity = async (picked: IWeatherCity): Promise<IWeatherData> =
       const idx = nowIndex + offset
       const info = weatherText(Number(hourlyCodes[idx] || 0))
       return {
-        time: offset === 0 ? '现在' : formatHour(time),
+        time: offset === 0 ? 'now' : formatHour(time),
         icon: info.icon,
         temperature: Math.round(Number(hourlyTemps[idx] || 0)),
         precipitationProbability: Math.round(Number(hourlyPop[idx] || 0))
@@ -432,10 +421,11 @@ const fetchWeatherByCity = async (picked: IWeatherCity): Promise<IWeatherData> =
     forecast: dailyCodes.slice(0, 5).map((code: number, index: number) => {
       const info = weatherText(Number(code))
       return {
-        day: shortWeekday(dailyTimes[index], index),
-        date: shortMonthDay(dailyTimes[index]),
+        day: dailyTimes[index],
+        date: dailyTimes[index],
         icon: info.icon,
         condition: info.condition,
+        weatherCode: Number(code),
         temperature: Math.round(Number(dailyMax[index] || 0)),
         minTemperature: Math.round(Number(dailyMin[index] || 0)),
         precipitationProbability: Math.round(Number(dailyPop[index] || 0))

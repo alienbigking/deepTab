@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Modal, Input, message } from 'antd'
 import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 import styles from './createFolderModal.module.less'
+import { useTranslation } from 'react-i18next'
 
 interface CreateFolderModalProps {
   visible: boolean
@@ -15,10 +16,11 @@ const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
   onCreateFolder
 }) => {
   const [folderName, setFolderName] = useState('')
+  const { t } = useTranslation()
 
   const handleOk = () => {
     if (!folderName.trim()) {
-      message.error('请输入文件夹名称')
+      message.error(t('folder.nameRequired', { defaultValue: 'Enter a folder name' }))
       return
     }
 
@@ -34,12 +36,12 @@ const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
 
   return (
     <Modal
-      title='创建文件夹'
+      title={t('folder.create', { defaultValue: 'Create folder' })}
       open={visible}
       onOk={handleOk}
       onCancel={handleCancel}
-      okText='创建'
-      cancelText='取消'
+      okText={t('common.add')}
+      cancelText={t('common.cancel')}
       centered
       rootClassName={styles.createFolderModalRoot}
       className={styles.createFolderModal}
@@ -48,7 +50,7 @@ const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
       maskStyle={modalMaskStyle}
     >
       <Input
-        placeholder='请输入文件夹名称'
+        placeholder={t('folder.namePlaceholder', { defaultValue: 'Enter a folder name' })}
         value={folderName}
         onChange={(e) => setFolderName(e.target.value)}
         onPressEnter={handleOk}

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import cn from 'classnames'
+import { useTranslation } from 'react-i18next'
 import { App, Button, Dropdown, Form, Input, Popover } from 'antd'
 import {
   PlusOutlined,
@@ -61,6 +62,7 @@ interface AppCategorySidebarProps {
 const AppCategorySidebar: React.FC<AppCategorySidebarProps> = (props) => {
   const { position = 'right' } = props
   const { message, modal } = App.useApp()
+  const { t } = useTranslation()
   const {
     categories,
     activeCategoryId,
@@ -226,7 +228,7 @@ const AppCategorySidebar: React.FC<AppCategorySidebarProps> = (props) => {
           <div className={cn(styles.labelItems)}>
             {visibleCategories.map((c) => (
               <div key={c.id} className={cn(styles.label)}>
-                {c.name}
+                {t(`categories.${c.id}`, { defaultValue: c.name })}
               </div>
             ))}
           </div>
@@ -237,7 +239,7 @@ const AppCategorySidebar: React.FC<AppCategorySidebarProps> = (props) => {
             className={cn(styles.avatar)}
             role='button'
             tabIndex={0}
-            title='个人信息'
+            title={t('sidebar.profile')}
             onClick={openProfileSettings}
             onKeyDown={(event) => {
               if (event.key === 'Enter' || event.key === ' ') {
@@ -262,10 +264,10 @@ const AppCategorySidebar: React.FC<AppCategorySidebarProps> = (props) => {
                 trigger={['contextMenu']}
                 menu={{
                   items: [
-                    { key: 'edit', label: '编辑' },
+                    { key: 'edit', label: t('common.edit') },
                     {
                       key: 'delete',
-                      label: '删除',
+                      label: t('common.delete'),
                       danger: true,
                       disabled: BUILTIN_CATEGORY_IDS.has(c.id)
                     }

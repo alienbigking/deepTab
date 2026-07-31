@@ -10,6 +10,7 @@ import AddAppModalNav from './addAppModalNav'
 import useAppCategoryStore from '@/pages/appCategory/stores/appCategory'
 import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 import { isImageIconSource } from './iconFallback'
+import { useTranslation } from 'react-i18next'
 
 interface AddAppModalProps {
   open: boolean
@@ -34,17 +35,22 @@ interface RecommendedApp {
   widgetSpan?: 2 | 4
 }
 
-const categoryItems: { key: AppCategory; label: string }[] = [
-  { key: 'all', label: '全部' },
-  { key: 'efficiency', label: '效率' },
-  { key: 'ai', label: 'AI' },
-  { key: 'dev', label: '开发' },
-  { key: 'study', label: '学习' },
-  { key: 'video', label: '视频' },
-  { key: 'social', label: '社交' },
-  { key: 'shopping', label: '购物' },
-  { key: 'design', label: '设计' }
+const categoryItems: { key: AppCategory }[] = [
+  { key: 'all' },
+  { key: 'efficiency' },
+  { key: 'ai' },
+  { key: 'dev' },
+  { key: 'study' },
+  { key: 'video' },
+  { key: 'social' },
+  { key: 'shopping' },
+  { key: 'design' }
 ]
+const categoryFallbacks: Record<AppCategory, string> = {
+  all: 'All', efficiency: 'Productivity', ai: 'AI', dev: 'Development', study: 'Learning',
+  video: 'Video', social: 'Social', shopping: 'Shopping', design: 'Design'
+}
+const builtInCategoryIds = new Set(['home', 'ai', 'design', 'dev', 'shop'])
 
 const navApps: RecommendedApp[] = [
   {
@@ -324,6 +330,11 @@ const iconTextFromName = (value: string) => {
 const AddAppModal: React.FC<AddAppModalProps> = (props) => {
   const { open = false, editingApp = null, onClose, onSuccess } = props
   const { message } = App.useApp()
+  const { t } = useTranslation()
+  const localizedCategoryItems = categoryItems.map((item) => ({
+    ...item,
+    label: t(`addAppCatalog.categories.${item.key}`, { defaultValue: categoryFallbacks[item.key] })
+  }))
   const [form] = Form.useForm()
   const [activeSidebar, setActiveSidebar] = useState<AddAppModalSidebarMode>('nav')
   const [activeSubTab, setActiveSubTab] = useState<AppSort>('today')
@@ -372,10 +383,28 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
 
   const categoryOptions = categories.map((category) => ({
     value: category.id,
-    label: `添加到：${category.name}`
+    label: `${t('addApp.addTo', { defaultValue: 'Add to' })}: ${builtInCategoryIds.has(category.id)
+      ? t(`categories.${category.id}`, { defaultValue: category.name })
+      : category.name}`
   }))
 
-  const recommendedApps = activeSidebar === 'widgets' ? widgetApps : navApps
+  const recommendedApps = useMemo(
+    () => activeSidebar === 'widgets'
+      ? widgetApps.map((app) => ({
+          ...app,
+          name: app.key === 'widget_calendar'
+            ? t('calendar.title')
+            : app.key === 'widget_weather'
+              ? t('weather.title')
+              : app.key === 'widget_todo'
+                ? t('todo.title')
+                : app.key === 'widget_hot_search'
+                  ? t('hotSearch.title')
+                  : app.name
+        }))
+      : navApps,
+    [activeSidebar, t]
+  )
 
   const filteredRecommendedApps = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase()
@@ -394,7 +423,7 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
       }
       return 0
     })
-  }, [activeCategory, activeSidebar, activeSubTab, recommendedApps, searchKeyword])
+  }, [activeCategory, activeSubTab, recommendedApps, searchKeyword])
 
   const handleSidebarChange = (mode: AddAppModalSidebarMode) => {
     setActiveSidebar(mode)
@@ -409,7 +438,7 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
     const fallbackName = fallbackNameFromUrl(url)
 
     if (!icon) {
-      if (manual) message.warning('请先输入有效的网站地址')
+      if (manual) message.warning(t('addApp.validUrl', { defaultValue: 'Enter a valid website address' }))
       return
     }
 
@@ -428,9 +457,9 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
       const resolvedIcon = await resolveFaviconIcon(url)
       if (autoFillIdRef.current !== requestId) return
       if (resolvedIcon) form.setFieldValue('icon', resolvedIcon)
-      if (manual) message.success('已获取网站图标')
+      if (manual) message.success(t('addApp.iconFetched', { defaultValue: 'Website icon found' }))
     } catch (error) {
-      if (manual) message.info('已使用默认网站图标')
+      if (manual) message.info(t('addApp.defaultIcon', { defaultValue: 'Using the default website icon' }))
     } finally {
       if (autoFillIdRef.current === requestId) setAutoFilling(false)
     }
@@ -464,12 +493,12 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
         categoryId: targetCategoryId,
         widgetSpan: app.widgetSpan
       })
-      message.success(`已添加 ${app.name}`)
+      message.success(t('addApp.added', { name: app.name, defaultValue: `Added ${app.name}` }))
       onSuccess()
       onClose()
     } catch (error) {
       console.error('添加失败:', error)
-      message.error('添加失败，请稍后重试')
+      message.error(t('addApp.failed', { defaultValue: 'Could not add the app' }))
     } finally {
       setSaving(false)
     }
@@ -500,14 +529,14 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
 
       if (editingApp) {
         await appGridService.update(editingApp.id, payload)
-        message.success('更新成功')
+        message.success(t('addApp.updated', { defaultValue: 'App updated' }))
         onSuccess()
         onClose()
         return
       }
 
       await appGridService.add(payload as AddAppParams)
-      message.success('添加成功')
+      message.success(t('addApp.success', { defaultValue: 'App added' }))
       onSuccess()
 
       if (closeAfterSave) {
@@ -532,12 +561,12 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
 
   const listNode =
     filteredRecommendedApps.length === 0 ? (
-      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description='没有找到匹配的应用' />
+      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('addApp.noMatches', { defaultValue: 'No matching apps found' })} />
     ) : activeSidebar === 'widgets' ? (
       <AddAppModalWidgets
         apps={filteredRecommendedApps}
         activeCategory={activeCategory}
-        categories={categoryItems}
+        categories={localizedCategoryItems}
         activeSubTab={activeSubTab}
         loading={saving}
         onChangeCategory={setActiveCategory}
@@ -548,7 +577,7 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
       <AddAppModalNav
         apps={filteredRecommendedApps}
         activeCategory={activeCategory}
-        categories={categoryItems}
+        categories={localizedCategoryItems}
         activeSubTab={activeSubTab}
         loading={saving}
         onChangeCategory={setActiveCategory}
@@ -559,7 +588,7 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
 
   return (
     <Modal
-      title={editingApp ? '编辑应用' : '添加应用'}
+      title={editingApp ? t('addApp.edit', { defaultValue: 'Edit app' }) : t('addApp.title', { defaultValue: 'Add app' })}
       open={open}
       onCancel={handleCancel}
       rootClassName={styles.addAppModalRoot}
@@ -577,12 +606,12 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
 
         <div className={styles.addAppContent}>
           <div className={styles.addAppHeader}>
-            <div>{editingApp ? '调整应用信息和所属分类' : '选择常用网站快速添加，或切换到“自定义图标”手动填写'}</div>
+            <div>{editingApp ? t('addApp.editHint', { defaultValue: 'Update app details and category' }) : t('addApp.hint', { defaultValue: 'Choose a common website or switch to Custom icon' })}</div>
           </div>
 
           <div className={styles.addAppSearchRow}>
             <Input.Search
-              placeholder={activeSidebar === 'custom' ? '自定义模式无需搜索' : '搜索站点或应用'}
+              placeholder={activeSidebar === 'custom' ? t('addApp.customNoSearch', { defaultValue: 'Search is not needed in custom mode' }) : t('addApp.search', { defaultValue: 'Search sites or apps' })}
               allowClear
               disabled={activeSidebar === 'custom'}
               value={searchKeyword}
@@ -591,7 +620,7 @@ const AddAppModal: React.FC<AddAppModalProps> = (props) => {
             <Select
               style={{ width: 160 }}
               value={targetCategoryId}
-              options={categoryOptions.length ? categoryOptions : [{ value: 'home', label: '添加到：主页' }]}
+              options={categoryOptions.length ? categoryOptions : [{ value: 'home', label: `${t('addApp.addTo', { defaultValue: 'Add to' })}: ${t('addApp.home', { defaultValue: 'Home' })}` }]}
               onChange={setTargetCategoryId}
             />
           </div>

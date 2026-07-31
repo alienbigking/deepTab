@@ -29,6 +29,8 @@ import type {
 import { initDefaultApps } from './initData'
 import { isImageIconSource } from './iconFallback'
 import { useNotification } from '@/common/ui'
+import syncPresentationStyles from '@/pages/deepTabSync/syncPresentation.module.less'
+import { useTranslation } from 'react-i18next'
 import useAppCategoryStore from '@/pages/appCategory/stores/appCategory'
 import useBottomBarStore from '@/pages/bottomBar/stores/bottomBar'
 
@@ -161,6 +163,7 @@ const getIconTextFromName = (value?: string) => {
 
 const AppGrid: React.FC = () => {
   const { message, modal } = App.useApp()
+  const { t } = useTranslation()
   const { showNotification } = useNotification()
   const [isEditMode, setIsEditMode] = useState(false)
   const [contextMenuData, setContextMenuData] = useState<ContextMenuState | null>(null)
@@ -287,20 +290,23 @@ const AppGrid: React.FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await appGridService.delete(id)
-      message.success('删除成功，应用已从首页移除')
+      message.success(t('appGrid.deleted', { defaultValue: 'App removed from the home page' }))
       await loadApps()
     } catch (error) {
       console.error('删除失败:', error)
-      message.error('删除失败，请稍后重试')
+      message.error(t('appGrid.deleteFailed', { defaultValue: 'Could not delete the app' }))
     }
   }
 
   const confirmDelete = (id: string) => {
     modal.confirm({
-      title: '确认删除',
-      content: '确定要删除这个应用吗?',
-      okText: '删除',
-      cancelText: '取消',
+      title: t('appGrid.deleteTitle', { defaultValue: 'Delete app' }),
+      content: t('appGrid.deleteConfirm', { defaultValue: 'Delete this app?' }),
+      okText: t('common.delete'),
+      cancelText: t('common.cancel'),
+      rootClassName: syncPresentationStyles.modalRoot,
+      className: syncPresentationStyles.modal,
+      transitionName: '',
       maskTransitionName: modalMaskTransitionName,
       maskStyle: modalMaskStyle,
       onOk: () => handleDelete(id)

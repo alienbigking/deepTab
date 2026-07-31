@@ -1,4 +1,5 @@
 import {
+  DEEP_TAB_SYNC_APPLIED,
   DEEP_TAB_SYNC_PENDING_KEY,
   DEEP_TAB_SYNC_CONFLICT,
   DEEP_TAB_SYNC_REQUEST,
@@ -22,6 +23,11 @@ const registerSuccessListener = () => {
     if (message?.type === DEEP_TAB_SYNC_CONFLICT) {
       window.dispatchEvent(
         new CustomEvent('dt:autoSyncConflict', { detail: { source: message.source } })
+      )
+    }
+    if (message?.type === DEEP_TAB_SYNC_APPLIED) {
+      window.dispatchEvent(
+        new CustomEvent('dt:autoSyncApplied', { detail: { source: message.source } })
       )
     }
   })

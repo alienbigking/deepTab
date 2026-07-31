@@ -7,6 +7,7 @@ interface IWeatherData {
   temperature: number
   apparentTemperature?: number
   condition: string
+  weatherCode?: number
   icon: string
   city?: string
   cityKey?: string
@@ -30,6 +31,7 @@ interface IForecastItem {
   date?: string
   icon: string
   condition?: string
+  weatherCode?: number
   temperature: number
   minTemperature?: number
   precipitationProbability?: number

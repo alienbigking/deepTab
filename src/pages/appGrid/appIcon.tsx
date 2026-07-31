@@ -4,6 +4,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { CloseCircleFilled, FolderFilled } from '@ant-design/icons'
 import cn from 'classnames'
 import styles from './appGrid.module.less'
+import { useTranslation } from 'react-i18next'
 import type { AppNode, AppItem, AppFolder, IconSettings } from './types/appGrid'
 import { createFallbackIcon, isImageIconSource } from './iconFallback'
 
@@ -23,6 +24,7 @@ interface AppIconProps {
  * 支持拖拽、长按进入编辑模式、右键菜单、文件夹点击打开
  */
 const AppIcon: React.FC<AppIconProps> = (props) => {
+  const { t } = useTranslation()
   const {
     node,
     isEditMode = false,
@@ -210,7 +212,7 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
               e.stopPropagation()
               onDelete(node.id)
             }}
-            aria-label='删除'
+            aria-label={t('common.delete')}
           >
             <CloseCircleFilled />
           </button>

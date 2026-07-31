@@ -11,15 +11,23 @@ import type {
   IWallpaperConfig,
   IWallpaperPageResult
 } from './types/wallpaper'
+import { useTranslation } from 'react-i18next'
 
 const WALLPAPER_BATCH_SIZE = 18
 const WALLPAPER_CATEGORIES = ['全部', '动物', '植物', '动漫', '街头', '城市', '科技', '天空', '海洋', '自然', '其他']
 const ANGLE_TICK_COUNT = 72
+const CATEGORY_FALLBACKS: Record<string, string> = {
+  '全部': 'All', '动物': 'Animals', '植物': 'Plants', '动漫': 'Anime', '街头': 'Street',
+  '城市': 'Cities', '科技': 'Technology', '天空': 'Sky', '海洋': 'Ocean', '自然': 'Nature', '其他': 'Other'
+}
 
 /**
  * 壁纸选择组件
  */
 const Wallpaper: React.FC = () => {
+  const { t } = useTranslation()
+  const categoryLabel = (category: string) =>
+    t(`wallpaper.categories.${category}`, { defaultValue: CATEGORY_FALLBACKS[category] || category })
   const [angle, setAngle] = useState(135)
   const angleValueRef = useRef(angle)
   const [brightness, setBrightness] = useState(100)
@@ -563,9 +571,9 @@ const Wallpaper: React.FC = () => {
         activeKey={activeTab}
         onChange={setActiveTab}
         items={[
-          { key: 'featured', label: '精选图片' },
-          { key: 'dynamic', label: '动态壁纸' },
-          { key: 'gradient', label: '渐变背景' }
+          { key: 'featured', label: t('wallpaper.featured', { defaultValue: 'Featured images' }) },
+          { key: 'dynamic', label: t('wallpaper.dynamic', { defaultValue: 'Live wallpapers' }) },
+          { key: 'gradient', label: t('wallpaper.gradient', { defaultValue: 'Gradients' }) }
         ]}
         className={styles.wallpaperTabs}
       />
@@ -578,7 +586,7 @@ const Wallpaper: React.FC = () => {
               className={`${styles.categoryPill} ${featuredCategory === category ? styles.active : ''}`}
               onClick={() => handleCategoryChange(category)}
             >
-              {category}
+              {categoryLabel(category)}
             </div>
           ))}
         </div>
@@ -592,7 +600,7 @@ const Wallpaper: React.FC = () => {
               className={`${styles.categoryPill} ${dynamicCategory === category ? styles.active : ''}`}
               onClick={() => setDynamicCategory(category)}
             >
-              {category}
+              {categoryLabel(category)}
             </div>
           ))}
         </div>
@@ -607,7 +615,7 @@ const Wallpaper: React.FC = () => {
               onClick={() => setSelectedColor(color.key)}
             >
               {color.key === 'all' ? (
-                <span className={styles.allText}>All</span>
+                <span className={styles.allText}>{t('wallpaper.all', { defaultValue: 'All' })}</span>
               ) : (
                 <div className={styles.colorDot} style={{ background: color.color }} />
               )}
@@ -630,7 +638,7 @@ const Wallpaper: React.FC = () => {
               </div>
             ) : featuredWallpapers.length === 0 ? (
               <div className={styles.emptyWrap}>
-                <Empty description='暂无壁纸' />
+                <Empty description={t('wallpaper.noImages', { defaultValue: 'No wallpapers' })} />
               </div>
             ) : (
               featuredWallpapers.map((wallpaper) => {
@@ -655,7 +663,7 @@ const Wallpaper: React.FC = () => {
                     {applying && (
                       <div className={styles.loadingMask}>
                         <Spin size='small' />
-                        <span>加载中...</span>
+                        <span>{t('common.loading')}</span>
                       </div>
                     )}
                   </div>
@@ -700,7 +708,7 @@ const Wallpaper: React.FC = () => {
               </div>
             ) : dynamicWallpapers.length === 0 ? (
               <div className={styles.emptyWrap}>
-                <Empty description='暂无动态壁纸' />
+                <Empty description={t('wallpaper.noDynamic', { defaultValue: 'No live wallpapers' })} />
               </div>
             ) : (
               dynamicWallpapers.map((wallpaper) => {
@@ -726,7 +734,7 @@ const Wallpaper: React.FC = () => {
                     {applying && (
                       <div className={styles.loadingMask}>
                         <Spin size='small' />
-                        <span>加载中...</span>
+                        <span>{t('common.loading')}</span>
                       </div>
                     )}
                   </div>
@@ -746,7 +754,7 @@ const Wallpaper: React.FC = () => {
       {activeTab === 'gradient' && (
         <div className={`${styles.controls} ${styles.gradientControls}`}>
           <div className={styles.controlItem}>
-            <span className={styles.controlLabel}>角度</span>
+            <span className={styles.controlLabel}>{t('wallpaper.angle', { defaultValue: 'Angle' })}</span>
             <div className={styles.controlBody}>
               <div
                 ref={angleDialRef}
@@ -777,7 +785,7 @@ const Wallpaper: React.FC = () => {
             </div>
           </div>
           <div className={styles.controlItem}>
-            <span className={styles.controlLabel}>色彩</span>
+            <span className={styles.controlLabel}>{t('wallpaper.saturation', { defaultValue: 'Saturation' })}</span>
             <div className={styles.controlBody}>
               <Slider
                 className={styles.slider}
@@ -790,7 +798,7 @@ const Wallpaper: React.FC = () => {
             </div>
           </div>
           <div className={styles.controlItem}>
-            <span className={styles.controlLabel}>亮度</span>
+            <span className={styles.controlLabel}>{t('wallpaper.brightness', { defaultValue: 'Brightness' })}</span>
             <div className={styles.controlBody}>
               <Slider
                 className={styles.slider}
@@ -803,7 +811,7 @@ const Wallpaper: React.FC = () => {
             </div>
           </div>
           <div className={styles.controlItem}>
-            <span className={styles.controlLabel}>模糊</span>
+            <span className={styles.controlLabel}>{t('wallpaper.blur', { defaultValue: 'Blur' })}</span>
             <div className={styles.controlBody}>
               <Slider
                 className={styles.slider}
@@ -824,7 +832,7 @@ const Wallpaper: React.FC = () => {
           {activeTab === 'dynamic' && (
             <>
               <div className={styles.controlItem}>
-                <span className={styles.controlLabel}>静音</span>
+                <span className={styles.controlLabel}>{t('wallpaper.mute', { defaultValue: 'Mute' })}</span>
                 <Switch
                   checked={dynamicMuted}
                   onChange={handleDynamicMutedChange}
@@ -832,7 +840,7 @@ const Wallpaper: React.FC = () => {
                 />
               </div>
               <div className={styles.controlItem}>
-                <span className={styles.controlLabel}>暂停</span>
+                <span className={styles.controlLabel}>{t('wallpaper.pause', { defaultValue: 'Pause' })}</span>
                 <Switch
                   checked={dynamicPaused}
                   onChange={handleDynamicPausedChange}
@@ -842,7 +850,7 @@ const Wallpaper: React.FC = () => {
             </>
           )}
           <div className={styles.controlItem}>
-            <span className={styles.controlLabel}>模糊</span>
+            <span className={styles.controlLabel}>{t('wallpaper.blur', { defaultValue: 'Blur' })}</span>
             <div className={styles.sliderWrap}>
               <Slider
                 className={styles.slider}

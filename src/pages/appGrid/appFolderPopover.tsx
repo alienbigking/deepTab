@@ -6,6 +6,7 @@ import styles from './appFolderPopover.module.less'
 import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 import type { AppNode, AppItem, AppFolder, IconSettings } from './types/appGrid'
 import DraggableFolderIcon from './draggableFolderIcon'
+import { useTranslation } from 'react-i18next'
 
 interface AppFolderPopoverProps {
   folder: AppFolder
@@ -29,6 +30,7 @@ const AppFolderPopover: React.FC<AppFolderPopoverProps> = ({
   onDeleteItem,
   onUpdateFolder
 }) => {
+  const { t } = useTranslation()
   const [isEditing, setIsEditing] = useState(false)
   const [folderName, setFolderName] = useState(folder.name)
 
@@ -61,8 +63,8 @@ const AppFolderPopover: React.FC<AppFolderPopoverProps> = ({
       return (
         <div className={styles.emptyFolder}>
           <div className={styles.emptyIcon}>📁</div>
-          <div className={styles.emptyText}>文件夹为空</div>
-          <div className={styles.emptyHint}>拖拽图标到此处添加</div>
+          <div className={styles.emptyText}>{t('folder.empty', { defaultValue: 'Folder is empty' })}</div>
+          <div className={styles.emptyHint}>{t('folder.dropHint', { defaultValue: 'Drag icons here to add them' })}</div>
         </div>
       )
     }

@@ -9,6 +9,7 @@ import { CloseCircleFilled } from '@ant-design/icons'
 import type { AppItem, IconSettings } from './types/appGrid'
 import cn from 'classnames'
 import styles from './appGrid.module.less'
+import { useTranslation } from 'react-i18next'
 import { createFallbackIcon, isImageIconSource } from './iconFallback'
 
 const animateLayoutChanges: AnimateLayoutChanges = (args) =>
@@ -31,6 +32,7 @@ const DroppableIcon: React.FC<DroppableIconProps> = ({
   onContextMenu,
   onLongPress
 }) => {
+  const { t } = useTranslation()
   const [iconLoadFailed, setIconLoadFailed] = React.useState(false)
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
     useSortable({
@@ -126,7 +128,7 @@ const DroppableIcon: React.FC<DroppableIconProps> = ({
               e.stopPropagation()
               onDelete(icon.id)
             }}
-            aria-label='删除'
+            aria-label={t('common.delete')}
           >
             <CloseCircleFilled />
           </button>

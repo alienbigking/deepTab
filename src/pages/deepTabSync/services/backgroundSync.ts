@@ -1,11 +1,13 @@
 import deepTabSyncService from './deepTabSync'
 import {
+  DEEP_TAB_SYNC_APPLIED,
   DEEP_TAB_SYNC_PENDING_KEY,
   DEEP_TAB_SYNC_CONFLICT,
   DEEP_TAB_SYNC_CONFLICT_KEY,
   DEEP_TAB_SYNC_RETRY_ALARM,
   DEEP_TAB_SYNC_SUCCESS,
   type DeepTabSyncMessage,
+  type DeepTabSyncConflictState,
   type DeepTabSyncPendingState
 } from './syncProtocol'
 
@@ -49,6 +51,15 @@ const notifyConflict = async (source?: string) => {
   }
 }
 
+const notifyApplied = async (source?: string) => {
+  const message: DeepTabSyncMessage = { type: DEEP_TAB_SYNC_APPLIED, source }
+  try {
+    await chrome.runtime.sendMessage(message)
+  } catch {
+    // Local storage is already updated and will be read on the next page load.
+  }
+}
+
 export const runPendingDeepTabSync = async (): Promise<void> => {
   if (syncing) {
     rerunRequested = true
@@ -63,23 +74,31 @@ export const runPendingDeepTabSync = async (): Promise<void> => {
     const auth = await chrome.storage.local.get(['token'])
     if (!auth.token) return
 
-    if (pending.source === 'login') {
-      const cloud = await deepTabSyncService.getCloudSync()
-      if (cloud?.payload) {
-        await deepTabSyncService.downloadCloudToLocal(cloud)
-        await chrome.storage.local.remove([DEEP_TAB_SYNC_PENDING_KEY])
-        await notifySuccess('login')
-        return
-      }
-    } else if (await deepTabSyncService.hasCloudConflict()) {
+    const comparison = await deepTabSyncService.compareLocalAndCloud()
+    if (comparison.status === 'conflict') {
       await chrome.storage.local.set({
         [DEEP_TAB_SYNC_CONFLICT_KEY]: {
           source: pending.source,
-          detectedAt: Date.now()
-        }
+          detectedAt: Date.now(),
+          cloud: comparison.cloud
+        } satisfies DeepTabSyncConflictState
       })
       await chrome.storage.local.remove([DEEP_TAB_SYNC_PENDING_KEY])
       await notifyConflict(pending.source)
+      return
+    }
+
+    if (comparison.status === 'equal') {
+      if (comparison.cloud) await deepTabSyncService.markCloudAsBaseline(comparison.cloud)
+      await chrome.storage.local.remove([DEEP_TAB_SYNC_PENDING_KEY])
+      await notifySuccess(pending.source)
+      return
+    }
+
+    if (comparison.status === 'cloudOnly') {
+      await deepTabSyncService.downloadCloudToLocal(comparison.cloud)
+      await chrome.storage.local.remove([DEEP_TAB_SYNC_PENDING_KEY])
+      await notifyApplied(pending.source)
       return
     }
 

@@ -37,6 +37,9 @@ import RemoteNotificationBridge from './notification/RemoteNotificationBridge'
 import { BOTTOM_BAR_DROPPABLE_ID } from './bottomBar/bottomBar'
 import { MAIN_GRID_DROPPABLE_ID } from './appGrid/appGrid'
 import { isImageIconSource } from './appGrid/iconFallback'
+import SyncConflictModal from './deepTabSync/SyncConflictModal'
+import syncPresentationStyles from './deepTabSync/syncPresentation.module.less'
+import { useTranslation } from 'react-i18next'
 
 const pageCollisionDetection: CollisionDetection = (args) => {
   const isContainerId = (id: string | number) =>
@@ -83,7 +86,8 @@ interface MainProps {
 }
 
 const Main: React.FC<MainProps> = ({ initialWallpaperConfig }) => {
-  const { message } = App.useApp()
+  const { message, notification } = App.useApp()
+  const { t } = useTranslation()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsMenu, setSettingsMenu] = useState<string | undefined>(undefined)
   const [showIcp, setShowIcp] = useState(defaultGeneralSettings.other.showIcp)
@@ -266,28 +270,20 @@ const Main: React.FC<MainProps> = ({ initialWallpaperConfig }) => {
 
   useEffect(() => {
     const onAutoSyncSuccess = () => {
-      message.success({
+      notification.success({
         key: 'deepTab-auto-sync-success',
-        content: '已同步',
-        duration: 1.6
-      })
-    }
-
-    const onAutoSyncConflict = () => {
-      message.warning({
-        key: 'deepTab-auto-sync-conflict',
-        content: '检测到云端配置已更新，请在“备份与恢复”中选择上传或恢复',
-        duration: 5
+        message: t('sync.synced'),
+        placement: 'topLeft',
+        duration: 2.4,
+        className: syncPresentationStyles.syncNotification
       })
     }
 
     window.addEventListener('dt:autoSyncSuccess', onAutoSyncSuccess)
-    window.addEventListener('dt:autoSyncConflict', onAutoSyncConflict)
     return () => {
       window.removeEventListener('dt:autoSyncSuccess', onAutoSyncSuccess)
-      window.removeEventListener('dt:autoSyncConflict', onAutoSyncConflict)
     }
-  }, [message])
+  }, [notification, t])
 
   useEffect(() => {
     void initCategories()
@@ -565,7 +561,7 @@ const Main: React.FC<MainProps> = ({ initialWallpaperConfig }) => {
         <button
           type='button'
           className={cn(styles.settingsButton)}
-          aria-label='打开 Deep Tab 设置'
+          aria-label={t('common.openSettings', { defaultValue: 'Open Deep Tab settings' })}
           onClick={() => onOpenSet()}
         >
           <SettingOutlined style={{ fontSize: 24, color: '#fff' }} />
@@ -681,6 +677,7 @@ const Main: React.FC<MainProps> = ({ initialWallpaperConfig }) => {
         )}
 
         <RemoteNotificationBridge />
+        <SyncConflictModal />
         {appCategorySidebarVisible && <AppCategorySidebar position={appCategorySidebarPosition} />}
       </div>
     </div>

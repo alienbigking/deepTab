@@ -7,7 +7,8 @@ import addAppModalStyles from '@/pages/appGrid/addAppModal.module.less'
 import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 import styles from './widgets.module.less'
 import DayJS from 'dayjs'
-import 'dayjs/locale/zh-cn'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 
 interface ICalendarDay {
   key: string
@@ -22,8 +23,6 @@ interface ICalendarDay {
   lunarMonth?: string
   lunarFestival?: string
 }
-
-const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
 
 const FESTIVALS: Record<string, string> = {
   '01-01': '元旦',
@@ -115,6 +114,17 @@ const LUNAR_DAY_TEXT = [
   '三十'
 ]
 
+const INTERNATIONAL_HOLIDAYS: Record<string, string> = {
+  '01-01': 'newYear',
+  '02-14': 'valentinesDay',
+  '03-08': 'womensDay',
+  '04-01': 'aprilFoolsDay',
+  '05-01': 'laborDay',
+  '10-31': 'halloween',
+  '12-24': 'christmasEve',
+  '12-25': 'christmasDay'
+}
+
 const getLunarInfo = (date: DayJS.Dayjs) => {
   try {
     const text = new Intl.DateTimeFormat('zh-CN-u-ca-chinese', {
@@ -141,56 +151,87 @@ const getDayLabel = (date: DayJS.Dayjs) => {
   return getLunarInfo(date).lunarFestival || FESTIVALS[key] || SOLAR_TERMS[key] || ''
 }
 
+const getLocalizedDayLabel = (date: DayJS.Dayjs, t: TFunction, showChineseCalendar: boolean) => {
+  if (showChineseCalendar) return getDayLabel(date)
+  const holidayKey = INTERNATIONAL_HOLIDAYS[date.format('MM-DD')]
+  return holidayKey ? t(`internationalHolidays.${holidayKey}`) : ''
+}
+
 const getWeekOfYear = (date: DayJS.Dayjs) => {
   const firstDay = date.startOf('year')
   const passedDays = date.diff(firstDay, 'day')
   return Math.ceil((passedDays + ((firstDay.day() + 6) % 7) + 1) / 7)
 }
 
-const getFestivalInfo = (date: DayJS.Dayjs) => {
-  const todayKey = date.format('MM-DD')
-  const todayFestival = getLunarInfo(date).lunarFestival || FESTIVALS[todayKey] || SOLAR_TERMS[todayKey]
+const getFestivalInfo = (date: DayJS.Dayjs, t: TFunction, showChineseCalendar: boolean) => {
+  const todayFestival = getLocalizedDayLabel(date, t, showChineseCalendar)
   if (todayFestival) {
     return {
-      label: `今天是${todayFestival}`,
-      detail: '愿今天有一点值得记住'
+      label: t('calendar.todayFestival', { festival: todayFestival }),
+      detail: t('calendar.todayFestivalDetail')
     }
   }
 
   const next = Array.from({ length: 370 }, (_, index) => {
     const candidate = date.add(index + 1, 'day')
-    const candidateKey = candidate.format('MM-DD')
-    const name = getLunarInfo(candidate).lunarFestival || FESTIVALS[candidateKey] || SOLAR_TERMS[candidateKey]
+    const name = getLocalizedDayLabel(candidate, t, showChineseCalendar)
     return name ? { name, days: index + 1 } : null
   }).find(Boolean)
 
   return {
-    label: next ? `下个节日 · ${next.name}` : '近期暂无节日',
-    detail: next ? `${next.days} 天后` : '保持好心情'
+    label: next
+      ? t('calendar.nextFestival', { festival: next.name })
+      : t('calendar.noRecentFestival'),
+    detail: next
+      ? t('calendar.daysLater', { count: next.days })
+      : t('calendar.keepGoodMood')
   }
 }
 
 const CalendarWidget: React.FC = () => {
+  const { t, i18n } = useTranslation()
+  const locale = i18n.resolvedLanguage || i18n.language || 'en'
+  const showChineseCalendar = locale === 'zh-CN'
+  const formatDate = (date: DayJS.Dayjs, includeDay = true) =>
+    new Intl.DateTimeFormat(locale, {
+      year: 'numeric',
+      month: 'long',
+      ...(includeDay ? { day: 'numeric' } : {})
+    }).format(date.toDate())
+  const formatWeekday = (date: DayJS.Dayjs) =>
+    new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(date.toDate())
+  const weekdays = Array.from({ length: 7 }, (_, index) =>
+    new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(
+      new Date(2024, 0, index + 1)
+    )
+  )
   const [open, setOpen] = useState(false)
-  const today = DayJS().locale('zh-cn')
+  const today = DayJS()
   const [viewMonth, setViewMonth] = useState(() => today.startOf('month'))
 
   const yearOptions = useMemo(
     () =>
       Array.from({ length: 21 }, (_, index) => {
         const year = today.year() - 10 + index
-        return { label: `${year}年`, value: year }
+        return {
+          label: new Intl.DateTimeFormat(locale, { year: 'numeric' }).format(
+            new Date(year, 0, 1)
+          ),
+          value: year
+        }
       }),
-    [today.year()]
+    [locale, today.year()]
   )
 
   const monthOptions = useMemo(
     () =>
       Array.from({ length: 12 }, (_, index) => ({
-        label: `${index + 1}月`,
+        label: new Intl.DateTimeFormat(locale, { month: 'long' }).format(
+          new Date(2024, index, 1)
+        ),
         value: index
       })),
-    []
+    [locale]
   )
 
   const monthDays = useMemo<ICalendarDay[]>(() => {
@@ -201,7 +242,7 @@ const CalendarWidget: React.FC = () => {
 
     return Array.from({ length: totalCells }, (_, index) => {
       const date = startDate.add(index, 'day')
-      const lunarInfo = getLunarInfo(date)
+      const lunarInfo = showChineseCalendar ? getLunarInfo(date) : {}
       return {
         key: date.format('YYYY-MM-DD'),
         day: date.date(),
@@ -209,25 +250,27 @@ const CalendarWidget: React.FC = () => {
         muted: date.month() !== viewMonth.month(),
         today: date.isSame(today, 'day'),
         weekend: [0, 6].includes(date.day()),
-        festival: FESTIVALS[date.format('MM-DD')],
-        solarTerm: SOLAR_TERMS[date.format('MM-DD')],
+        festival: showChineseCalendar
+          ? FESTIVALS[date.format('MM-DD')]
+          : getLocalizedDayLabel(date, t, false) || undefined,
+        solarTerm: showChineseCalendar ? SOLAR_TERMS[date.format('MM-DD')] : undefined,
         ...lunarInfo
       }
     })
-  }, [today.format('YYYY-MM-DD'), viewMonth.format('YYYY-MM')])
+  }, [showChineseCalendar, t, today.format('YYYY-MM-DD'), viewMonth.format('YYYY-MM')])
 
   const currentMonthDays = monthDays.filter((item) => !item.muted)
   const monthWeekendCount = currentMonthDays.filter((item) => item.weekend).length
   const monthMarkedDays = currentMonthDays.filter((item) => item.festival || item.solarTerm || item.lunarFestival)
-  const todayLabel = getDayLabel(today)
-  const todayLunarInfo = getLunarInfo(today)
+  const todayLabel = getLocalizedDayLabel(today, t, showChineseCalendar)
+  const todayLunarInfo = showChineseCalendar ? getLunarInfo(today) : {}
 
   const dayOfYear = today.diff(today.startOf('year'), 'day') + 1
   const daysInYear = today.endOf('year').diff(today.startOf('year'), 'day') + 1
   const daysLeft = daysInYear - dayOfYear
   const weekOfYear = getWeekOfYear(today)
   const isCurrentMonth = viewMonth.isSame(today, 'month')
-  const festivalInfo = getFestivalInfo(today)
+  const festivalInfo = getFestivalInfo(today, t, showChineseCalendar)
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen)
@@ -245,18 +288,20 @@ const CalendarWidget: React.FC = () => {
       >
         <div className={styles.calendarWidget}>
           <div className={styles.calendarCompactTop}>
-            <span>{today.format('YYYY年M月')}</span>
-            <b>{today.format('dddd')}</b>
+            <span>{formatDate(today, false)}</span>
+            <b>{formatWeekday(today)}</b>
           </div>
           <div className={styles.calendarCompactMain}>
             <strong>{today.date()}</strong>
             <div>
-              <span>今天</span>
-              <em>第 {dayOfYear} 天</em>
-              <div className={styles.calendarCompactMeta}>
-                <i>{todayLunarInfo.lunarMonth}{todayLunarInfo.lunarDay}</i>
-                {todayLabel && <i>{todayLabel}</i>}
-              </div>
+              <span>{t('calendar.today', { defaultValue: 'Today' })}</span>
+              <em>{t('calendar.dayOfYear', { value: dayOfYear, defaultValue: `Day ${dayOfYear}` })}</em>
+              {showChineseCalendar && (
+                <div className={styles.calendarCompactMeta}>
+                  <i>{todayLunarInfo.lunarMonth}{todayLunarInfo.lunarDay}</i>
+                  {todayLabel && <i>{todayLabel}</i>}
+                </div>
+              )}
             </div>
           </div>
           <div className={styles.calendarFestival}>
@@ -267,7 +312,7 @@ const CalendarWidget: React.FC = () => {
       </Card>
 
       <Modal
-        title='日期'
+        title={t('calendar.title', { defaultValue: 'Calendar' })}
         open={open}
         onCancel={() => handleOpenChange(false)}
         rootClassName={`${addAppModalStyles.addAppModalRoot} ${styles.widgetModalRoot}`}
@@ -284,13 +329,15 @@ const CalendarWidget: React.FC = () => {
         <div className={styles.widgetModalBody}>
           <div className={styles.calendarModalHero}>
             <div>
-              <span>今天</span>
-              <strong>{today.format('YYYY年M月D日')}</strong>
-              <em>{today.format('dddd')}</em>
-              <div className={styles.calendarHeroMeta}>
-                <i>{todayLunarInfo.lunarMonth}{todayLunarInfo.lunarDay}</i>
-                {(todayLabel || festivalInfo.label) && <i>{todayLabel || festivalInfo.label}</i>}
-              </div>
+              <span>{t('calendar.today', { defaultValue: 'Today' })}</span>
+              <strong>{formatDate(today)}</strong>
+              <em>{formatWeekday(today)}</em>
+              {showChineseCalendar && (
+                <div className={styles.calendarHeroMeta}>
+                  <i>{todayLunarInfo.lunarMonth}{todayLunarInfo.lunarDay}</i>
+                  {(todayLabel || festivalInfo.label) && <i>{todayLabel || festivalInfo.label}</i>}
+                </div>
+              )}
             </div>
             <b>{today.date()}</b>
           </div>
@@ -298,9 +345,9 @@ const CalendarWidget: React.FC = () => {
           <div className={styles.calendarModalContent}>
             <section className={styles.calendarMonthPanel}>
               <div className={styles.calendarMonthToolbar}>
-                <div className={styles.calendarMonthTitle}>{viewMonth.format('YYYY年M月')}</div>
+                <div className={styles.calendarMonthTitle}>{formatDate(viewMonth, false)}</div>
                 <div className={styles.calendarMonthActions}>
-                  <Tooltip title='上个月'>
+                  <Tooltip title={t('calendar.previousMonth', { defaultValue: 'Previous month' })}>
                     <Button
                       size='small'
                       shape='circle'
@@ -322,7 +369,7 @@ const CalendarWidget: React.FC = () => {
                     options={monthOptions}
                     onChange={(month) => setViewMonth((value) => value.month(month))}
                   />
-                  <Tooltip title='回到今天'>
+                  <Tooltip title={t('calendar.backToday', { defaultValue: 'Back to today' })}>
                     <Button
                       size='small'
                       shape='circle'
@@ -331,7 +378,7 @@ const CalendarWidget: React.FC = () => {
                       onClick={() => setViewMonth(today.startOf('month'))}
                     />
                   </Tooltip>
-                  <Tooltip title='下个月'>
+                  <Tooltip title={t('calendar.nextMonth', { defaultValue: 'Next month' })}>
                     <Button
                       size='small'
                       shape='circle'
@@ -343,30 +390,41 @@ const CalendarWidget: React.FC = () => {
               </div>
 
               <div className={styles.calendarWeekdays}>
-                {WEEKDAYS.map((weekday) => (
+                {weekdays.map((weekday) => (
                   <span key={weekday}>{weekday}</span>
                 ))}
               </div>
               <div className={styles.calendarGrid}>
-                {monthDays.map((item) => (
-                  <span
-                    key={item.key}
-                    className={cn(styles.calendarDayCell, {
-                      [styles.muted]: item.muted,
-                      [styles.today]: item.today,
-                      [styles.weekend]: item.weekend && !item.today,
-                      [styles.markedDay]: !!(item.festival || item.solarTerm || item.lunarFestival) && !item.today
-                    })}
-                  >
-                    {(item.lunarFestival || item.festival || item.solarTerm) && (
-                      <em className={styles.calendarDayTopLabel}>
-                        {item.lunarFestival || item.festival || item.solarTerm}
-                      </em>
-                    )}
-                    <b>{item.day}</b>
-                    <em>{item.lunarDay || item.lunarMonth}</em>
-                  </span>
-                ))}
+                {monthDays.map((item) => {
+                  const dayLabel = item.lunarFestival || item.festival || item.solarTerm || ''
+                  const isLongLabel = Array.from(dayLabel).length > 7
+
+                  return (
+                    <span
+                      key={item.key}
+                      className={cn(styles.calendarDayCell, {
+                        [styles.muted]: item.muted,
+                        [styles.today]: item.today,
+                        [styles.weekend]: item.weekend && !item.today,
+                        [styles.markedDay]: !!dayLabel && !item.today
+                      })}
+                    >
+                      {dayLabel && (
+                        <em
+                          className={cn(
+                            styles.calendarDayTopLabel,
+                            isLongLabel && styles.calendarDayTopLabelLong
+                          )}
+                          title={dayLabel}
+                        >
+                          {dayLabel}
+                        </em>
+                      )}
+                      <b>{item.day}</b>
+                      {(item.lunarDay || item.lunarMonth) && <em>{item.lunarDay || item.lunarMonth}</em>}
+                    </span>
+                  )
+                })}
               </div>
             </section>
 
@@ -374,8 +432,8 @@ const CalendarWidget: React.FC = () => {
               <SimpleBar className={`${styles.calendarInfoScroller} dtPrettyScrollbar`} autoHide>
                 <section className={styles.calendarInfoPanelInner}>
                   <div className={styles.calendarTodayCard}>
-                    <span>今日提示</span>
-                    <strong>{todayLabel || (today.day() === 0 || today.day() === 6 ? '周末' : '工作日')}</strong>
+                    <span>{t('calendar.todayTip', { defaultValue: 'Today' })}</span>
+                    <strong>{todayLabel || (today.day() === 0 || today.day() === 6 ? t('calendar.weekend', { defaultValue: 'Weekend' }) : t('calendar.workday', { defaultValue: 'Workday' }))}</strong>
                     <em>
                       {festivalInfo.label} · {festivalInfo.detail}
                     </em>
@@ -383,22 +441,22 @@ const CalendarWidget: React.FC = () => {
 
                   <div className={styles.calendarStats}>
                     <div>
-                      <span>今年第</span>
-                      <strong>{dayOfYear} 天</strong>
+                      <span>{t('calendar.dayOfYearLabel', { defaultValue: 'Day of year' })}</span>
+                      <strong>{dayOfYear}</strong>
                     </div>
                     <div>
-                      <span>本年第</span>
-                      <strong>{weekOfYear} 周</strong>
+                      <span>{t('calendar.weekOfYear', { defaultValue: 'Week of year' })}</span>
+                      <strong>{weekOfYear}</strong>
                     </div>
                     <div>
-                      <span>剩余</span>
-                      <strong>{daysLeft} 天</strong>
+                      <span>{t('calendar.remaining', { defaultValue: 'Days remaining' })}</span>
+                      <strong>{daysLeft}</strong>
                     </div>
                   </div>
 
                   <div className={styles.calendarYearProgress}>
                     <div>
-                      <span>今年进度</span>
+                      <span>{t('calendar.yearProgress', { defaultValue: 'Year progress' })}</span>
                       <strong>{Math.round((dayOfYear / daysInYear) * 100)}%</strong>
                     </div>
                     <i style={{ width: `${(dayOfYear / daysInYear) * 100}%` }} />
@@ -406,25 +464,25 @@ const CalendarWidget: React.FC = () => {
 
                   <div className={styles.calendarMonthSummary}>
                     <div>
-                      <span>本月周末</span>
-                      <strong>{monthWeekendCount} 天</strong>
+                      <span>{t('calendar.monthWeekends', { defaultValue: 'Weekend days' })}</span>
+                      <strong>{monthWeekendCount}</strong>
                     </div>
                     <div>
-                      <span>本月节日/节气</span>
-                      <strong>{monthMarkedDays.length} 个</strong>
+                      <span>{t('calendar.monthEvents', { defaultValue: 'Events this month' })}</span>
+                      <strong>{monthMarkedDays.length}</strong>
                     </div>
                   </div>
 
                   <div className={styles.calendarFestivalList}>
-                    <span>本月标记</span>
+                    <span>{t('calendar.monthMarkers', { defaultValue: 'This month' })}</span>
                     {monthMarkedDays.length ? (
                       monthMarkedDays.map((item) => (
                         <em key={item.key}>
-                          {item.date.format('M月D日')} · {item.lunarFestival || item.festival || item.solarTerm}
+                          {formatDate(item.date)} · {item.lunarFestival || item.festival || item.solarTerm}
                         </em>
                       ))
                     ) : (
-                      <em>本月暂无节日或节气</em>
+                      <em>{t('calendar.noEvents', { defaultValue: 'No marked dates this month' })}</em>
                     )}
                   </div>
                 </section>

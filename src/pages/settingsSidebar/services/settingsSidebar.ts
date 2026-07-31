@@ -1,5 +1,6 @@
 import { IAppSettings } from '../types/settingsSidebar'
 import requestDeepTabAutoSync from '@/pages/deepTabSync/services/autoSync'
+import { normalizeLanguage } from '@/i18n/types'
 
 /**
  * settingsSidebar 服务层
@@ -9,8 +10,8 @@ export default {
   async getAppSettings(): Promise<IAppSettings> {
     try {
       const result = await chrome.storage.local.get(['appSettings'])
-      return (
-        result.appSettings || {
+      const stored = result.appSettings as IAppSettings | undefined
+      return stored ? { ...stored, language: normalizeLanguage(stored.language) } : {
           wallpaper: {
             type: 'gradient',
             gradient: 'linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #ff8c42 100%)'
@@ -21,10 +22,9 @@ export default {
             style: 'digital'
           },
           searchEngine: 'baidu',
-          language: 'zh',
+          language: 'zh-CN',
           theme: 'auto'
         }
-      )
     } catch (error) {
       console.error('获取应用设置失败:', error)
       return {
@@ -38,7 +38,7 @@ export default {
           style: 'digital'
         },
         searchEngine: 'baidu',
-        language: 'zh',
+        language: 'zh-CN',
         theme: 'auto'
       }
     }

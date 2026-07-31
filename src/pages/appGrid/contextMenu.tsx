@@ -17,6 +17,7 @@ import {
 import cn from 'classnames'
 import styles from './contextMenu.module.less'
 import type { AppFolder } from './types/appGrid'
+import { useTranslation } from 'react-i18next'
 
 interface ContextMenuProps {
   visible: boolean
@@ -58,6 +59,7 @@ const ContextMenu: React.FC<ContextMenuProps> = (props) => {
     onRandomWallpaper,
     onEditHome
   } = props
+  const { t } = useTranslation()
   const menuWidth = 220
   const menuHeight = nodeType === 'blank' ? 268 : nodeType === 'item' ? 236 : 128
   const menuX = Math.min(Math.max(x + 8, 8), window.innerWidth - menuWidth - 8)
@@ -94,12 +96,12 @@ const ContextMenu: React.FC<ContextMenuProps> = (props) => {
       items.push(
         {
           key: 'open-current',
-          label: '在当前标签页打开',
+          label: t('context.openCurrent', { defaultValue: 'Open in current tab' }),
           icon: <FolderOpenOutlined />
         },
         {
           key: 'open-new',
-          label: '在新标签页打开',
+          label: t('context.openNew', { defaultValue: 'Open in new tab' }),
           icon: <FolderAddOutlined />
         }
       )
@@ -114,28 +116,28 @@ const ContextMenu: React.FC<ContextMenuProps> = (props) => {
       items.push(
         {
           key: 'add-app',
-          label: '添加应用',
+          label: t('context.addApp', { defaultValue: 'Add app' }),
           icon: <AppstoreAddOutlined />
         },
         {
           key: 'create-folder',
-          label: '创建文件夹',
+          label: t('context.createFolder', { defaultValue: 'Create folder' }),
           icon: <PlusOutlined />
         },
         { type: 'divider' },
         {
           key: 'download-wallpaper',
-          label: '下载当前壁纸',
+          label: t('context.downloadWallpaper', { defaultValue: 'Download current wallpaper' }),
           icon: <DownloadOutlined />
         },
         {
           key: 'random-wallpaper',
-          label: '随机壁纸',
+          label: t('context.randomWallpaper', { defaultValue: 'Random wallpaper' }),
           icon: <BgColorsOutlined />
         },
         {
           key: 'edit-home',
-          label: '编辑主页',
+          label: t('context.editHome', { defaultValue: 'Edit home page' }),
           icon: <LayoutOutlined />
         }
       )
@@ -145,7 +147,7 @@ const ContextMenu: React.FC<ContextMenuProps> = (props) => {
     if (nodeType === 'item' && allFolders.length > 0) {
       items.push({
         key: 'move-to-folder',
-        label: '移动到文件夹',
+        label: t('context.moveToFolder', { defaultValue: 'Move to folder' }),
         icon: <FolderOutlined />,
         children: allFolders.map((folder) => ({
           key: `move-to-${folder.id}`,
@@ -160,12 +162,12 @@ const ContextMenu: React.FC<ContextMenuProps> = (props) => {
       items.push(
         {
           key: 'edit',
-          label: nodeType === 'folder' ? '重命名/封面' : '编辑',
+          label: nodeType === 'folder' ? t('context.renameFolder', { defaultValue: 'Rename / cover' }) : t('common.edit'),
           icon: <EditOutlined />
         },
         {
           key: 'delete',
-          label: nodeType === 'folder' ? '删除文件夹' : '删除',
+          label: nodeType === 'folder' ? t('context.deleteFolder', { defaultValue: 'Delete folder' }) : t('common.delete'),
           icon: <DeleteOutlined />,
           danger: true
         }
@@ -175,7 +177,7 @@ const ContextMenu: React.FC<ContextMenuProps> = (props) => {
     if (nodeType === 'widget') {
       items.push({
         key: 'delete',
-        label: '移除小组件',
+        label: t('context.removeWidget', { defaultValue: 'Remove widget' }),
         icon: <DeleteOutlined />,
         danger: true
       })

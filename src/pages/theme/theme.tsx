@@ -5,9 +5,11 @@ import { SunOutlined, MoonOutlined, BulbOutlined, SkinOutlined } from '@ant-desi
 import styles from './theme.module.less'
 import themeService from './services/theme'
 import useThemeStore from './stores/theme'
+import { useTranslation } from 'react-i18next'
 
 const Theme: React.FC = () => {
   const { config, setConfig, init } = useThemeStore()
+  const { t } = useTranslation()
 
   useEffect(() => {
     void init()
@@ -22,31 +24,31 @@ const Theme: React.FC = () => {
 
   return (
     <div className={cn(styles.container)}>
-      <Card title='主题模式' className='dtSettingsCard' variant='borderless'>
+      <Card title={t('theme.title', { defaultValue: 'Theme mode' })} className='dtSettingsCard' variant='borderless'>
         <Radio.Group value={config.mode} onChange={handleChange}>
           <Space direction='vertical' size='large'>
             <Radio value='default'>
               <Space>
                 <SkinOutlined />
-                默认模式
+                {t('theme.default', { defaultValue: 'Default' })}
               </Space>
             </Radio>
             <Radio value='light'>
               <Space>
                 <SunOutlined />
-                浅色模式
+                {t('theme.light', { defaultValue: 'Light' })}
               </Space>
             </Radio>
             <Radio value='dark'>
               <Space>
                 <MoonOutlined />
-                深色模式
+                {t('theme.dark', { defaultValue: 'Dark' })}
               </Space>
             </Radio>
             <Radio value='system'>
               <Space>
                 <BulbOutlined />
-                跟随系统
+                {t('theme.system', { defaultValue: 'Use system setting' })}
               </Space>
             </Radio>
           </Space>

@@ -5,9 +5,11 @@ import { CopyOutlined, GiftOutlined, MailOutlined } from '@ant-design/icons'
 import styles from './invitation.module.less'
 import invitationService from './services/invitation'
 import type { IInvitationRecord, IInvitationStats } from './types/invitation'
+import { useTranslation } from 'react-i18next'
 
 const Invitation: React.FC = () => {
   const { message } = App.useApp()
+  const { t, i18n } = useTranslation()
   const [stats, setStats] = useState<IInvitationStats>({
     totalInvites: 0,
     successfulInvites: 0,
@@ -33,13 +35,13 @@ const Invitation: React.FC = () => {
 
   const copy = async (text: string) => {
     await navigator.clipboard.writeText(text)
-    message.success('已复制')
+    message.success(t('invitation.copied', { defaultValue: 'Copied' }))
   }
 
   const sendInvitation = async () => {
     const value = email.trim()
     if (!value) {
-      message.warning('请输入邮箱')
+      message.warning(t('invitation.emailRequired', { defaultValue: 'Enter an email address' }))
       return
     }
 
@@ -49,10 +51,10 @@ const Invitation: React.FC = () => {
       setRecords((prev) => [data.record, ...prev])
       setStats(data.stats)
       setEmail('')
-      message.success('邀请邮件已发送')
+      message.success(t('invitation.sent', { defaultValue: 'Invitation email sent' }))
     } catch (error: any) {
       console.error('发送邀请邮件失败:', error)
-      message.error(error?.message || '发送邀请失败，请稍后再试')
+      message.error(t('invitation.failed', { defaultValue: 'Could not send the invitation' }))
     } finally {
       setSending(false)
     }
@@ -60,12 +62,12 @@ const Invitation: React.FC = () => {
 
   const getStatusMeta = (status: IInvitationRecord['inviteeStatus']) => {
     if (status === 'registered') {
-      return { text: '已注册', className: styles.statusRegistered }
+      return { text: t('invitation.registered', { defaultValue: 'Registered' }), className: styles.statusRegistered }
     }
     if (status === 'subscribed') {
-      return { text: '已订阅', className: styles.statusSubscribed }
+      return { text: t('invitation.subscribed', { defaultValue: 'Subscribed' }), className: styles.statusSubscribed }
     }
-    return { text: '待接受', className: styles.statusPending }
+    return { text: t('invitation.pending', { defaultValue: 'Pending' }), className: styles.statusPending }
   }
 
   return (
@@ -74,27 +76,27 @@ const Invitation: React.FC = () => {
         <Space direction='vertical' size='large' className={cn(styles.cardContent)}>
           <div className={cn(styles.header)}>
             <GiftOutlined className={styles.headerIcon} />
-            <h2>邀请好友，获得奖励</h2>
+            <h2>{t('invitation.title', { defaultValue: 'Invite friends and earn rewards' })}</h2>
           </div>
 
           <div className={cn(styles.inviteCode)}>
-            <span>邀请码</span>
+            <span>{t('invitation.code', { defaultValue: 'Invitation code' })}</span>
             <Input value={stats.inviteCode} readOnly className={styles.inviteInput} />
             <Button type='primary' icon={<CopyOutlined />} onClick={() => void copy(stats.inviteCode)}>
-              复制
+              {t('invitation.copy', { defaultValue: 'Copy' })}
             </Button>
           </div>
 
           <div className={cn(styles.inviteCode)}>
-            <span>邀请链接</span>
+            <span>{t('invitation.link', { defaultValue: 'Invitation link' })}</span>
             <Input value={inviteLink} readOnly className={styles.inviteInput} />
             <Button type='primary' icon={<CopyOutlined />} onClick={() => void copy(inviteLink)}>
-              复制
+              {t('invitation.copy', { defaultValue: 'Copy' })}
             </Button>
           </div>
 
           <div className={cn(styles.inviteCode)}>
-            <span>发送邀请</span>
+            <span>{t('invitation.send', { defaultValue: 'Send invitation' })}</span>
             <Input
               value={email}
               onChange={(event) => setEmail(event.target.value)}
@@ -108,25 +110,25 @@ const Invitation: React.FC = () => {
               loading={sending}
               onClick={() => void sendInvitation()}
             >
-              发送
+              {t('invitation.sendButton', { defaultValue: 'Send' })}
             </Button>
           </div>
 
           <div className={cn(styles.stats)}>
-            <div>已邀请：{stats.totalInvites} 人</div>
-            <div>成功注册：{stats.successfulInvites} 人</div>
-            <div>累计奖励：{stats.totalRewards} 元</div>
+            <div>{t('invitation.invited', { defaultValue: 'Invited' })}: {stats.totalInvites}</div>
+            <div>{t('invitation.successful', { defaultValue: 'Registered' })}: {stats.successfulInvites}</div>
+            <div>{t('invitation.rewards', { defaultValue: 'Rewards' })}: {stats.totalRewards}</div>
           </div>
 
           <List
             size='small'
             dataSource={records}
-            locale={{ emptyText: '暂无邀请记录' }}
+            locale={{ emptyText: t('invitation.empty', { defaultValue: 'No invitation records' }) }}
             renderItem={(item) => (
               <List.Item className={styles.recordItem}>
                 <List.Item.Meta
                   title={item.inviteeEmail}
-                  description={new Date(item.inviteDate).toLocaleString()}
+                  description={new Date(item.inviteDate).toLocaleString(i18n.resolvedLanguage)}
                 />
                 <Tag className={cn(styles.statusTag, getStatusMeta(item.inviteeStatus).className)} bordered={false}>
                   {getStatusMeta(item.inviteeStatus).text}

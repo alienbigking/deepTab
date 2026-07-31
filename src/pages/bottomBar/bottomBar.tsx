@@ -12,6 +12,7 @@ import AddAppModal from '@/pages/appGrid/addAppModal'
 import appGridService from '@/pages/appGrid/services/appGrid'
 import type { AppItem } from '@/pages/appGrid/types/appGrid'
 import { createFallbackIcon, isImageIconSource } from '@/pages/appGrid/iconFallback'
+import { useTranslation } from 'react-i18next'
 
 interface BottomBarProps {
   activeCategoryId?: string
@@ -99,6 +100,7 @@ const DockSortableItem: React.FC<DockItemProps> = (props) => {
 }
 
 const BottomBar: React.FC<BottomBarProps> = (props) => {
+  const { t } = useTranslation()
   const { activeCategoryId = 'home' } = props
   const apps = useAppGridStore((s) => s.apps)
   const setApps = useAppGridStore((s) => s.setApps)
@@ -169,7 +171,7 @@ const BottomBar: React.FC<BottomBarProps> = (props) => {
             ))}
           </SortableContext>
         ) : (
-          <span className={styles.dockEmpty}>拖入图标到此处</span>
+          <span className={styles.dockEmpty}>{t('dock.dropHere', { defaultValue: 'Drag icons here' })}</span>
         )}
       </div>
 

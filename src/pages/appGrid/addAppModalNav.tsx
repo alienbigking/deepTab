@@ -2,6 +2,7 @@ import React from 'react'
 import { Button, Tabs } from 'antd'
 import cn from 'classnames'
 import styles from './addAppModalNav.module.less'
+import { useTranslation } from 'react-i18next'
 
 interface RecommendedApp {
   key: string
@@ -33,6 +34,8 @@ const AddAppModalNav: React.FC<AddAppModalNavProps> = ({
   onChangeSubTab,
   onAddApp
 }) => {
+  const { t } = useTranslation()
+
   return (
     <div className={styles.container}>
       <div className={styles.categoryRow}>
@@ -54,9 +57,9 @@ const AddAppModalNav: React.FC<AddAppModalNavProps> = ({
           activeKey={activeSubTab}
           onChange={(key) => onChangeSubTab(key as 'today' | 'recent' | 'popular')}
           items={[
-            { key: 'today', label: '今日推荐' },
-            { key: 'recent', label: '最近更新' },
-            { key: 'popular', label: '最受欢迎' }
+            { key: 'today', label: t('addAppCatalog.tabs.today') },
+            { key: 'recent', label: t('addAppCatalog.tabs.recent') },
+            { key: 'popular', label: t('addAppCatalog.tabs.popular') }
           ]}
         />
       </div>
@@ -82,7 +85,7 @@ const AddAppModalNav: React.FC<AddAppModalNavProps> = ({
                   onAddApp(app)
                 }}
               >
-                添加
+                {t('addAppCatalog.add')}
               </Button>
             </div>
           </div>

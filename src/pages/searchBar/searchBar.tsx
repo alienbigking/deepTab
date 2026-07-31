@@ -16,6 +16,7 @@ import { defaultGeneralSettings } from '../generalSettings/stores/generalSetting
 import searchBarService from './services/searchBar'
 import searchSuggestionService from './services/searchSuggestion'
 import type { ISearchFavoriteItem, ISearchHistoryItem } from './types/searchBar'
+import { useTranslation } from 'react-i18next'
 
 /**
  * 搜索框组件
@@ -31,6 +32,7 @@ const SearchBar: React.FC = () => {
   const [history, setHistory] = useState<ISearchHistoryItem[]>([])
   const [favorites, setFavorites] = useState<ISearchFavoriteItem[]>([])
   const [activeIndex, setActiveIndex] = useState(-1)
+  const { t } = useTranslation()
 
   const wrapRef = useRef<HTMLDivElement | null>(null)
   const requestIdRef = useRef(0)
@@ -418,7 +420,7 @@ const SearchBar: React.FC = () => {
         <Input
           className={styles.searchInput}
           size='large'
-          placeholder='输入关键词搜索'
+          placeholder={t('search.placeholder', { defaultValue: 'Search the web' })}
           prefix={
             <Space size={8} className={styles.prefixWrap}>
               <span
@@ -517,7 +519,7 @@ const SearchBar: React.FC = () => {
                 <div className={styles.engineTileIcon}>
                   <PlusOutlined />
                 </div>
-                <div className={styles.engineTileLabel}>添加</div>
+                <div className={styles.engineTileLabel}>{t('common.add')}</div>
               </div>
             </div>
           </div>
@@ -534,7 +536,7 @@ const SearchBar: React.FC = () => {
             {showSuggestPanel && (
               <>
                 <div className={styles.panelHeader}>
-                  <div>搜索建议</div>
+                  <div>{t('search.suggestions', { defaultValue: 'Search suggestions' })}</div>
                 </div>
 
                 <div className={styles.panelList}>
@@ -563,7 +565,7 @@ const SearchBar: React.FC = () => {
               <div className={styles.quickPanel}>
                 <div className={styles.quickSection}>
                   <div className={styles.sectionHeader}>
-                    <div className={styles.sectionTitle}>常用搜索</div>
+                    <div className={styles.sectionTitle}>{t('search.favorites', { defaultValue: 'Favorites' })}</div>
                     {favorites.length > 0 && (
                       <div
                         className={styles.panelActions}
@@ -571,7 +573,7 @@ const SearchBar: React.FC = () => {
                         role='button'
                         tabIndex={0}
                       >
-                        清空
+                        {t('search.clear', { defaultValue: 'Clear' })}
                       </div>
                     )}
                   </div>
@@ -600,7 +602,7 @@ const SearchBar: React.FC = () => {
                               }}
                               role='button'
                               tabIndex={0}
-                              title='移出常用搜索'
+                              title={t('search.removeFavorite', { defaultValue: 'Remove from favorites' })}
                             >
                               <StarFilled />
                             </span>
@@ -609,14 +611,14 @@ const SearchBar: React.FC = () => {
                       ))}
                     </div>
                   ) : (
-                    <div className={styles.emptyTip}>点击历史记录右侧星标后，会出现在这里</div>
+                    <div className={styles.emptyTip}>{t('search.favoriteHint', { defaultValue: 'Star a history item to add it here' })}</div>
                   )}
                 </div>
 
                 {showHistoryPanel && (
                   <div className={styles.quickSection}>
                     <div className={styles.sectionHeader}>
-                      <div className={styles.sectionTitle}>搜索历史</div>
+                      <div className={styles.sectionTitle}>{t('search.history', { defaultValue: 'Search history' })}</div>
                       {history.length > 0 && (
                         <div
                           className={styles.panelActions}
@@ -624,7 +626,7 @@ const SearchBar: React.FC = () => {
                           role='button'
                           tabIndex={0}
                         >
-                          清空
+                          {t('search.clear', { defaultValue: 'Clear' })}
                         </div>
                       )}
                     </div>
@@ -658,7 +660,7 @@ const SearchBar: React.FC = () => {
                                   }}
                                   role='button'
                                   tabIndex={0}
-                                  title={isFavorite ? '移出常用搜索' : '加入常用搜索'}
+                                  title={isFavorite ? t('search.removeFavorite', { defaultValue: 'Remove from favorites' }) : t('search.addFavorite', { defaultValue: 'Add to favorites' })}
                                 >
                                   {isFavorite ? <StarFilled /> : <StarOutlined />}
                                 </span>
@@ -670,7 +672,7 @@ const SearchBar: React.FC = () => {
                                   }}
                                   role='button'
                                   tabIndex={0}
-                                  title='删除历史记录'
+                                  title={t('search.deleteHistory', { defaultValue: 'Delete history item' })}
                                 >
                                   <DeleteOutlined />
                                 </span>
@@ -680,7 +682,7 @@ const SearchBar: React.FC = () => {
                         })}
                       </div>
                     ) : (
-                      <div className={styles.emptyTip}>暂时还没有搜索历史</div>
+                      <div className={styles.emptyTip}>{t('search.noHistory', { defaultValue: 'No search history yet' })}</div>
                     )}
                   </div>
                 )}

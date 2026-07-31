@@ -14,6 +14,7 @@ import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 import styles from './widgets.module.less'
 import widgetsContainerService from './services/widgetsContainer'
 import type { IHotSearchData } from './types/widgetsContainer'
+import { useTranslation } from 'react-i18next'
 
 const hotSearchWidgetCache: {
   platformKey: string
@@ -38,6 +39,7 @@ const hotSearchWidgetCache: {
 }
 
 const HotSearchWidget: React.FC = () => {
+  const { t } = useTranslation()
   const platforms = useMemo(() => widgetsContainerService.getHotSearchPlatforms(), [])
   const [platformKey, setPlatformKey] = useState(hotSearchWidgetCache.platformKey)
   const [data, setData] = useState<IHotSearchData | null>(hotSearchWidgetCache.data)
@@ -261,7 +263,7 @@ const HotSearchWidget: React.FC = () => {
       : Array.from(new Set([...hiddenPlatformKeys, key]))
     const nextVisible = platforms.filter((item) => !nextHidden.includes(item.key))
     if (!nextVisible.length) {
-      messageApi.warning('至少保留一个热搜源')
+      messageApi.warning(t('hotSearch.keepOne', { defaultValue: 'Keep at least one hot search source' }))
       return
     }
 
@@ -362,7 +364,7 @@ const HotSearchWidget: React.FC = () => {
                   event.stopPropagation()
                   switchPlatform(platformIndex - 1)
                 }}
-                aria-label='切换上一个热搜来源'
+                aria-label={t('hotSearch.previousSource', { defaultValue: 'Previous hot search source' })}
               >
                 <StepBackwardFilled />
               </button>
@@ -373,7 +375,7 @@ const HotSearchWidget: React.FC = () => {
                   event.stopPropagation()
                   switchCompactPage(-1)
                 }}
-                aria-label='查看上一组热搜'
+                aria-label={t('hotSearch.previousPage', { defaultValue: 'Previous hot search page' })}
               >
                 <LeftOutlined />
               </button>
@@ -385,7 +387,7 @@ const HotSearchWidget: React.FC = () => {
                   event.stopPropagation()
                   switchCompactPage(1)
                 }}
-                aria-label='查看下一组热搜'
+                aria-label={t('hotSearch.nextPage', { defaultValue: 'Next hot search page' })}
               >
                 <RightOutlined />
               </button>
@@ -396,7 +398,7 @@ const HotSearchWidget: React.FC = () => {
                   event.stopPropagation()
                   switchPlatform(platformIndex + 1)
                 }}
-                aria-label='切换下一个热搜来源'
+                aria-label={t('hotSearch.nextSource', { defaultValue: 'Next hot search source' })}
               >
                 <StepForwardFilled />
               </button>
@@ -415,7 +417,7 @@ const HotSearchWidget: React.FC = () => {
       </Card>
 
       <Modal
-        title={<span className={styles.hotSearchTitle}>热搜榜</span>}
+        title={<span className={styles.hotSearchTitle}>{t('hotSearch.title', { defaultValue: 'Hot search' })}</span>}
         open={open}
         onCancel={() => setOpen(false)}
         rootClassName={`${addAppModalStyles.addAppModalRoot} ${styles.widgetModalRoot}`}
@@ -448,9 +450,9 @@ const HotSearchWidget: React.FC = () => {
 
           <section className={styles.hotSearchMain}>
             <div className={styles.hotSearchModalToolbar}>
-              <span>上次更新：{modalUpdatedAt}</span>
+              <span>{t('hotSearch.updated', { defaultValue: 'Updated' })}: {modalUpdatedAt}</span>
               <div>
-                <Tooltip title='刷新'>
+                <Tooltip title={t('common.refresh', { defaultValue: 'Refresh' })}>
                   <button
                     type='button'
                     className={modalLoading ? styles.refreshingToolbarButton : ''}
@@ -460,7 +462,7 @@ const HotSearchWidget: React.FC = () => {
                     <ReloadOutlined spin={modalLoading} />
                   </button>
                 </Tooltip>
-                <Tooltip title='设置'>
+                <Tooltip title={t('common.settings')}>
                   <button
                     ref={settingsButtonRef}
                     type='button'
@@ -477,8 +479,8 @@ const HotSearchWidget: React.FC = () => {
               <div ref={settingsPanelRef} className={styles.hotSearchSettingsPanel}>
                 <div className={styles.hotSearchSettingsHeader}>
                   <div>
-                    <strong>热搜源显示</strong>
-                    <span>勾选后会显示在左侧来源列表和小卡片切换中</span>
+                    <strong>{t('hotSearch.sources', { defaultValue: 'Visible sources' })}</strong>
+                    <span>{t('hotSearch.sourcesHint', { defaultValue: 'Selected sources appear in the source list and card switcher' })}</span>
                   </div>
                 </div>
                 <div className={styles.hotSearchSettingsGrid}>
@@ -507,7 +509,7 @@ const HotSearchWidget: React.FC = () => {
                   ))
                 ) : (
                   <div className={styles.hotSearchEmpty}>
-                    {modalLoading ? '正在获取热搜...' : '当前平台暂时没有获取到热搜，稍后刷新试试'}
+                    {modalLoading ? t('hotSearch.loading', { defaultValue: 'Loading hot search...' }) : t('hotSearch.empty', { defaultValue: 'No hot search data for this platform. Try refreshing later.' })}
                   </div>
                 )}
               </div>

@@ -100,7 +100,8 @@ module.exports = (webpackEnv, argv) => {
             from: 'manifest.json',
             to: '.'
           },
-          { from: 'src/assets', to: 'src/assets' }
+          { from: 'src/assets', to: 'src/assets' },
+          { from: '_locales', to: '_locales' }
         ]
       })
     ],

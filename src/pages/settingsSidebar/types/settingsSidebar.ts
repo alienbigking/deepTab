@@ -21,11 +21,13 @@ interface IClockSettings {
 }
 
 // 应用设置
+import type { AppLanguage } from '@/i18n/types'
+
 interface IAppSettings {
   wallpaper: IWallpaperConfig
   clock: IClockSettings
   searchEngine: string
-  language: 'zh' | 'en'
+  language: AppLanguage
   theme: 'light' | 'dark' | 'auto'
 }
 

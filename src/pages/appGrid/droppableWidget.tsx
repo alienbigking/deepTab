@@ -13,6 +13,7 @@ import HotSearchWidget from '@/pages/widgetsContainer/hotSearchWidget'
 import { CloseCircleFilled } from '@ant-design/icons'
 import type { AppItem, WidgetKind } from './types/appGrid'
 import styles from './appGrid.module.less'
+import { useTranslation } from 'react-i18next'
 
 const animateLayoutChanges: AnimateLayoutChanges = (args) =>
   defaultAnimateLayoutChanges(args)
@@ -43,6 +44,7 @@ const DroppableWidget: React.FC<DroppableWidgetProps> = ({
   onDelete,
   onContextMenu
 }) => {
+  const { t } = useTranslation()
   const { attributes, listeners, setNodeRef, transform, isDragging, isOver } = useSortable({
     id: widget.id,
     animateLayoutChanges,
@@ -99,7 +101,7 @@ const DroppableWidget: React.FC<DroppableWidgetProps> = ({
             event.stopPropagation()
             onDelete(widget.id)
           }}
-          aria-label='删除小组件'
+          aria-label={t('context.removeWidget', { defaultValue: 'Remove widget' })}
         >
           <CloseCircleFilled />
         </button>

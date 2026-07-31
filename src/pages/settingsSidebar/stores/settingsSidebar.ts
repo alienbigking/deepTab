@@ -21,7 +21,7 @@ export const useSettingsSidebarStore = create<SettingsSidebarStore>((set) => ({
       style: 'digital'
     },
     searchEngine: 'baidu',
-    language: 'zh',
+    language: 'zh-CN',
     theme: 'auto'
   },
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),

@@ -4,6 +4,7 @@ import { Form, Input, Button, ColorPicker, Segmented, message } from 'antd'
 import cn from 'classnames'
 import styles from './addAppModalCustom.module.less'
 import { isImageIconSource } from './iconFallback'
+import { useTranslation } from 'react-i18next'
 
 interface AddAppModalCustomProps {
   form: FormInstance
@@ -26,6 +27,7 @@ const AddAppModalCustom: React.FC<AddAppModalCustomProps> = ({
   onSave,
   onSaveAndContinue
 }) => {
+  const { t } = useTranslation()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const lastUrlRef = useRef('')
   const presetColors = ['#1890ff', '#faad14', '#ff4d4f', '#13c2c2', '#722ed1', '#000000']
@@ -62,7 +64,7 @@ const AddAppModalCustom: React.FC<AddAppModalCustomProps> = ({
     if (!file) return
 
     if (!file.type.startsWith('image/')) {
-      message.warning('请选择图片文件')
+      message.warning(t('profile.imageRequired', { defaultValue: 'Choose an image file' }))
       event.target.value = ''
       return
     }
@@ -73,12 +75,12 @@ const AddAppModalCustom: React.FC<AddAppModalCustomProps> = ({
       if (dataUrl) {
         form.setFieldValue('icon', dataUrl)
         setSelectedPreviewKey('image-0')
-        message.success('图标已上传')
+        message.success(t('addApp.iconUploaded', { defaultValue: 'Icon uploaded' }))
       }
       event.target.value = ''
     }
     reader.onerror = () => {
-      message.error('读取图片失败')
+      message.error(t('addApp.imageReadFailed', { defaultValue: 'Could not read the image' }))
       event.target.value = ''
     }
     reader.readAsDataURL(file)
@@ -98,8 +100,8 @@ const AddAppModalCustom: React.FC<AddAppModalCustomProps> = ({
   }, [iconValue, urlValue])
   const imageIconSlots = [imageIconCandidates[0] || '', imageIconCandidates[1] || '']
   const textIconSlots = [
-    { label: '文字图标', value: iconText },
-    { label: '简写图标', value: shortIconText }
+    { label: t('addApp.textIcon', { defaultValue: 'Text icon' }), value: iconText },
+    { label: t('addApp.shortIcon', { defaultValue: 'Short icon' }), value: shortIconText }
   ]
   useEffect(() => {
     const url = String(urlValue || '').trim()
@@ -154,10 +156,10 @@ const AddAppModalCustom: React.FC<AddAppModalCustomProps> = ({
       </Form.Item>
 
       <Form.Item
-        label='地址'
+        label={t('addApp.address', { defaultValue: 'Address' })}
         name='url'
         rules={[
-          { required: true, message: '请输入链接地址' },
+          { required: true, message: t('addApp.addressRequired', { defaultValue: 'Enter a website address' }) },
           {
             validator: (_, value) => {
               const raw = String(value || '').trim()
@@ -167,9 +169,9 @@ const AddAppModalCustom: React.FC<AddAppModalCustomProps> = ({
                 const url = new URL(normalized)
                 return url.hostname.includes('.')
                   ? Promise.resolve()
-                  : Promise.reject(new Error('请输入有效的网站地址'))
+                  : Promise.reject(new Error(t('addApp.validUrl', { defaultValue: 'Enter a valid website address' })))
               } catch {
-                return Promise.reject(new Error('请输入有效的网站地址'))
+                return Promise.reject(new Error(t('addApp.validUrl', { defaultValue: 'Enter a valid website address' })))
               }
             }
           }
@@ -186,26 +188,26 @@ const AddAppModalCustom: React.FC<AddAppModalCustomProps> = ({
           }}
           addonAfter={
             <Button type='link' loading={autoFilling} onClick={onFetchIcon}>
-              {autoFilling ? '获取中' : '获取图标'}
+              {autoFilling ? t('common.loading') : t('addApp.fetchIcon', { defaultValue: 'Fetch icon' })}
             </Button>
           }
         />
       </Form.Item>
 
-      <Form.Item label='名称' name='name' rules={[{ required: true, message: '请输入网站名称' }]}>
-        <Input placeholder='网站名称' />
+      <Form.Item label={t('addApp.name', { defaultValue: 'Name' })} name='name' rules={[{ required: true, message: t('addApp.nameRequired', { defaultValue: 'Enter a website name' }) }]}>
+        <Input placeholder={t('addApp.websiteName', { defaultValue: 'Website name' })} />
       </Form.Item>
 
       <div className={styles.row}>
-        <Form.Item label='背景模式' style={{ marginBottom: 0 }}>
+        <Form.Item label={t('addApp.backgroundMode', { defaultValue: 'Background mode' })} style={{ marginBottom: 0 }}>
           <div className={styles.backgroundMode}>
             <Segmented
               className={styles.modeSegment}
               value={iconBgMode}
               onChange={(value) => form.setFieldValue('iconBgMode', String(value))}
               options={[
-                { label: '跟随主题', value: 'theme' },
-                { label: '自定义颜色', value: 'custom' }
+                { label: t('addApp.followTheme', { defaultValue: 'Follow theme' }), value: 'theme' },
+                { label: t('addApp.customColor', { defaultValue: 'Custom color' }), value: 'custom' }
               ]}
             />
             {useCustomIconBg && (
@@ -230,7 +232,7 @@ const AddAppModalCustom: React.FC<AddAppModalCustomProps> = ({
                       styles.customColorButton,
                       !presetColors.includes(iconColor) && styles.customColorButtonActive
                     )}
-                    aria-label='自定义图标颜色'
+                    aria-label={t('addApp.customColor', { defaultValue: 'Custom color' })}
                   />
                 </ColorPicker>
               </div>
@@ -239,7 +241,7 @@ const AddAppModalCustom: React.FC<AddAppModalCustomProps> = ({
         </Form.Item>
 
         <Form.Item
-          label='图标文字'
+          label={t('addApp.iconText', { defaultValue: 'Icon text' })}
           name='iconText'
           rules={[
             {
@@ -248,14 +250,14 @@ const AddAppModalCustom: React.FC<AddAppModalCustomProps> = ({
                 if (isImageIconSource(icon)) return Promise.resolve()
                 return String(value || '').trim()
                   ? Promise.resolve()
-                  : Promise.reject(new Error('请输入图标文字'))
+                  : Promise.reject(new Error(t('addApp.iconTextRequired', { defaultValue: 'Enter icon text' })))
               }
             }
           ]}
           style={{ flex: 1, marginBottom: 0 }}
         >
           <Input
-            placeholder='例如: A'
+            placeholder={t('addApp.iconTextExample', { defaultValue: 'Example: A' })}
             maxLength={8}
             showCount
             onChange={(event) => {
@@ -303,7 +305,7 @@ const AddAppModalCustom: React.FC<AddAppModalCustomProps> = ({
                 )}
               </div>
               <div className={styles.typeLabel}>
-                {disabled ? '暂无图标' : index === 0 ? '网站图标' : '备用图标'}
+                {disabled ? t('addApp.noIcon', { defaultValue: 'No icon' }) : index === 0 ? t('addApp.websiteIcon', { defaultValue: 'Website icon' }) : t('addApp.fallbackIcon', { defaultValue: 'Alternative icon' })}
               </div>
             </div>
           )
@@ -336,7 +338,7 @@ const AddAppModalCustom: React.FC<AddAppModalCustomProps> = ({
                 {disabled ? '?' : item.value}
               </span>
             </div>
-            <div className={styles.typeLabel}>{disabled ? '暂无文字' : item.label}</div>
+            <div className={styles.typeLabel}>{disabled ? t('addApp.noText', { defaultValue: 'No text' }) : item.label}</div>
           </div>
           )
         })}
@@ -345,7 +347,7 @@ const AddAppModalCustom: React.FC<AddAppModalCustomProps> = ({
           <div className={styles.uploadCard} onClick={() => fileInputRef.current?.click()}>
             +
           </div>
-          <div className={styles.typeLabel}>上传</div>
+          <div className={styles.typeLabel}>{t('addApp.upload', { defaultValue: 'Upload' })}</div>
         </div>
       </div>
 
@@ -359,10 +361,10 @@ const AddAppModalCustom: React.FC<AddAppModalCustomProps> = ({
 
       <div className={styles.actions}>
         <Button type='primary' loading={loading} onClick={onSave}>
-          保存
+          {t('common.save')}
         </Button>
         <Button loading={loading} onClick={onSaveAndContinue}>
-          保存并继续
+          {t('addApp.saveContinue', { defaultValue: 'Save and continue' })}
         </Button>
       </div>
     </Form>

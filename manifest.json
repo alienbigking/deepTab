@@ -1,7 +1,8 @@
 {
-  "name": "Deep Tab",
-  "version": "1.0.1",
-  "description": "一款用于搜索、应用快捷入口、壁纸和个性化设置的新标签页插件",
+  "name": "__MSG_extensionName__",
+  "version": "1.0.3",
+  "description": "__MSG_extensionDescription__",
+  "default_locale": "en",
   "manifest_version": 3,
   "permissions": [
     "storage",
@@ -24,7 +25,7 @@
     "service_worker": "extension/background/index.js"
   },
   "action": {
-    "default_title": "Deep Tab",
+    "default_title": "__MSG_extensionName__",
     "default_icon": "src/assets/images/favicon-300.png",
     "default_popup": "popup.html"
   },
