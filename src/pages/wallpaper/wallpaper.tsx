@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react'
-import { Tabs, Slider, Empty, Switch } from 'antd'
+import { Tabs, Slider, Empty, Switch, Spin } from 'antd'
+import SimpleBar from 'simplebar-react'
 import styles from './wallpaper.module.less'
 import { wallpaperService } from './services'
 import useWallpaperStore from './stores/wallpaper'
@@ -7,13 +8,26 @@ import type {
   IGradientWallpaper,
   IImageWallpaper,
   IDynamicWallpaper,
-  IWallpaperConfig
+  IWallpaperConfig,
+  IWallpaperPageResult
 } from './types/wallpaper'
+import { useTranslation } from 'react-i18next'
+
+const WALLPAPER_BATCH_SIZE = 18
+const WALLPAPER_CATEGORIES = ['全部', '动物', '植物', '动漫', '街头', '城市', '科技', '天空', '海洋', '自然', '其他']
+const ANGLE_TICK_COUNT = 72
+const CATEGORY_FALLBACKS: Record<string, string> = {
+  '全部': 'All', '动物': 'Animals', '植物': 'Plants', '动漫': 'Anime', '街头': 'Street',
+  '城市': 'Cities', '科技': 'Technology', '天空': 'Sky', '海洋': 'Ocean', '自然': 'Nature', '其他': 'Other'
+}
 
 /**
  * 壁纸选择组件
  */
 const Wallpaper: React.FC = () => {
+  const { t } = useTranslation()
+  const categoryLabel = (category: string) =>
+    t(`wallpaper.categories.${category}`, { defaultValue: CATEGORY_FALLBACKS[category] || category })
   const [angle, setAngle] = useState(135)
   const angleValueRef = useRef(angle)
   const [brightness, setBrightness] = useState(100)
@@ -24,6 +38,17 @@ const Wallpaper: React.FC = () => {
   const [gradients, setGradients] = useState<IGradientWallpaper[]>([])
   const [featuredWallpapers, setFeaturedWallpapers] = useState<IImageWallpaper[]>([])
   const [dynamicWallpapers, setDynamicWallpapers] = useState<IDynamicWallpaper[]>([])
+  const [featuredLoading, setFeaturedLoading] = useState(false)
+  const [dynamicLoading, setDynamicLoading] = useState(false)
+  const [featuredLoadingMore, setFeaturedLoadingMore] = useState(false)
+  const [dynamicLoadingMore, setDynamicLoadingMore] = useState(false)
+  const [applyingWallpaperId, setApplyingWallpaperId] = useState('')
+  const [featuredPage, setFeaturedPage] = useState(0)
+  const [dynamicPage, setDynamicPage] = useState(0)
+  const [featuredHasMore, setFeaturedHasMore] = useState(true)
+  const [dynamicHasMore, setDynamicHasMore] = useState(true)
+  const featuredRequestIdRef = useRef(0)
+  const dynamicRequestIdRef = useRef(0)
   const {
     config,
     setConfig,
@@ -32,7 +57,9 @@ const Wallpaper: React.FC = () => {
     selectedColor,
     setSelectedColor,
     featuredCategory,
-    setFeaturedCategory
+    setFeaturedCategory,
+    dynamicCategory,
+    setDynamicCategory
   } = useWallpaperStore()
 
   useEffect(() => {
@@ -42,9 +69,15 @@ const Wallpaper: React.FC = () => {
   useEffect(() => {
     loadConfig()
     loadGradients()
-    loadFeaturedWallpapers()
-    loadDynamicWallpapers()
   }, [])
+
+  useEffect(() => {
+    loadFeaturedWallpapers({ page: 1, category: featuredCategory })
+  }, [featuredCategory])
+
+  useEffect(() => {
+    loadDynamicWallpapers({ page: 1, category: dynamicCategory })
+  }, [dynamicCategory])
 
   const loadConfig = async () => {
     const data = await wallpaperService.getWallpaperConfig()
@@ -70,27 +103,105 @@ const Wallpaper: React.FC = () => {
     setGradients(data)
   }
 
-  const loadFeaturedWallpapers = async () => {
-    const data = await wallpaperService.getImageWallpapers()
-    setFeaturedWallpapers(data)
+  const mergeWallpaperPage = <T extends { id: string }>(current: T[], incoming: T[]) => {
+    const seen = new Set(current.map((item) => item.id))
+    return [...current, ...incoming.filter((item) => !seen.has(item.id))]
   }
 
-  const loadDynamicWallpapers = async () => {
-    const data = await wallpaperService.getDynamicWallpapers()
-    setDynamicWallpapers(data)
+  const loadFeaturedWallpapers = async ({
+    page,
+    category
+  }: {
+    page: number
+    category: string
+  }) => {
+    const requestId = ++featuredRequestIdRef.current
+    if (page === 1) setFeaturedLoading(true)
+    else setFeaturedLoadingMore(true)
+
+    try {
+      const data: IWallpaperPageResult<IImageWallpaper> = await wallpaperService.getImageWallpapers({
+        page,
+        pageSize: WALLPAPER_BATCH_SIZE,
+        category: category === '全部' ? undefined : category
+      })
+
+      if (requestId !== featuredRequestIdRef.current) return
+
+      setFeaturedWallpapers((current) => (page === 1 ? data.list : mergeWallpaperPage(current, data.list)))
+      setFeaturedPage(data.page || page)
+      setFeaturedHasMore(data.hasMore)
+    } catch (error) {
+      if (requestId !== featuredRequestIdRef.current) return
+      console.error('加载静态壁纸失败:', error)
+      if (page === 1) setFeaturedWallpapers([])
+      setFeaturedHasMore(false)
+    } finally {
+      if (requestId === featuredRequestIdRef.current) {
+        if (page === 1) setFeaturedLoading(false)
+        else setFeaturedLoadingMore(false)
+      }
+    }
   }
 
-  const featuredCategories = useMemo(() => {
-    const base = ['全部', '动物', '植物', '动漫', '街头', '自然', '其他']
-    const dynamic = Array.from(new Set(featuredWallpapers.map((w) => w.category))).filter(Boolean)
-    const merged = Array.from(new Set([...base, ...dynamic]))
-    return merged
-  }, [featuredWallpapers])
+  const loadDynamicWallpapers = async ({
+    page,
+    category
+  }: {
+    page: number
+    category: string
+  }) => {
+    const requestId = ++dynamicRequestIdRef.current
+    if (page === 1) setDynamicLoading(true)
+    else setDynamicLoadingMore(true)
 
-  const filteredFeaturedWallpapers = useMemo(() => {
-    if (featuredCategory === '全部') return featuredWallpapers
-    return featuredWallpapers.filter((w) => w.category === featuredCategory)
-  }, [featuredCategory, featuredWallpapers])
+    try {
+      const data: IWallpaperPageResult<IDynamicWallpaper> = await wallpaperService.getDynamicWallpapers({
+        page,
+        pageSize: WALLPAPER_BATCH_SIZE,
+        category: category === '全部' ? undefined : category
+      })
+
+      if (requestId !== dynamicRequestIdRef.current) return
+
+      setDynamicWallpapers((current) => (page === 1 ? data.list : mergeWallpaperPage(current, data.list)))
+      setDynamicPage(data.page || page)
+      setDynamicHasMore(data.hasMore)
+    } catch (error) {
+      if (requestId !== dynamicRequestIdRef.current) return
+      console.error('加载动态壁纸失败:', error)
+      if (page === 1) setDynamicWallpapers([])
+      setDynamicHasMore(false)
+    } finally {
+      if (requestId === dynamicRequestIdRef.current) {
+        if (page === 1) setDynamicLoading(false)
+        else setDynamicLoadingMore(false)
+      }
+    }
+  }
+
+  const featuredCategories = WALLPAPER_CATEGORIES
+  const dynamicCategories = WALLPAPER_CATEGORIES
+
+  const handleWallpaperScroll = (event: React.UIEvent<HTMLElement>) => {
+    const target = event.currentTarget
+    const nearBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 160
+    if (!nearBottom) return
+
+    if (activeTab === 'featured' && featuredHasMore && !featuredLoading && !featuredLoadingMore) {
+      loadFeaturedWallpapers({
+        page: featuredPage + 1,
+        category: featuredCategory
+      })
+    }
+
+    if (activeTab === 'dynamic' && dynamicHasMore && !dynamicLoading && !dynamicLoadingMore) {
+      loadDynamicWallpapers({
+        page: dynamicPage + 1,
+        category: dynamicCategory
+      })
+    }
+  }
 
   const handleCategoryChange = async (category: string) => {
     setFeaturedCategory(category)
@@ -100,9 +211,59 @@ const Wallpaper: React.FC = () => {
     await wallpaperService.saveWallpaperConfig(next)
   }
 
+  const handleThumbError = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    const image = event.currentTarget
+    if (image.dataset.fallbackApplied === 'true') return
+    image.dataset.fallbackApplied = 'true'
+    image.src = 'https://picsum.photos/seed/deeptab-fallback/640/360'
+  }
+
   const saveConfig = async (next: IWallpaperConfig) => {
     setConfig(next)
     await wallpaperService.saveWallpaperConfig(next)
+  }
+
+  const preloadWallpaperImage = (url: string) => {
+    return new Promise<void>((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => resolve()
+      img.onerror = () => reject(new Error('图片加载失败'))
+      img.src = url
+    })
+  }
+
+  const preloadWallpaperVideo = (url: string) => {
+    return new Promise<void>((resolve, reject) => {
+      const video = document.createElement('video')
+      const cleanup = () => {
+        video.removeAttribute('src')
+        video.load()
+      }
+      const timer = window.setTimeout(() => {
+        cleanup()
+        reject(new Error('视频加载超时'))
+      }, 15000)
+      video.preload = 'auto'
+      video.muted = true
+      video.playsInline = true
+      video.onloadeddata = () => {
+        window.clearTimeout(timer)
+        cleanup()
+        resolve()
+      }
+      video.oncanplay = () => {
+        window.clearTimeout(timer)
+        cleanup()
+        resolve()
+      }
+      video.onerror = () => {
+        window.clearTimeout(timer)
+        cleanup()
+        reject(new Error('视频加载失败'))
+      }
+      video.src = url
+      video.load()
+    })
   }
 
   const applyAngleToGradient = (gradient: string, nextAngle: number) => {
@@ -192,6 +353,23 @@ const Wallpaper: React.FC = () => {
     return gradients.filter((g) => (g.colors || []).some((c) => matchColorKey(c, selectedColor)))
   }, [gradients, selectedColor])
 
+  const angleTicks = useMemo(() => {
+    const activeCount = Math.max(0, Math.round((angle / 360) * ANGLE_TICK_COUNT))
+
+    return Array.from({ length: ANGLE_TICK_COUNT }, (_, index) => {
+      const ratio = index / Math.max(ANGLE_TICK_COUNT - 1, 1)
+      const hue = 188 - ratio * 56
+      const major = index % 6 === 0
+      return {
+        angle: index * (360 / ANGLE_TICK_COUNT),
+        active: index < activeCount,
+        major,
+        radius: major ? 46.5 : 48,
+        color: `hsla(${hue}, 92%, ${66 - ratio * 8}%, ${0.78 + ratio * 0.22})`
+      }
+    })
+  }, [angle])
+
   const handleSelectGradient = async (wallpaper: IGradientWallpaper) => {
     const next: IWallpaperConfig = {
       currentWallpaper: {
@@ -250,16 +428,38 @@ const Wallpaper: React.FC = () => {
   }
 
   const handleSelectFeaturedWallpaper = async (wallpaper: IImageWallpaper) => {
+    if (applyingWallpaperId) return
+
+    const loadingKey = `image:${wallpaper.id}`
+    setApplyingWallpaperId(loadingKey)
+    try {
+      await preloadWallpaperImage(wallpaper.url)
+    } catch (error) {
+      console.warn('预加载静态壁纸失败，继续应用:', error)
+    }
     const next: IWallpaperConfig = {
       currentWallpaper: wallpaper,
       brightness,
       blur,
       featuredCategory: featuredCategory || wallpaper.category
     }
-    await saveConfig(next)
+    try {
+      await saveConfig(next)
+    } finally {
+      setApplyingWallpaperId((current) => (current === loadingKey ? '' : current))
+    }
   }
 
   const handleSelectDynamicWallpaper = async (wallpaper: IDynamicWallpaper) => {
+    if (applyingWallpaperId) return
+
+    const loadingKey = `dynamic:${wallpaper.id}`
+    setApplyingWallpaperId(loadingKey)
+    try {
+      await preloadWallpaperVideo(wallpaper.videoUrl)
+    } catch (error) {
+      console.warn('预加载动态壁纸失败，继续应用:', error)
+    }
     const next: IWallpaperConfig = {
       currentWallpaper: wallpaper,
       brightness: config?.brightness ?? brightness,
@@ -268,7 +468,11 @@ const Wallpaper: React.FC = () => {
       dynamicMuted,
       dynamicPaused
     }
-    await saveConfig(next)
+    try {
+      await saveConfig(next)
+    } finally {
+      setApplyingWallpaperId((current) => (current === loadingKey ? '' : current))
+    }
   }
 
   const handleAngleAfterChange = async (value: number) => {
@@ -367,75 +571,114 @@ const Wallpaper: React.FC = () => {
         activeKey={activeTab}
         onChange={setActiveTab}
         items={[
-          { key: 'featured', label: '精选图片' },
-          { key: 'dynamic', label: '动态壁纸' },
-          { key: 'gradient', label: '渐变背景' }
+          { key: 'featured', label: t('wallpaper.featured', { defaultValue: 'Featured images' }) },
+          { key: 'dynamic', label: t('wallpaper.dynamic', { defaultValue: 'Live wallpapers' }) },
+          { key: 'gradient', label: t('wallpaper.gradient', { defaultValue: 'Gradients' }) }
         ]}
         className={styles.wallpaperTabs}
       />
 
       {activeTab === 'featured' && (
-        <>
-          <div className={styles.categoryFilters}>
-            {featuredCategories.map((category) => (
-              <div
-                key={category}
-                className={`${styles.categoryPill} ${featuredCategory === category ? styles.active : ''}`}
-                onClick={() => handleCategoryChange(category)}
-              >
-                {category}
-              </div>
-            ))}
-          </div>
+        <div className={styles.categoryFilters}>
+          {featuredCategories.map((category) => (
+            <div
+              key={category}
+              className={`${styles.categoryPill} ${featuredCategory === category ? styles.active : ''}`}
+              onClick={() => handleCategoryChange(category)}
+            >
+              {categoryLabel(category)}
+            </div>
+          ))}
+        </div>
+      )}
 
+      {activeTab === 'dynamic' && (
+        <div className={styles.categoryFilters}>
+          {dynamicCategories.map((category) => (
+            <div
+              key={category}
+              className={`${styles.categoryPill} ${dynamicCategory === category ? styles.active : ''}`}
+              onClick={() => setDynamicCategory(category)}
+            >
+              {categoryLabel(category)}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {activeTab === 'gradient' && (
+        <div className={styles.colorFilters}>
+          {colors.map((color) => (
+            <div
+              key={color.key}
+              className={`${styles.colorFilter} ${selectedColor === color.key ? styles.active : ''}`}
+              onClick={() => setSelectedColor(color.key)}
+            >
+              {color.key === 'all' ? (
+                <span className={styles.allText}>{t('wallpaper.all', { defaultValue: 'All' })}</span>
+              ) : (
+                <div className={styles.colorDot} style={{ background: color.color }} />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <SimpleBar
+        className={`${styles.wallpaperMain} dtPrettyScrollbar`}
+        autoHide
+        scrollableNodeProps={{ onScroll: handleWallpaperScroll }}
+      >
+        <div className={styles.wallpaperMainInner}>
+        {activeTab === 'featured' && (
           <div className={styles.imageGrid}>
-            {filteredFeaturedWallpapers.length === 0 ? (
+            {featuredLoading ? (
               <div className={styles.emptyWrap}>
-                <Empty description='暂无壁纸' />
+                <Spin />
+              </div>
+            ) : featuredWallpapers.length === 0 ? (
+              <div className={styles.emptyWrap}>
+                <Empty description={t('wallpaper.noImages', { defaultValue: 'No wallpapers' })} />
               </div>
             ) : (
-              filteredFeaturedWallpapers.map((wallpaper) => {
+              featuredWallpapers.map((wallpaper) => {
                 const selected =
                   config?.currentWallpaper?.type === 'image' &&
                   (config.currentWallpaper as IImageWallpaper).id === wallpaper.id
+                const applying = applyingWallpaperId === `image:${wallpaper.id}`
 
                 return (
                   <div
                     key={wallpaper.id}
-                    className={`${styles.imageCard} ${selected ? styles.selected : ''}`}
+                    className={`${styles.imageCard} ${selected ? styles.selected : ''} ${applying ? styles.applying : ''}`}
                     onClick={() => handleSelectFeaturedWallpaper(wallpaper)}
                   >
                     <img
                       className={styles.imageThumb}
                       src={wallpaper.thumbnail || wallpaper.url}
                       alt=''
+                      loading='lazy'
+                      onError={handleThumbError}
                     />
+                    {applying && (
+                      <div className={styles.loadingMask}>
+                        <Spin size='small' />
+                        <span>{t('common.loading')}</span>
+                      </div>
+                    )}
                   </div>
                 )
               })
             )}
-          </div>
-        </>
-      )}
-
-      {activeTab === 'gradient' && (
-        <>
-          <div className={styles.colorFilters}>
-            {colors.map((color) => (
-              <div
-                key={color.key}
-                className={`${styles.colorFilter} ${selectedColor === color.key ? styles.active : ''}`}
-                onClick={() => setSelectedColor(color.key)}
-              >
-                {color.key === 'all' ? (
-                  <span className={styles.allText}>All</span>
-                ) : (
-                  <div className={styles.colorDot} style={{ background: color.color }} />
-                )}
+            {!featuredLoading && featuredLoadingMore && (
+              <div className={styles.loadMoreWrap}>
+                <Spin size='small' />
               </div>
-            ))}
+            )}
           </div>
+        )}
 
+        {activeTab === 'gradient' && (
           <div className={styles.gradientGrid}>
             {filteredGradients.map((wallpaper) => {
               const selected =
@@ -455,91 +698,141 @@ const Wallpaper: React.FC = () => {
               )
             })}
           </div>
-        </>
-      )}
+        )}
 
-      {activeTab === 'dynamic' && (
-        <div className={styles.dynamicGrid}>
-          {dynamicWallpapers.length === 0 ? (
-            <div className={styles.emptyWrap}>
-              <Empty description='暂无动态壁纸' />
-            </div>
-          ) : (
-            dynamicWallpapers.map((wallpaper) => {
-              const selected =
-                config?.currentWallpaper?.type === 'dynamic' &&
-                (config.currentWallpaper as IDynamicWallpaper).id === wallpaper.id
+        {activeTab === 'dynamic' && (
+          <div className={styles.dynamicGrid}>
+            {dynamicLoading ? (
+              <div className={styles.emptyWrap}>
+                <Spin />
+              </div>
+            ) : dynamicWallpapers.length === 0 ? (
+              <div className={styles.emptyWrap}>
+                <Empty description={t('wallpaper.noDynamic', { defaultValue: 'No live wallpapers' })} />
+              </div>
+            ) : (
+              dynamicWallpapers.map((wallpaper) => {
+                const selected =
+                  config?.currentWallpaper?.type === 'dynamic' &&
+                  (config.currentWallpaper as IDynamicWallpaper).id === wallpaper.id
+                const applying = applyingWallpaperId === `dynamic:${wallpaper.id}`
 
-              return (
-                <div
-                  key={wallpaper.id}
-                  className={`${styles.dynamicCard} ${selected ? styles.selected : ''}`}
-                  onClick={() => handleSelectDynamicWallpaper(wallpaper)}
-                >
-                  <img className={styles.imageThumb} src={wallpaper.thumbnail} alt='' />
-                  <div className={styles.playBadge} />
-                </div>
-              )
-            })
-          )}
+                return (
+                  <div
+                    key={wallpaper.id}
+                    className={`${styles.dynamicCard} ${selected ? styles.selected : ''} ${applying ? styles.applying : ''}`}
+                    onClick={() => handleSelectDynamicWallpaper(wallpaper)}
+                  >
+                    <img
+                      className={styles.imageThumb}
+                      src={wallpaper.thumbnail}
+                      alt=''
+                      loading='lazy'
+                      onError={handleThumbError}
+                    />
+                    <div className={styles.playBadge} />
+                    {applying && (
+                      <div className={styles.loadingMask}>
+                        <Spin size='small' />
+                        <span>{t('common.loading')}</span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })
+            )}
+            {!dynamicLoading && dynamicLoadingMore && (
+              <div className={styles.loadMoreWrap}>
+                <Spin size='small' />
+              </div>
+            )}
+          </div>
+        )}
         </div>
-      )}
+      </SimpleBar>
 
       {activeTab === 'gradient' && (
-        <div className={styles.controls}>
+        <div className={`${styles.controls} ${styles.gradientControls}`}>
           <div className={styles.controlItem}>
-            <span className={styles.controlLabel}>色彩</span>
-            <Slider
-              className={styles.slider}
-              value={saturation}
-              onChange={setSaturation}
-              onAfterChange={(value) => handleSaturationAfterChange(value as number)}
-              min={0}
-              max={200}
-            />
+            <span className={styles.controlLabel}>{t('wallpaper.angle', { defaultValue: 'Angle' })}</span>
+            <div className={styles.controlBody}>
+              <div
+                ref={angleDialRef}
+                className={styles.angleDial}
+                onPointerDown={startDialDrag}
+              >
+                <div className={styles.angleTickTrack}>
+                  {angleTicks.map((tick) => (
+                    <span
+                      key={tick.angle}
+                      className={`${styles.angleTick} ${tick.major ? styles.major : ''} ${tick.active ? styles.active : ''}`}
+                      style={{
+                        transform: `translate(-50%, -50%) rotate(${tick.angle}deg) translateY(-${tick.radius}px)`,
+                        ...(tick.active ? { background: tick.color, boxShadow: `0 0 10px ${tick.color}` } : {})
+                      }}
+                    />
+                  ))}
+                </div>
+                <div className={styles.angleDialCenter}>
+                  <div className={styles.angleDialValue}>{angle}°</div>
+                  <div className={styles.angleDialUnit}>ANGLE</div>
+                </div>
+                <div
+                  className={styles.angleKnob}
+                  style={{ transform: `translate(-50%, -50%) rotate(${angle}deg) translateY(-34px) rotate(-${angle}deg)` }}
+                />
+              </div>
+            </div>
           </div>
           <div className={styles.controlItem}>
-            <span className={styles.controlLabel}>角度</span>
-            <div ref={angleDialRef} className={styles.angleDial} onPointerDown={startDialDrag}>
-              <div className={styles.angleDialValue}>{angle}°</div>
-              <div
-                className={styles.angleKnob}
-                style={{ transform: `rotate(${angle}deg) translateY(-44px) rotate(-${angle}deg)` }}
+            <span className={styles.controlLabel}>{t('wallpaper.saturation', { defaultValue: 'Saturation' })}</span>
+            <div className={styles.controlBody}>
+              <Slider
+                className={styles.slider}
+                value={saturation}
+                onChange={setSaturation}
+                onAfterChange={(value) => handleSaturationAfterChange(value as number)}
+                min={0}
+                max={200}
               />
             </div>
           </div>
           <div className={styles.controlItem}>
-            <span className={styles.controlLabel}>亮度</span>
-            <Slider
-              className={styles.slider}
-              value={brightness}
-              onChange={setBrightness}
-              onAfterChange={(value) => handleBrightnessAfterChange(value as number)}
-              min={0}
-              max={200}
-            />
+            <span className={styles.controlLabel}>{t('wallpaper.brightness', { defaultValue: 'Brightness' })}</span>
+            <div className={styles.controlBody}>
+              <Slider
+                className={styles.slider}
+                value={brightness}
+                onChange={setBrightness}
+                onAfterChange={(value) => handleBrightnessAfterChange(value as number)}
+                min={0}
+                max={200}
+              />
+            </div>
           </div>
           <div className={styles.controlItem}>
-            <span className={styles.controlLabel}>模糊</span>
-            <Slider
-              className={styles.slider}
-              value={blur}
-              onChange={setBlur}
-              onAfterChange={(value) => handleBlurAfterChange(value as number)}
-              min={0}
-              max={30}
-              disabled={!config}
-            />
+            <span className={styles.controlLabel}>{t('wallpaper.blur', { defaultValue: 'Blur' })}</span>
+            <div className={styles.controlBody}>
+              <Slider
+                className={styles.slider}
+                value={blur}
+                onChange={setBlur}
+                onAfterChange={(value) => handleBlurAfterChange(value as number)}
+                min={0}
+                max={30}
+                disabled={!config}
+              />
+            </div>
           </div>
         </div>
       )}
 
       {activeTab !== 'gradient' && (
-        <div className={styles.controls}>
+        <div className={`${styles.controls} ${activeTab === 'dynamic' ? styles.dynamicControls : ''}`}>
           {activeTab === 'dynamic' && (
             <>
               <div className={styles.controlItem}>
-                <span className={styles.controlLabel}>静音</span>
+                <span className={styles.controlLabel}>{t('wallpaper.mute', { defaultValue: 'Mute' })}</span>
                 <Switch
                   checked={dynamicMuted}
                   onChange={handleDynamicMutedChange}
@@ -547,7 +840,7 @@ const Wallpaper: React.FC = () => {
                 />
               </div>
               <div className={styles.controlItem}>
-                <span className={styles.controlLabel}>暂停</span>
+                <span className={styles.controlLabel}>{t('wallpaper.pause', { defaultValue: 'Pause' })}</span>
                 <Switch
                   checked={dynamicPaused}
                   onChange={handleDynamicPausedChange}
@@ -557,16 +850,18 @@ const Wallpaper: React.FC = () => {
             </>
           )}
           <div className={styles.controlItem}>
-            <span className={styles.controlLabel}>模糊</span>
-            <Slider
-              className={styles.slider}
-              value={blur}
-              onChange={setBlur}
-              onAfterChange={(value) => handleBlurAfterChange(value as number)}
-              min={0}
-              max={30}
-              disabled={!config}
-            />
+            <span className={styles.controlLabel}>{t('wallpaper.blur', { defaultValue: 'Blur' })}</span>
+            <div className={styles.sliderWrap}>
+              <Slider
+                className={styles.slider}
+                value={blur}
+                onChange={setBlur}
+                onAfterChange={(value) => handleBlurAfterChange(value as number)}
+                min={0}
+                max={30}
+                disabled={!config}
+              />
+            </div>
           </div>
         </div>
       )}

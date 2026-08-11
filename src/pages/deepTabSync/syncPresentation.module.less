@@ -1,0 +1,118 @@
+.syncNotification {
+  width: fit-content !important;
+  min-width: 196px;
+  max-width: min(260px, calc(100vw - 32px));
+  padding: 10px 14px !important;
+  background: rgba(15, 23, 42, 0.82) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  box-shadow: var(--dt-settings-card-shadow) !important;
+  backdrop-filter: var(--dt-settings-card-backdrop);
+  -webkit-backdrop-filter: var(--dt-settings-card-backdrop);
+  color: rgba(255, 255, 255, 0.96) !important;
+
+  :global {
+    .ant-notification-notice-content,
+    .ant-notification-notice-with-icon,
+    .ant-notification-notice-message {
+      color: inherit !important;
+    }
+
+    .ant-notification-notice-message {
+      margin-bottom: 0 !important;
+      font-size: 14px;
+      line-height: 20px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .ant-notification-notice-description,
+    .ant-notification-notice-close {
+      color: inherit !important;
+    }
+
+    .ant-notification-notice-icon {
+      margin-top: 1px;
+    }
+  }
+}
+
+:global(html[data-theme='light']) .syncNotification {
+  color: rgba(15, 18, 34, 0.92) !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+}
+
+.modalRoot {
+  :global {
+    .ant-modal-mask {
+      background: rgba(0, 0, 0, 0.25) !important;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+
+    .ant-modal-content {
+      color: var(--dt-settings-card-text);
+      background: var(--dt-settings-card-bg) !important;
+      border: 1px solid var(--dt-settings-card-border);
+      border-radius: 18px;
+      box-shadow: var(--dt-settings-card-shadow);
+      backdrop-filter: var(--dt-settings-card-backdrop);
+      -webkit-backdrop-filter: var(--dt-settings-card-backdrop);
+      overflow: hidden;
+      animation: none !important;
+      transition: none !important;
+    }
+
+    .ant-modal-header,
+    .ant-modal-body,
+    .ant-modal-footer {
+      background: transparent !important;
+    }
+
+    .ant-modal-title,
+    .ant-modal-confirm-title {
+      color: var(--dt-settings-strong-text) !important;
+    }
+
+    .ant-modal-confirm-content,
+    .ant-typography,
+    .ant-typography-secondary {
+      color: var(--dt-settings-card-muted) !important;
+    }
+
+    .ant-btn-default {
+      color: var(--dt-settings-card-text);
+      background: var(--dt-settings-hover-bg);
+      border-color: var(--dt-settings-card-border);
+    }
+
+    .ant-btn-primary,
+    .ant-btn-primary span {
+      color: #fff !important;
+    }
+
+    .ant-zoom-enter,
+    .ant-zoom-appear,
+    .ant-zoom-leave,
+    .ant-fade-enter,
+    .ant-fade-appear,
+    .ant-fade-leave {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+}
+
+.modal {
+  animation: none !important;
+  transition: none !important;
+
+  :global {
+    .ant-modal-content,
+    .ant-modal-body,
+    .ant-modal-confirm-body-wrapper {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+}

@@ -31,6 +31,18 @@ export interface IDynamicWallpaper {
   type: 'dynamic'
   videoUrl: string
   thumbnail: string
+  category: string
+  title?: string
+  author?: string
+  source?: string
+}
+
+export interface IWallpaperPageResult<T> {
+  list: T[]
+  page: number
+  pageSize: number
+  hasMore: boolean
+  category?: string
 }
 
 // 壁纸配置
@@ -53,8 +65,10 @@ export interface WallpaperStore {
   activeTab: string
   selectedColor: string
   featuredCategory: string
+  dynamicCategory: string
   setConfig: (config: IWallpaperConfig | null) => void
   setActiveTab: (tab: string) => void
   setSelectedColor: (color: string) => void
   setFeaturedCategory: (category: string) => void
+  setDynamicCategory: (category: string) => void
 }

@@ -1,10 +1,19 @@
 import React from 'react'
-import { useSortable } from '@dnd-kit/sortable'
+import {
+  defaultAnimateLayoutChanges,
+  useSortable,
+  type AnimateLayoutChanges
+} from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { CloseCircleFilled } from '@ant-design/icons'
 import type { AppItem, IconSettings } from './types/appGrid'
 import cn from 'classnames'
 import styles from './appGrid.module.less'
+import { useTranslation } from 'react-i18next'
+import { createFallbackIcon, isImageIconSource } from './iconFallback'
+
+const animateLayoutChanges: AnimateLayoutChanges = (args) =>
+  defaultAnimateLayoutChanges(args)
 
 interface DroppableIconProps {
   icon: AppItem
@@ -23,19 +32,26 @@ const DroppableIcon: React.FC<DroppableIconProps> = ({
   onContextMenu,
   onLongPress
 }) => {
+  const { t } = useTranslation()
+  const [iconLoadFailed, setIconLoadFailed] = React.useState(false)
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
     useSortable({
       id: icon.id,
+      animateLayoutChanges,
       data: {
+        container: 'grid',
+        appId: icon.id,
         type: 'item',
         item: icon
       }
     })
 
   const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
+    transform: isDragging ? undefined : CSS.Transform.toString(transform),
+    transition: isDragging
+      ? undefined
+      : 'transform 380ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease',
+    opacity: isDragging ? 0.12 : 1,
     touchAction: 'none'
   }
 
@@ -43,7 +59,8 @@ const DroppableIcon: React.FC<DroppableIconProps> = ({
     width: iconSettings.size,
     height: iconSettings.size,
     borderRadius: iconSettings.radius,
-    opacity: iconSettings.opacity / 100
+    opacity: iconSettings.opacity / 100,
+    background: isImageIconSource(icon.icon) ? 'var(--dt-app-icon-bg)' : icon.iconBg || 'var(--dt-app-icon-bg)'
   }
 
   const appNameStyle: React.CSSProperties = {
@@ -83,9 +100,14 @@ const DroppableIcon: React.FC<DroppableIconProps> = ({
     onContextMenu(e, icon.id, 'item')
   }
 
+  const hasImageIcon = isImageIconSource(icon.icon)
+  const isImageIcon = hasImageIcon && !iconLoadFailed
+  const fallbackIcon = createFallbackIcon(icon.name)
+
   return (
     <div
       ref={setNodeRef}
+      data-app-grid-id={icon.id}
       style={style}
       className={cn(styles.droppableIcon, styles.appIcon, {
         [styles.iconDropOver]: isOver && !isDragging,
@@ -96,24 +118,35 @@ const DroppableIcon: React.FC<DroppableIconProps> = ({
       {...attributes}
       {...listeners}
     >
-      {/* 删除按钮 */}
-      {isEditMode && (
-        <div className={styles.deleteBtnWrapper}>
-          <div
-            className={styles.deleteBtn}
+      {/* 图标 - 点击打开链接 */}
+      <div className={styles.iconWrapper} style={iconWrapperStyle} onClick={handleClick}>
+        {isEditMode && (
+          <button
+            type='button'
+            className={styles.deleteFloatingBtn}
             onClick={(e) => {
               e.stopPropagation()
               onDelete(icon.id)
             }}
+            aria-label={t('common.delete')}
           >
             <CloseCircleFilled />
-          </div>
-        </div>
-      )}
-
-      {/* 图标 - 点击打开链接 */}
-      <div className={styles.iconWrapper} style={iconWrapperStyle} onClick={handleClick}>
-        <span className={styles.iconEmoji}>{icon.icon}</span>
+          </button>
+        )}
+        <span className={styles.iconEmoji}>
+          {isImageIcon ? (
+            <img
+              className={styles.iconImg}
+              src={icon.icon}
+              alt=''
+              onError={() => setIconLoadFailed(true)}
+            />
+          ) : hasImageIcon ? (
+            <img className={styles.iconImg} src={fallbackIcon} alt='' />
+          ) : (
+            icon.icon || <img className={styles.iconImg} src={fallbackIcon} alt='' />
+          )}
+        </span>
       </div>
 
       {/* 应用名称 */}

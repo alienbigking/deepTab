@@ -4,16 +4,82 @@ import {
   IGradientWallpaper,
   IImageWallpaper,
   IDynamicWallpaper,
-  IWallpaperConfig
+  IWallpaperConfig,
+  IWallpaperPageResult
 } from '../types/wallpaper'
+import requestDeepTabAutoSync from '@/pages/deepTabSync/services/autoSync'
 
+const syncTimeout = 20000
 const buildUrl = (path: string) => `${env.HOST_API_URL.replace(/\/$/, '')}${path}`
+
+type WallpaperPageParams = {
+  category?: string
+  page?: number
+  pageSize?: number
+}
+
+const isHttpUrl = (value: unknown): value is string => {
+  return typeof value === 'string' && /^https?:\/\//i.test(value)
+}
+
+const normalizeImageWallpaper = (
+  item: Partial<IImageWallpaper>,
+  fallbackId: string
+): IImageWallpaper | null => {
+  if (!isHttpUrl(item.url)) return null
+  const thumbnail = isHttpUrl(item.thumbnail) ? item.thumbnail : item.url
+
+  return {
+    id: item.id || fallbackId,
+    type: 'image',
+    url: item.url,
+    thumbnail,
+    category: item.category || '其他',
+    author: item.author,
+    source: item.source
+  }
+}
+
+const normalizeDynamicWallpaper = (
+  item: Partial<IDynamicWallpaper>,
+  fallbackId: string
+): IDynamicWallpaper | null => {
+  if (!isHttpUrl(item.videoUrl) || !isHttpUrl(item.thumbnail)) return null
+
+  return {
+    id: item.id || fallbackId,
+    type: 'dynamic',
+    videoUrl: item.videoUrl,
+    thumbnail: item.thumbnail,
+    category: item.category || '其他',
+    title: item.title,
+    author: item.author,
+    source: item.source
+  }
+}
+
+const normalizePageResponse = <T>(
+  payload: unknown,
+  normalizeItem: (item: Partial<T>, fallbackId: string) => T | null
+): IWallpaperPageResult<T> => {
+  const raw = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : {}
+  const list = Array.isArray(raw.list) ? raw.list : []
+
+  return {
+    list: list
+      .map((item, index) => normalizeItem((item || {}) as Partial<T>, `wallpaper-${index}`))
+      .filter(Boolean) as T[],
+    page: typeof raw.page === 'number' ? raw.page : 1,
+    pageSize: typeof raw.pageSize === 'number' ? raw.pageSize : list.length,
+    hasMore: !!raw.hasMore,
+    category: typeof raw.category === 'string' ? raw.category : undefined
+  }
+}
 
 /**
  * wallpaper 服务层
  */
 export default {
-  // 获取渐变壁纸列表
   async getGradientWallpapers(): Promise<IGradientWallpaper[]> {
     const extractHexColors = (gradient: string) => {
       const matches = gradient.match(/#[0-9a-fA-F]{3,8}/g)
@@ -45,159 +111,40 @@ export default {
     }))
   },
 
-  // 获取图片壁纸列表
-  async getImageWallpapers(): Promise<IImageWallpaper[]> {
-    try {
-      const response = await http(buildUrl('/api/deepTab/wallpapers/images'))
-      const data: unknown = response.data
-      if (!Array.isArray(data)) return []
-      return (data as IImageWallpaper[]).map((item) => ({
-        ...item,
-        category: item.category || '其他'
-      }))
-    } catch (error) {
-      console.error('获取图片壁纸失败:', error)
-      const mocks: IImageWallpaper[] = [
-        {
-          id: 'featured-animal-1',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1546182990-dffeafbe841d?auto=format&fit=crop&w=1920&q=80',
-          thumbnail:
-            'https://images.unsplash.com/photo-1546182990-dffeafbe841d?auto=format&fit=crop&w=600&q=80',
-          category: '动物',
-          author: 'Unsplash',
-          source: 'unsplash'
+  async getImageWallpapers(params: WallpaperPageParams = {}): Promise<IWallpaperPageResult<IImageWallpaper>> {
+    const response = await http<IWallpaperPageResult<Partial<IImageWallpaper>>>(
+      buildUrl('/api/deepTab/wallpapers/images'),
+      {
+        params: {
+          category: params.category,
+          page: params.page || 1,
+          pageSize: params.pageSize || 18
         },
-        {
-          id: 'featured-animal-2',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=1920&q=80',
-          thumbnail:
-            'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=600&q=80',
-          category: '动物',
-          author: 'Unsplash',
-          source: 'unsplash'
-        },
-        {
-          id: 'featured-plant-1',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1920&q=80',
-          thumbnail:
-            'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=600&q=80',
-          category: '植物',
-          author: 'Unsplash',
-          source: 'unsplash'
-        },
-        {
-          id: 'featured-plant-2',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=1920&q=80',
-          thumbnail:
-            'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=600&q=80',
-          category: '植物',
-          author: 'Unsplash',
-          source: 'unsplash'
-        },
-        {
-          id: 'featured-anime-1',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1520975916090-3105956dac38?auto=format&fit=crop&w=1920&q=80',
-          thumbnail:
-            'https://images.unsplash.com/photo-1520975916090-3105956dac38?auto=format&fit=crop&w=600&q=80',
-          category: '动漫',
-          author: 'Unsplash',
-          source: 'unsplash'
-        },
-        {
-          id: 'featured-anime-2',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1518443895914-7d8b0f1b5cdb?auto=format&fit=crop&w=1920&q=80',
-          thumbnail:
-            'https://images.unsplash.com/photo-1518443895914-7d8b0f1b5cdb?auto=format&fit=crop&w=600&q=80',
-          category: '动漫',
-          author: 'Unsplash',
-          source: 'unsplash'
-        },
-        {
-          id: 'featured-street-1',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=1920&q=80',
-          thumbnail:
-            'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=600&q=80',
-          category: '街头',
-          author: 'Unsplash',
-          source: 'unsplash'
-        },
-        {
-          id: 'featured-street-2',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1520975682031-ae460d545300?auto=format&fit=crop&w=1920&q=80',
-          thumbnail:
-            'https://images.unsplash.com/photo-1520975682031-ae460d545300?auto=format&fit=crop&w=600&q=80',
-          category: '街头',
-          author: 'Unsplash',
-          source: 'unsplash'
-        },
-        {
-          id: 'featured-nature-1',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1920&q=80',
-          thumbnail:
-            'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=600&q=80',
-          category: '自然',
-          author: 'Unsplash',
-          source: 'unsplash'
-        },
-        {
-          id: 'featured-nature-2',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1920&q=80',
-          thumbnail:
-            'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=600&q=80',
-          category: '自然',
-          author: 'Unsplash',
-          source: 'unsplash'
-        }
-      ]
-      return mocks
-    }
+        timeout: syncTimeout
+      }
+    )
+
+    return normalizePageResponse<IImageWallpaper>(response.data, normalizeImageWallpaper)
   },
 
-  // 获取动态壁纸列表
-  async getDynamicWallpapers(): Promise<IDynamicWallpaper[]> {
-    try {
-      const response = await http(buildUrl('/api/deepTab/wallpapers/dynamic'))
-      return response.data
-    } catch (error) {
-      console.error('获取动态壁纸失败:', error)
-      const mocks: IDynamicWallpaper[] = [
-        {
-          id: 'dynamic-1',
-          type: 'dynamic',
-          videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
-          thumbnail:
-            'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=600&q=80'
+  async getDynamicWallpapers(
+    params: WallpaperPageParams = {}
+  ): Promise<IWallpaperPageResult<IDynamicWallpaper>> {
+    const response = await http<IWallpaperPageResult<Partial<IDynamicWallpaper>>>(
+      buildUrl('/api/deepTab/wallpapers/dynamic'),
+      {
+        params: {
+          category: params.category,
+          page: params.page || 1,
+          pageSize: params.pageSize || 18
         },
-        {
-          id: 'dynamic-2',
-          type: 'dynamic',
-          videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/forest.mp4',
-          thumbnail:
-            'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=600&q=80'
-        },
-        {
-          id: 'dynamic-3',
-          type: 'dynamic',
-          videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/river.mp4',
-          thumbnail:
-            'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=600&q=80'
-        }
-      ]
-      return mocks
-    }
+        timeout: syncTimeout
+      }
+    )
+
+    return normalizePageResponse<IDynamicWallpaper>(response.data, normalizeDynamicWallpaper)
   },
 
-  // 获取当前壁纸配置
   async getWallpaperConfig(): Promise<IWallpaperConfig | null> {
     try {
       const result = await chrome.storage.local.get(['wallpaperConfig'])
@@ -208,10 +155,10 @@ export default {
     }
   },
 
-  // 保存壁纸配置
   async saveWallpaperConfig(config: IWallpaperConfig): Promise<void> {
     try {
       await chrome.storage.local.set({ wallpaperConfig: config })
+      requestDeepTabAutoSync('wallpaperConfig')
     } catch (error) {
       console.error('保存壁纸配置失败:', error)
     }

@@ -10,7 +10,9 @@ import bottomBarService from './services/bottomBar'
 import { Dropdown } from 'antd'
 import AddAppModal from '@/pages/appGrid/addAppModal'
 import appGridService from '@/pages/appGrid/services/appGrid'
-import type { AppNode, AppItem } from '@/pages/appGrid/types/appGrid'
+import type { AppItem } from '@/pages/appGrid/types/appGrid'
+import { createFallbackIcon, isImageIconSource } from '@/pages/appGrid/iconFallback'
+import { useTranslation } from 'react-i18next'
 
 interface BottomBarProps {
   activeCategoryId?: string
@@ -22,8 +24,6 @@ const getDockSortableId = (appId: string) => {
   return `dock:${appId}`
 }
 
-const MAX_FALLBACK_ITEMS = 5
-
 interface DockItemProps {
   app: AppItem
   onOpen: (url: string) => void
@@ -33,9 +33,7 @@ interface DockItemProps {
 
 const DockSortableItem: React.FC<DockItemProps> = (props) => {
   const { app, onOpen, onRemove, onEdit } = props
-
-  // 只允许普通图标在底部栏，文件夹不支持
-  if (app.type !== 'item') return null
+  const [iconLoadFailed, setIconLoadFailed] = useState(false)
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: getDockSortableId(app.id),
@@ -51,9 +49,9 @@ const DockSortableItem: React.FC<DockItemProps> = (props) => {
     opacity: isDragging ? 0.6 : 1
   }
 
-  const isImageIcon = (icon: string) => {
-    return /^(https?:\/\/|data:image\/)/.test(icon)
-  }
+  const hasImageIcon = isImageIconSource(app.icon)
+  const isImageIcon = hasImageIcon && !iconLoadFailed
+  const fallbackIcon = createFallbackIcon(app.name)
 
   return (
     <Dropdown
@@ -82,10 +80,19 @@ const DockSortableItem: React.FC<DockItemProps> = (props) => {
         {...attributes}
         {...listeners}
       >
-        {isImageIcon(app.icon) ? (
-          <img className={cn(styles.iconImg)} src={app.icon} alt={app.name} />
+        {isImageIcon ? (
+          <img
+            className={cn(styles.iconImg)}
+            src={app.icon}
+            alt=''
+            onError={() => setIconLoadFailed(true)}
+          />
+        ) : hasImageIcon ? (
+          <img className={cn(styles.iconImg)} src={fallbackIcon} alt='' />
         ) : (
-          <span className={cn(styles.emoji)}>{app.icon}</span>
+          <span className={cn(styles.emoji)}>
+            {app.icon || <img className={cn(styles.iconImg)} src={fallbackIcon} alt='' />}
+          </span>
         )}
       </div>
     </Dropdown>
@@ -93,6 +100,7 @@ const DockSortableItem: React.FC<DockItemProps> = (props) => {
 }
 
 const BottomBar: React.FC<BottomBarProps> = (props) => {
+  const { t } = useTranslation()
   const { activeCategoryId = 'home' } = props
   const apps = useAppGridStore((s) => s.apps)
   const setApps = useAppGridStore((s) => s.setApps)
@@ -113,14 +121,6 @@ const BottomBar: React.FC<BottomBarProps> = (props) => {
       .map((id) => apps.find((a) => a.id === id) || null)
       .filter(Boolean) as AppItem[]
   }, [apps, pinnedAppIds])
-
-  const dockApps = useMemo(() => {
-    return apps
-      .filter((node): node is AppItem => node.type === 'item')
-      .filter((app) => (app.categoryId || 'home') === activeCategoryId)
-      .sort((a, b) => a.order - b.order)
-      .slice(0, MAX_FALLBACK_ITEMS)
-  }, [apps, activeCategoryId])
 
   const normalizeUrl = (url: string): string => {
     if (!url) return ''
@@ -152,8 +152,6 @@ const BottomBar: React.FC<BottomBarProps> = (props) => {
     setEditOpen(true)
   }
 
-  const fallbackApps = dockApps
-
   return (
     <div className={cn(styles.bottomBarWrap)}>
       <div ref={setNodeRef} className={cn(styles.dock, { [styles.dockOver]: isOver })}>
@@ -173,20 +171,7 @@ const BottomBar: React.FC<BottomBarProps> = (props) => {
             ))}
           </SortableContext>
         ) : (
-          fallbackApps.map((app) => (
-            <div
-              key={app.id}
-              className={cn(styles.dockItem)}
-              title={app.name}
-              onClick={() => openApp(app.url)}
-            >
-              {/^(https?:\/\/|data:image\/)/.test(app.icon) ? (
-                <img className={cn(styles.iconImg)} src={app.icon} alt={app.name} />
-              ) : (
-                <span className={cn(styles.emoji)}>{app.icon}</span>
-              )}
-            </div>
-          ))
+          <span className={styles.dockEmpty}>{t('dock.dropHere', { defaultValue: 'Drag icons here' })}</span>
         )}
       </div>
 

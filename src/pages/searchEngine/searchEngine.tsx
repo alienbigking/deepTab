@@ -11,6 +11,8 @@ import {
 } from '@ant-design/icons'
 import styles from './searchEngine.module.less'
 import useSearchEngineStore from './stores/searchEngine'
+import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
+import { useTranslation } from 'react-i18next'
 
 const SearchEngine: React.FC = () => {
   const { config, init, setDefaultEngineId, upsertCustomEngine, removeCustomEngine } =
@@ -20,6 +22,7 @@ const SearchEngine: React.FC = () => {
   const [lastAutoIcon, setLastAutoIcon] = useState<string>('')
   const [form] = Form.useForm()
   const iconPreview = Form.useWatch('icon', form)
+  const { t } = useTranslation()
 
   function toFaviconUrl(template: string) {
     const v = String(template || '').trim()
@@ -163,9 +166,9 @@ const SearchEngine: React.FC = () => {
 
   const validateUrlTemplate = (_: any, value?: string) => {
     const v = (value || '').trim()
-    if (!v) return Promise.reject(new Error('请输入搜索 URL'))
+    if (!v) return Promise.reject(new Error(t('searchEngine.urlRequired', { defaultValue: 'Enter a search URL' })))
     const ok = v.includes('{q}') || v.includes('%s')
-    if (!ok) return Promise.reject(new Error('URL 需要包含 {q} 或 %s 作为关键词占位符'))
+    if (!ok) return Promise.reject(new Error(t('searchEngine.placeholderRequired', { defaultValue: 'The URL must contain {q} or %s as the query placeholder' })))
     return Promise.resolve()
   }
 
@@ -226,10 +229,10 @@ const SearchEngine: React.FC = () => {
     <div className={cn(styles.container)}>
       <Card
         className='dtSettingsCard'
-        title='默认搜索引擎'
+        title={t('searchEngine.defaultTitle', { defaultValue: 'Default search engine' })}
         extra={
           <div className={styles.currentDefault}>
-            <span className={styles.currentDefaultLabel}>当前：</span>
+            <span className={styles.currentDefaultLabel}>{t('searchEngine.current', { defaultValue: 'Current' })}: </span>
             <Tag color='processing'>{defaultEngineName}</Tag>
           </div>
         }
@@ -250,7 +253,7 @@ const SearchEngine: React.FC = () => {
                 <div className={styles.engineName}>{it.name}</div>
                 <div className={styles.engineUrl}>{it.url}</div>
               </div>
-              {defaultEngineId === it.id ? <Tag color='success'>默认</Tag> : null}
+              {defaultEngineId === it.id ? <Tag color='success'>{t('searchEngine.default', { defaultValue: 'Default' })}</Tag> : null}
             </div>
           ))}
         </div>
@@ -258,10 +261,10 @@ const SearchEngine: React.FC = () => {
 
       <Card
         className='dtSettingsCard'
-        title='自定义搜索引擎'
+        title={t('searchEngine.customTitle', { defaultValue: 'Custom search engines' })}
         extra={
           <Button type='primary' icon={<PlusOutlined />} onClick={openCreate}>
-            添加
+            {t('common.add')}
           </Button>
         }
       >
@@ -273,14 +276,14 @@ const SearchEngine: React.FC = () => {
                   <div className={styles.customName}>
                     <LinkOutlined />
                     <span>{it.name}</span>
-                    {defaultEngineId === it.id ? <Tag color='success'>默认</Tag> : null}
+                    {defaultEngineId === it.id ? <Tag color='success'>{t('searchEngine.default', { defaultValue: 'Default' })}</Tag> : null}
                   </div>
                   <div className={styles.customUrl}>{it.url}</div>
                 </div>
                 <div className={styles.customActions}>
                   {defaultEngineId !== it.id ? (
                     <Button size='small' onClick={() => void setDefaultEngineId(it.id)}>
-                      设为默认
+                      {t('searchEngine.setDefault', { defaultValue: 'Set as default' })}
                     </Button>
                   ) : null}
                   <Button size='small' icon={<EditOutlined />} onClick={() => openEdit(it.id)} />
@@ -290,11 +293,13 @@ const SearchEngine: React.FC = () => {
                     icon={<DeleteOutlined />}
                     onClick={() => {
                       Modal.confirm({
-                        title: '删除自定义搜索引擎',
-                        content: `确定删除 “${it.name}” 吗？`,
-                        okText: '删除',
-                        cancelText: '取消',
+                        title: t('searchEngine.deleteTitle', { defaultValue: 'Delete custom search engine' }),
+                        content: t('searchEngine.deleteConfirm', { name: it.name, defaultValue: `Delete “${it.name}”?` }),
+                        okText: t('common.delete'),
+                        cancelText: t('common.cancel'),
                         okButtonProps: { danger: true },
+                        maskTransitionName: modalMaskTransitionName,
+                        maskStyle: modalMaskStyle,
                         onOk: async () => {
                           await removeCustomEngine(it.id)
                         }
@@ -306,38 +311,40 @@ const SearchEngine: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className={styles.empty}>暂无自定义搜索引擎，点击右上角添加</div>
+          <div className={styles.empty}>{t('searchEngine.empty', { defaultValue: 'No custom search engines. Use Add to create one.' })}</div>
         )}
       </Card>
 
       <Modal
         open={modalOpen}
-        title={editingId ? '编辑自定义搜索引擎' : '新增自定义搜索引擎'}
-        okText='保存'
-        cancelText='取消'
+        title={editingId ? t('searchEngine.editTitle', { defaultValue: 'Edit custom search engine' }) : t('searchEngine.addTitle', { defaultValue: 'Add custom search engine' })}
+        okText={t('common.save')}
+        cancelText={t('common.cancel')}
         onOk={handleSubmit}
         onCancel={closeModal}
+        maskTransitionName={modalMaskTransitionName}
+        maskStyle={modalMaskStyle}
         destroyOnHidden
       >
         <Form form={form} layout='vertical' onValuesChange={onFormValuesChange}>
           <Form.Item
             name='name'
-            label='名称'
-            rules={[{ required: true, message: '请输入名称' }]}
+            label={t('addApp.name', { defaultValue: 'Name' })}
+            rules={[{ required: true, message: t('searchEngine.nameRequired', { defaultValue: 'Enter a name' }) }]}
             normalize={(v) => (typeof v === 'string' ? v.trimStart() : v)}
           >
-            <Input placeholder='例如：掘金 / GitHub / 维基百科' />
+            <Input placeholder={t('searchEngine.nameExample', { defaultValue: 'Example: GitHub / Wikipedia' })} />
           </Form.Item>
-          <Form.Item name='url' label='搜索 URL' rules={[{ validator: validateUrlTemplate }]}>
-            <Input placeholder='例如：https://www.google.com/search?q={q}' />
+          <Form.Item name='url' label={t('searchEngine.searchUrl', { defaultValue: 'Search URL' })} rules={[{ validator: validateUrlTemplate }]}>
+            <Input placeholder={t('searchEngine.urlExample', { defaultValue: 'Example: https://www.google.com/search?q={q}' })} />
           </Form.Item>
-          <Form.Item label='图标'>
+          <Form.Item label={t('searchEngine.icon', { defaultValue: 'Icon' })}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <Form.Item name='icon' noStyle>
-                <Input placeholder='可填写图片 URL / favicon / dataURL' />
+                <Input placeholder={t('searchEngine.iconPlaceholder', { defaultValue: 'Image URL / favicon / data URL' })} />
               </Form.Item>
               <Upload accept='image/*' showUploadList={false} beforeUpload={handleUploadBefore}>
-                <Button>上传</Button>
+                <Button>{t('addApp.upload', { defaultValue: 'Upload' })}</Button>
               </Upload>
               <Button
                 onClick={() => {
@@ -349,7 +356,7 @@ const SearchEngine: React.FC = () => {
                   }
                 }}
               >
-                使用网站图标
+                {t('searchEngine.useWebsiteIcon', { defaultValue: 'Use website icon' })}
               </Button>
               <Button
                 onClick={() => {
@@ -357,11 +364,11 @@ const SearchEngine: React.FC = () => {
                   setLastAutoIcon('')
                 }}
               >
-                清空
+                {t('search.clear')}
               </Button>
             </div>
             <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ color: 'rgba(255,255,255,0.7)' }}>预览：</span>
+              <span style={{ color: 'rgba(255,255,255,0.7)' }}>{t('searchEngine.preview', { defaultValue: 'Preview' })}: </span>
               {String(iconPreview || '').trim() ? (
                 <Image
                   preview={false}
@@ -383,7 +390,7 @@ const SearchEngine: React.FC = () => {
             </div>
           </Form.Item>
           <Form.Item name='setAsDefault' valuePropName='checked'>
-            <Checkbox>设为默认搜索引擎</Checkbox>
+            <Checkbox>{t('searchEngine.setDefault', { defaultValue: 'Set as default' })}</Checkbox>
           </Form.Item>
         </Form>
       </Modal>

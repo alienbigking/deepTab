@@ -1,4 +1,5 @@
 import type { ISearchEngineConfig } from '../types/searchEngine'
+import requestDeepTabAutoSync from '@/pages/deepTabSync/services/autoSync'
 
 export default {
   async getSearchEngineConfig(): Promise<ISearchEngineConfig> {
@@ -51,6 +52,7 @@ export default {
   async saveSearchEngineConfig(config: ISearchEngineConfig): Promise<void> {
     try {
       await chrome.storage.local.set({ searchEngineConfig: config })
+      requestDeepTabAutoSync('searchEngineConfig')
     } catch (error) {
       console.error('保存搜索引擎配置失败:', error)
     }

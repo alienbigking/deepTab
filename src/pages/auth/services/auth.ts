@@ -1,11 +1,13 @@
 import { env } from '@/config/env'
-import http from '@/utils/http'
+import http, { isHttpError } from '@/utils/http'
+import requestDeepTabAutoSync from '@/pages/deepTabSync/services/autoSync'
 import type { AuthSession, LoginParams, RegisterParams } from '../types/auth'
 
 const TOKEN_KEY = 'token'
 const SESSION_KEY = 'auth_session'
 
 const buildUrl = (path: string) => `${env.HOST_API_URL.replace(/\/$/, '')}${path}`
+const DEFAULT_AVATAR_URL = buildUrl('/images/default-avatar.svg')
 
 const normalizeIdentifier = (value: string) => value.trim()
 
@@ -25,6 +27,8 @@ const toAbsoluteUrl = (url: string) => {
   return `${env.HOST_API_URL.replace(/\/$/, '')}${url.startsWith('/') ? url : `/${url}`}`
 }
 
+const resolveAvatarUrl = (url?: string) => toAbsoluteUrl(url || '') || DEFAULT_AVATAR_URL
+
 const getToken = async () => {
   const result = await chrome.storage.local.get([TOKEN_KEY])
   return result[TOKEN_KEY] || ''
@@ -41,7 +45,29 @@ export default {
       await this.clearSession()
       return null
     }
-    return session
+
+    try {
+      const response = await http<AuthSession['user']>(buildUrl('/oauth/session'))
+      const nextSession: AuthSession = {
+        ...session,
+        user: {
+          ...(session.user || {}),
+          ...(response.data || {}),
+          avatar: resolveAvatarUrl(response.data?.avatar || session.user?.avatar || '')
+        }
+      }
+      await this.saveSession(nextSession)
+      return nextSession
+    } catch (error) {
+      if (isHttpError(error) && error.code === 401) {
+        console.warn('远端会话已失效，已清除本地会话')
+        await this.clearSession()
+        return null
+      }
+
+      console.warn('远端会话暂时无法校验，保留本地登录状态:', error)
+      return session
+    }
   },
 
   async saveSession(session: AuthSession): Promise<void> {
@@ -84,10 +110,11 @@ export default {
       expiresAt: Date.now() + (data.expiresIn || 86400) * 1000,
       user: {
         ...(data.user || {}),
-        avatar: toAbsoluteUrl(data.user?.avatar || '')
+        avatar: resolveAvatarUrl(data.user?.avatar || '')
       }
     }
     await this.saveSession(session)
+    void requestDeepTabAutoSync('login')
     return session
   },
 

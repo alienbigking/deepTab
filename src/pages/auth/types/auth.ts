@@ -6,8 +6,13 @@ export interface AuthUser {
   avatar?: string
   email?: string
   mobile?: string
+  gender?: string
+  remark?: string
+  status?: string
   userIdentifier?: string
   identityType?: string
+  permissions?: string[]
+  isSuperAdmin?: boolean
 }
 
 export interface AuthSession {

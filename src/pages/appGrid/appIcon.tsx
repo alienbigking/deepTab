@@ -1,10 +1,12 @@
-import React, { useRef, useEffect } from 'react'
+import React, { useRef, useEffect, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { CloseCircleFilled, FolderFilled } from '@ant-design/icons'
 import cn from 'classnames'
 import styles from './appGrid.module.less'
+import { useTranslation } from 'react-i18next'
 import type { AppNode, AppItem, AppFolder, IconSettings } from './types/appGrid'
+import { createFallbackIcon, isImageIconSource } from './iconFallback'
 
 interface AppIconProps {
   node: AppNode
@@ -22,6 +24,7 @@ interface AppIconProps {
  * 支持拖拽、长按进入编辑模式、右键菜单、文件夹点击打开
  */
 const AppIcon: React.FC<AppIconProps> = (props) => {
+  const { t } = useTranslation()
   const {
     node,
     isEditMode = false,
@@ -35,10 +38,30 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
 
   const longPressTimer = useRef<NodeJS.Timeout | null>(null)
   const longPressTriggered = useRef(false)
+  const [failedIconUrls, setFailedIconUrls] = useState<Record<string, boolean>>({})
 
   const isFolder = node.type === 'folder'
   const folder = isFolder ? (node as AppFolder) : null
   const item = !isFolder ? (node as AppItem) : null
+  const isImageIcon = isImageIconSource
+  const nodeHasImageIcon = !isFolder && isImageIcon(item?.icon)
+  const renderImageIcon = (
+    icon: string | undefined,
+    className: string,
+    fallback: React.ReactNode
+  ) => {
+    const active = String(icon || '')
+    if (failedIconUrls[active]) return fallback
+    if (!active) return fallback
+    return (
+      <img
+        src={active}
+        alt=''
+        className={className}
+        onError={() => setFailedIconUrls((value) => ({ ...value, [active]: true }))}
+      />
+    )
+  }
 
   // 拖拽相关 - 只有在不禁用拖拽时才使用
   const sortable = useSortable({
@@ -66,7 +89,8 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
     width: iconSettings.size,
     height: iconSettings.size,
     borderRadius: iconSettings.radius,
-    opacity: iconSettings.opacity / 100
+    opacity: iconSettings.opacity / 100,
+    background: nodeHasImageIcon ? 'var(--dt-app-icon-bg)' : node.iconBg || 'var(--dt-app-icon-bg)'
   }
 
   const appNameStyle: React.CSSProperties = {
@@ -106,6 +130,15 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
     if (!item) return
 
     try {
+      if (item.url.startsWith('deeptab://widget/')) {
+        document.querySelector('[data-deeptab-widgets]')?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'center'
+        })
+        return
+      }
+
       const normalizedUrl = normalizeUrl(item.url)
       if (normalizedUrl) {
         chrome.tabs.create({ url: normalizedUrl, active: true })
@@ -149,6 +182,10 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
     }
   }, [])
 
+  useEffect(() => {
+    setFailedIconUrls({})
+  }, [node.id, node.icon])
+
   return (
     <div
       ref={disableDrag ? undefined : setNodeRef}
@@ -165,37 +202,52 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
       {...(disableDrag ? {} : attributes)}
       {...(disableDrag || isFolder ? {} : listeners)}
     >
-      {/* 删除按钮 - 直接触发父组件的删除确认逻辑 */}
-      {isEditMode && (
-        <div className={styles.deleteBtnWrapper}>
-          <div
-            className={styles.deleteBtn}
+      {/* 图标 */}
+      <div className={styles.iconWrapper} style={iconWrapperStyle}>
+        {isEditMode && (
+          <button
+            type='button'
+            className={styles.deleteFloatingBtn}
             onClick={(e) => {
-              // 阻止冒泡,避免触发图标点击/拖拽
               e.stopPropagation()
               onDelete(node.id)
             }}
+            aria-label={t('common.delete')}
           >
             <CloseCircleFilled />
-          </div>
-        </div>
-      )}
-
-      {/* 图标 */}
-      <div className={styles.iconWrapper} style={iconWrapperStyle}>
+          </button>
+        )}
         {isFolder ? (
           <>
             {/* 文件夹封面 - 显示最多4个子图标 */}
             {folder && folder.children.length > 0 ? (
               <div className={styles.folderCover}>
-                {folder.children.slice(0, 4).map((child, index) => (
+                {folder.children.slice(0, 4).map((child) => (
                   <span key={child.id} className={styles.folderCoverIcon}>
-                    {child.icon}
+                    {isImageIcon(child.icon) ? (
+                      renderImageIcon(
+                        child.icon,
+                        styles.folderCoverImg,
+                        <img className={styles.folderCoverImg} src={createFallbackIcon(child.name)} alt='' />
+                      )
+                    ) : (
+                      child.icon
+                    )}
                   </span>
                 ))}
               </div>
             ) : (
-              <span className={styles.iconEmoji}>{folder?.icon || <FolderFilled />}</span>
+              <span className={styles.iconEmoji}>
+                {isImageIcon(folder?.icon) ? (
+                  renderImageIcon(
+                    folder?.icon,
+                    styles.iconImg,
+                    <FolderFilled />
+                  )
+                ) : (
+                  folder?.icon || <FolderFilled />
+                )}
+              </span>
             )}
             {/* 徽标计数 */}
             {folder && folder.children.length > 0 && (
@@ -205,7 +257,17 @@ const AppIcon: React.FC<AppIconProps> = (props) => {
             )}
           </>
         ) : (
-          <span className={styles.iconEmoji}>{item?.icon}</span>
+          <span className={styles.iconEmoji}>
+            {isImageIcon(item?.icon) ? (
+              renderImageIcon(
+                item?.icon,
+                styles.iconImg,
+                <img className={styles.iconImg} src={createFallbackIcon(item?.name)} alt='' />
+              )
+            ) : (
+              item?.icon
+            )}
+          </span>
         )}
       </div>
 

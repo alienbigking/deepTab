@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react'
 import cn from 'classnames'
-import { Card, Descriptions, Alert } from 'antd'
+import { Card, Descriptions, Alert, Button, Space } from 'antd'
 import styles from './about.module.less'
 import generalSettingsService from '../generalSettings/services/generalSettings'
 import { defaultGeneralSettings } from '../generalSettings/stores/generalSettings'
+import LegalModal from '@/pages/legal/legalModal'
+import type { LegalDocumentType } from '@/pages/legal/legalDocuments'
+import { useTranslation } from 'react-i18next'
 
 const About: React.FC = () => {
   const [showIcp, setShowIcp] = useState(defaultGeneralSettings.other.showIcp)
+  const [legalType, setLegalType] = useState<LegalDocumentType | null>(null)
+  const { t } = useTranslation()
 
   useEffect(() => {
     const load = async () => {
@@ -31,21 +36,31 @@ const About: React.FC = () => {
   return (
     <div className={cn(styles.container)}>
       <Alert
-        message='💡 首次使用提示'
-        description='如果您在新标签页右下角看到"自定义Chrome"按钮,这是 Chrome 浏览器的功能。您可以点击该按钮,选择"在新标签页上隐藏页脚",按钮将永久隐藏。'
+        message={t('about.firstUse', { defaultValue: 'First-use tip' })}
+        description={t('about.browserTip', { defaultValue: 'Your browser may show its own customization button on the new tab page. You can hide it from the browser controls.' })}
         type='info'
         showIcon
         closable
         className={styles.tipAlert}
       />
-      <Card title='关于 deepTab' className='dtSettingsCard' variant='borderless'>
+      <Card title={t('sidebar.about')} className='dtSettingsCard' variant='borderless'>
         <Descriptions column={1}>
-          <Descriptions.Item label='版本'>V2.2.22</Descriptions.Item>
-          <Descriptions.Item label='作者'>deepTab Team</Descriptions.Item>
-          <Descriptions.Item label='邮箱'>1260213657@qq.com</Descriptions.Item>
-          <Descriptions.Item label='官网'>https://deeptab.com</Descriptions.Item>
+          <Descriptions.Item label={t('about.version', { defaultValue: 'Version' })}>V2.2.22</Descriptions.Item>
+          <Descriptions.Item label={t('about.author', { defaultValue: 'Author' })}>deepTab Team</Descriptions.Item>
+          <Descriptions.Item label={t('profile.email', { defaultValue: 'Email' })}>1260213657@qq.com</Descriptions.Item>
+          <Descriptions.Item label={t('about.website', { defaultValue: 'Website' })}>https://deeptab.com</Descriptions.Item>
+          <Descriptions.Item label={t('about.legal', { defaultValue: 'Legal documents' })}>
+            <Space size={8} wrap>
+              <Button type='link' size='small' onClick={() => setLegalType('terms')}>
+                {t('sidebar.terms')}
+              </Button>
+              <Button type='link' size='small' onClick={() => setLegalType('privacy')}>
+                {t('sidebar.privacy')}
+              </Button>
+            </Space>
+          </Descriptions.Item>
           {showIcp && (
-            <Descriptions.Item label='备案号'>
+            <Descriptions.Item label={t('about.registration', { defaultValue: 'Registration' })}>
               <a
                 href='https://beian.miit.gov.cn/'
                 target='_blank'
@@ -56,9 +71,19 @@ const About: React.FC = () => {
               </a>
             </Descriptions.Item>
           )}
-          <Descriptions.Item label='描述'>一款漂亮的新标签页插件</Descriptions.Item>
+          <Descriptions.Item label={t('about.descriptionLabel', { defaultValue: 'Description' })}>{t('about.description', { defaultValue: 'A polished and customizable new tab extension.' })}</Descriptions.Item>
         </Descriptions>
       </Card>
+
+      <Card title={t('about.privacyOverview', { defaultValue: 'Privacy & permissions overview' })} className='dtSettingsCard' variant='borderless'>
+        <div className={styles.privacySummary}>
+          <p>{t('about.privacyLocal', { defaultValue: 'Deep Tab uses browser storage for home icons, wallpapers, themes, search history, widgets, and preferences.' })}</p>
+          <p>{t('about.privacyCloud', { defaultValue: 'After signing in, you can sync icons, categories, Dock, settings, and themes to the Deep Tab service.' })}</p>
+          <p>{t('about.privacyThirdParty', { defaultValue: 'Weather, hot search, suggestions, and wallpaper features contact third-party services when needed.' })}</p>
+        </div>
+      </Card>
+
+      <LegalModal open={Boolean(legalType)} type={legalType || 'terms'} onClose={() => setLegalType(null)} />
     </div>
   )
 }

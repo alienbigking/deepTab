@@ -1,25 +1,28 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react'
 import {
+  closestCorners,
   DndContext,
-  closestCenter,
   DragOverlay,
   KeyboardSensor,
   PointerSensor,
+  pointerWithin,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent
 } from '@dnd-kit/core'
+import { snapCenterToCursor } from '@dnd-kit/modifiers'
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import cn from 'classnames'
 import styles from './main.module.less'
 import SearchBar from './searchBar/searchBar'
-import WidgetsContainer from './widgetsContainer/widgetsContainer'
-import AppGrid from './appGrid/appGrid'
+import AppGrid, { GridDragOverlayContent } from './appGrid/appGrid'
 import SettingsSidebar from './settingsSidebar/settingsSidebar'
 import { App } from 'antd'
 import { SettingOutlined } from '@ant-design/icons'
 import WallpaperBackground from './wallpaper/WallpaperBackground'
+import type { IWallpaperConfig } from './wallpaper/types/wallpaper'
 import generalSettingsService from './generalSettings/services/generalSettings'
 import { defaultGeneralSettings } from './generalSettings/stores/generalSettings'
 import { AppCategorySidebar } from './appCategory'
@@ -30,14 +33,61 @@ import appGridService from './appGrid/services/appGrid'
 import useAppGridStore from './appGrid/stores/appGrid'
 import bottomBarService from './bottomBar/services/bottomBar'
 import useBottomBarStore from './bottomBar/stores/bottomBar'
+import RemoteNotificationBridge from './notification/RemoteNotificationBridge'
 import { BOTTOM_BAR_DROPPABLE_ID } from './bottomBar/bottomBar'
+import { MAIN_GRID_DROPPABLE_ID } from './appGrid/appGrid'
+import { isImageIconSource } from './appGrid/iconFallback'
+import SyncConflictModal from './deepTabSync/SyncConflictModal'
+import syncPresentationStyles from './deepTabSync/syncPresentation.module.less'
+import { useTranslation } from 'react-i18next'
+
+const pageCollisionDetection: CollisionDetection = (args) => {
+  const isContainerId = (id: string | number) =>
+    id === MAIN_GRID_DROPPABLE_ID || id === BOTTOM_BAR_DROPPABLE_ID
+
+  const pointerCollisions = pointerWithin(args)
+  const dockPointerCollision = pointerCollisions.find(
+    (collision) => collision.id === BOTTOM_BAR_DROPPABLE_ID
+  )
+  if (dockPointerCollision) {
+    return [dockPointerCollision]
+  }
+
+  const nonContainerDroppables = args.droppableContainers.filter(
+    (container) => !isContainerId(container.id)
+  )
+
+  const pointerOnItems = pointerCollisions.filter((collision) => !isContainerId(collision.id))
+  if (pointerOnItems.length > 0) {
+    return pointerOnItems
+  }
+
+  const cornerOnItems = closestCorners({
+    ...args,
+    droppableContainers: nonContainerDroppables
+  })
+  if (cornerOnItems.length > 0) {
+    return cornerOnItems
+  }
+
+  if (pointerCollisions.length > 0) {
+    return pointerCollisions
+  }
+
+  return closestCorners(args)
+}
 
 /**
  * 新标签页主组件
  * 实现类似 macOS 风格的标签页界面
  */
-const Main: React.FC = () => {
-  const { message } = App.useApp()
+interface MainProps {
+  initialWallpaperConfig?: IWallpaperConfig | null
+}
+
+const Main: React.FC<MainProps> = ({ initialWallpaperConfig }) => {
+  const { message, notification } = App.useApp()
+  const { t } = useTranslation()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsMenu, setSettingsMenu] = useState<string | undefined>(undefined)
   const [showIcp, setShowIcp] = useState(defaultGeneralSettings.other.showIcp)
@@ -66,6 +116,55 @@ const Main: React.FC = () => {
     }
   }
 
+  const handlePageContextMenu = (event: React.MouseEvent) => {
+    const target = event.target as HTMLElement | null
+    if (
+      target?.closest('input, textarea, [contenteditable="true"], [role="textbox"]')
+    ) {
+      return
+    }
+
+    if (event.defaultPrevented) return
+
+    event.preventDefault()
+
+    window.dispatchEvent(
+      new CustomEvent('dt:openAppGridBlankMenu', {
+        detail: {
+          x: event.clientX,
+          y: event.clientY
+        }
+      })
+    )
+  }
+
+  const handlePageClick = (event: React.MouseEvent) => {
+    const target = event.target as HTMLElement | null
+    if (!target) return
+
+    const isInteractiveTarget = target.closest(
+      [
+        'input',
+        'textarea',
+        'button',
+        'a',
+        '[contenteditable="true"]',
+        '[role="button"]',
+        '[role="textbox"]',
+        '[data-app-grid-id]',
+        '.ant-modal-root',
+        '.ant-drawer',
+        '.ant-dropdown',
+        '.ant-popover',
+        '.ant-select-dropdown'
+      ].join(', ')
+    )
+
+    if (isInteractiveTarget) return
+
+    window.dispatchEvent(new CustomEvent('dt:cancelAppGridEditMode'))
+  }
+
   const [appCategorySidebarVisible, setAppCategorySidebarVisible] = useState(
     defaultGeneralSettings.controlBar.sidebar !== 'alwaysHide'
   )
@@ -80,18 +179,21 @@ const Main: React.FC = () => {
   const initCategories = useAppCategoryStore((s) => s.init)
   const setActiveCategoryId = useAppCategoryStore((s) => s.setActiveCategoryId)
   const apps = useAppGridStore((s) => s.apps)
-  const setApps = useAppGridStore((s) => s.setApps)
   const pinnedAppIds = useBottomBarStore((s) => s.pinnedAppIds)
   const setPinnedAppIds = useBottomBarStore((s) => s.setPinnedAppIds)
 
   const contentRef = useRef<HTMLDivElement | null>(null)
   const wheelAccRef = useRef(0)
   const wheelLockRef = useRef(false)
-
-  const draggingApp = useMemo(() => {
-    if (!activeDragId) return null
-    return apps.find((a) => a.id === activeDragId) || null
-  }, [activeDragId, apps])
+  const pageSwitchScrollLockUntilRef = useRef(0)
+  const previousCategoryIdRef = useRef(activeCategoryId)
+  const [homePageMotion, setHomePageMotion] = useState<{
+    direction: 'next' | 'prev'
+    tick: number
+  }>({
+    direction: 'next',
+    tick: 0
+  })
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -103,6 +205,11 @@ const Main: React.FC = () => {
       coordinateGetter: sortableKeyboardCoordinates
     })
   )
+
+  const activeDockApp = useMemo(() => {
+    if (!activeDragId) return null
+    return apps.find((app) => app.id === activeDragId && app.type === 'item') || null
+  }, [activeDragId, apps])
 
   // 页面加载时清空地址栏并聚焦
   useEffect(() => {
@@ -162,6 +269,23 @@ const Main: React.FC = () => {
   }, [])
 
   useEffect(() => {
+    const onAutoSyncSuccess = () => {
+      notification.success({
+        key: 'deepTab-auto-sync-success',
+        message: t('sync.synced'),
+        placement: 'topLeft',
+        duration: 2.4,
+        className: syncPresentationStyles.syncNotification
+      })
+    }
+
+    window.addEventListener('dt:autoSyncSuccess', onAutoSyncSuccess)
+    return () => {
+      window.removeEventListener('dt:autoSyncSuccess', onAutoSyncSuccess)
+    }
+  }, [notification, t])
+
+  useEffect(() => {
     void initCategories()
 
     const load = async () => {
@@ -207,6 +331,54 @@ const Main: React.FC = () => {
   }, [useSystemFont])
 
   useEffect(() => {
+    const previousId = previousCategoryIdRef.current
+    if (previousId === activeCategoryId) return
+
+    const orderedIds = categories
+      .slice()
+      .sort((a, b) => Number(a.order) - Number(b.order))
+      .map((category) => category.id)
+    const previousIndex = orderedIds.indexOf(previousId)
+    const currentIndex = orderedIds.indexOf(activeCategoryId)
+    const lastIndex = orderedIds.length - 1
+    const direction =
+      previousIndex === 0 && currentIndex === lastIndex
+        ? 'prev'
+        : previousIndex === lastIndex && currentIndex === 0
+          ? 'next'
+          : currentIndex >= previousIndex
+            ? 'next'
+            : 'prev'
+
+    previousCategoryIdRef.current = activeCategoryId
+    setHomePageMotion((value) => ({
+      direction,
+      tick: value.tick + 1
+    }))
+  }, [activeCategoryId, categories])
+
+  useLayoutEffect(() => {
+    const root = contentRef.current
+    if (!root) return
+
+    root.scrollTop = 0
+
+    const resetScroll = () => {
+      root.scrollTop = 0
+    }
+    const firstFrame = window.requestAnimationFrame(() => {
+      resetScroll()
+      window.requestAnimationFrame(resetScroll)
+    })
+    const timeout = window.setTimeout(resetScroll, 120)
+
+    return () => {
+      window.cancelAnimationFrame(firstFrame)
+      window.clearTimeout(timeout)
+    }
+  }, [activeCategoryId])
+
+  useEffect(() => {
     const root = contentRef.current
     if (!root) return
 
@@ -242,8 +414,20 @@ const Main: React.FC = () => {
       const delta = Number(e.deltaY) || 0
       if (!delta) return
 
+      if (wheelLockRef.current || Date.now() < pageSwitchScrollLockUntilRef.current) {
+        root.scrollTop = 0
+        wheelAccRef.current = 0
+        return
+      }
+
+      const canScroll =
+        root.scrollHeight > root.clientHeight + 2 &&
+        ((delta > 0 && root.scrollTop + root.clientHeight < root.scrollHeight - 2) ||
+          (delta < 0 && root.scrollTop > 2))
+      if (canScroll) return
+
       wheelAccRef.current += delta
-      const threshold = getThreshold(scrollSensitivity)
+      const threshold = Math.max(30, Math.round(getThreshold(scrollSensitivity) * 0.2))
 
       if (wheelLockRef.current) return
       if (Math.abs(wheelAccRef.current) < threshold) return
@@ -252,9 +436,15 @@ const Main: React.FC = () => {
       const idx = ids.findIndex((id) => id === activeCategoryId)
       const currentIdx = idx >= 0 ? idx : 0
       const step = wheelAccRef.current > 0 ? 1 : -1
-      const nextIdx = (currentIdx + step + ids.length) % ids.length
+      const nextIdx = currentIdx + step
+      if (nextIdx < 0 || nextIdx >= ids.length) {
+        wheelAccRef.current = 0
+        return
+      }
       const nextId = ids[nextIdx]
       if (nextId && nextId !== activeCategoryId) {
+        root.scrollTop = 0
+        pageSwitchScrollLockUntilRef.current = Date.now() + 640
         setActiveCategoryId(nextId)
       }
 
@@ -262,7 +452,7 @@ const Main: React.FC = () => {
       wheelLockRef.current = true
       window.setTimeout(() => {
         wheelLockRef.current = false
-      }, 350)
+      }, 720)
     }
 
     root.addEventListener('wheel', onWheel, { passive: true })
@@ -286,25 +476,46 @@ const Main: React.FC = () => {
   }
 
   const handleDragStart = (event: DragStartEvent) => {
+    const fromContainer = String(event.active?.data?.current?.container || '')
+    if (fromContainer !== 'dock') {
+      setActiveDragId(null)
+      return
+    }
     setActiveDragId(String(event.active?.data?.current?.appId || event.active.id))
   }
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
-
     const activeAppId = String(active?.data?.current?.appId || active.id)
+    const fromContainer = String(active?.data?.current?.container || '')
+    const activeType = String(active?.data?.current?.type || '')
     setActiveDragId(null)
 
     if (!over) return
 
     const overAppId = String(over?.data?.current?.appId || over.id)
-
-    const fromContainer = String(active?.data?.current?.container || '')
     const toContainer = String(over?.data?.current?.container || '')
 
     const isOverDock = toContainer === 'dock' || String(over.id) === BOTTOM_BAR_DROPPABLE_ID
 
-    if (fromContainer === 'dock' && toContainer === 'dock') {
+    if (isOverDock && fromContainer !== 'dock') {
+      if (activeType !== 'item') return
+      if (pinnedAppIds.includes(activeAppId)) return
+
+      const nextPinned = [...pinnedAppIds, activeAppId]
+      setPinnedAppIds(nextPinned)
+      try {
+        await bottomBarService.savePins(nextPinned)
+      } catch (error) {
+        console.error('固定到底部栏失败:', error)
+        message.error('固定到底部栏失败，请重试')
+      }
+      return
+    }
+
+    if (fromContainer !== 'dock') return
+
+    if (toContainer === 'dock') {
       if (activeAppId === overAppId) return
 
       const oldIndex = pinnedAppIds.findIndex((id) => id === activeAppId)
@@ -322,101 +533,92 @@ const Main: React.FC = () => {
       return
     }
 
-    if (isOverDock) {
-      let nextPinned: string[] | null = null
-      setPinnedAppIds((prev) => {
-        if (prev.includes(activeAppId)) {
-          nextPinned = null
-          return prev
-        }
-        nextPinned = [...prev, activeAppId]
-        return nextPinned
-      })
-
-      if (nextPinned) {
-        try {
-          await bottomBarService.savePins(nextPinned)
-        } catch (error) {
-          console.error('保存底部栏失败:', error)
-          message.error('固定到底部栏失败，请重试')
-        }
+    const nextPinned = pinnedAppIds.filter((id) => id !== activeAppId)
+    if (nextPinned.length !== pinnedAppIds.length) {
+      setPinnedAppIds(nextPinned)
+      try {
+        await bottomBarService.savePins(nextPinned)
+      } catch (error) {
+        console.error('更新 Dock 固定项失败:', error)
+        message.error('更新 Dock 失败，请重试')
       }
-
-      return
-    }
-
-    if (fromContainer === 'dock') return
-
-    if (activeAppId === overAppId) return
-
-    const visibleApps = apps.filter((app) => (app.categoryId || 'home') === activeCategoryId)
-    const oldIndex = visibleApps.findIndex((app) => app.id === activeAppId)
-    const newIndex = visibleApps.findIndex((app) => app.id === overAppId)
-    if (oldIndex === -1 || newIndex === -1) return
-
-    const movedVisible = arrayMove(visibleApps, oldIndex, newIndex)
-
-    const indices = apps
-      .map((app, index) => ({ app, index }))
-      .filter(({ app }) => (app.categoryId || 'home') === activeCategoryId)
-      .map(({ index }) => index)
-
-    const nextApps = [...apps]
-    indices.forEach((idx, k) => {
-      nextApps[idx] = movedVisible[k]
-    })
-
-    setApps(nextApps)
-
-    try {
-      await appGridService.updateOrder(nextApps)
-    } catch (error) {
-      console.error('保存顺序失败:', error)
-      message.error('拖放失败，请重试！')
     }
   }
 
   return (
-    <div className={cn(styles.container)}>
-      <WallpaperBackground />
+    <div
+      className={cn(styles.container)}
+      onClick={handlePageClick}
+      onContextMenu={handlePageContextMenu}
+    >
+      <WallpaperBackground initialConfig={initialWallpaperConfig} />
+
+      {/* 搜索框 */}
+      <SearchBar />
+
       <div className={cn(styles.content)} ref={contentRef}>
         {/* 设置按钮 */}
-        <div className={cn(styles.settingsButton)} onClick={() => onOpenSet()}>
+        <button
+          type='button'
+          className={cn(styles.settingsButton)}
+          aria-label={t('common.openSettings', { defaultValue: 'Open Deep Tab settings' })}
+          onClick={() => onOpenSet()}
+        >
           <SettingOutlined style={{ fontSize: 24, color: '#fff' }} />
-        </div>
-
-        {/* 搜索框 */}
-        <SearchBar />
-
-        {/* 小部件区域 */}
-        <WidgetsContainer />
+        </button>
 
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCenter}
+          collisionDetection={pageCollisionDetection}
+          modifiers={[snapCenterToCursor]}
           onDragStart={handleDragStart}
           onDragCancel={() => setActiveDragId(null)}
           onDragEnd={handleDragEnd}
         >
-          {/* 应用图标网格 */}
-          <AppGrid />
+          <div
+            className={cn(
+              styles.homePage,
+              homePageMotion.tick > 0 && styles.homePageAnimating
+            )}
+            style={
+              homePageMotion.tick > 0
+                ? {
+                    animationName:
+                      homePageMotion.direction === 'next'
+                        ? homePageMotion.tick % 2
+                          ? styles.homePageInNextA
+                          : styles.homePageInNextB
+                        : homePageMotion.tick % 2
+                          ? styles.homePageInPrevA
+                          : styles.homePageInPrevB
+                  }
+                : undefined
+            }
+          >
+            {/* 应用图标网格 */}
+            <AppGrid key={activeCategoryId} />
+          </div>
 
           {bottomBarVisible && <BottomBar activeCategoryId={activeCategoryId} />}
 
-          <DragOverlay>
-            {draggingApp ? (
+          <DragOverlay dropAnimation={null} adjustScale={false}>
+            {activeDockApp ? (
               <div className={cn(styles.dragOverlayItem)}>
-                {/^(https?:\/\/|data:image\/)/.test(draggingApp.icon) ? (
+                {isImageIconSource(activeDockApp.icon) ? (
                   <img
                     className={cn(styles.dragOverlayImg)}
-                    src={draggingApp.icon}
-                    alt={draggingApp.name}
+                    src={activeDockApp.icon}
+                    alt={activeDockApp.name}
                   />
                 ) : (
-                  <span className={cn(styles.dragOverlayEmoji)}>{draggingApp.icon}</span>
+                  <span className={cn(styles.dragOverlayEmoji)}>
+                    {activeDockApp.icon || activeDockApp.name.slice(0, 1)}
+                  </span>
                 )}
               </div>
-            ) : null}
+            ) : (
+              <GridDragOverlayContent />
+            )}
           </DragOverlay>
         </DndContext>
 
@@ -474,6 +676,8 @@ const Main: React.FC = () => {
           </div>
         )}
 
+        <RemoteNotificationBridge />
+        <SyncConflictModal />
         {appCategorySidebarVisible && <AppCategorySidebar position={appCategorySidebarPosition} />}
       </div>
     </div>

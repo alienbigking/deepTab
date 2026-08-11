@@ -6,12 +6,20 @@ import type {
   IGradientWallpaper,
   IImageWallpaper
 } from './types/wallpaper'
+import { useTranslation } from 'react-i18next'
 
 const DEFAULT_GRADIENT = 'linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #ff8c42 100%)'
 
-const WallpaperBackground: React.FC = () => {
-  const [config, setConfig] = useState<IWallpaperConfig | null>(null)
-  const [displayConfig, setDisplayConfig] = useState<IWallpaperConfig | null>(null)
+interface WallpaperBackgroundProps {
+  initialConfig?: IWallpaperConfig | null
+}
+
+const WallpaperBackground: React.FC<WallpaperBackgroundProps> = ({ initialConfig }) => {
+  const { t } = useTranslation()
+  const [config, setConfig] = useState<IWallpaperConfig | null>(initialConfig || null)
+  const [displayConfig, setDisplayConfig] = useState<IWallpaperConfig | null>(
+    initialConfig || null
+  )
   const [videoReady, setVideoReady] = useState(false)
   const [videoError, setVideoError] = useState(false)
   const [autoplayBlocked, setAutoplayBlocked] = useState(false)
@@ -215,7 +223,7 @@ const WallpaperBackground: React.FC = () => {
         )}
         {videoError && (
           <div className={styles.tip}>
-            <div className={styles.tipTitle}>动态壁纸加载失败</div>
+            <div className={styles.tipTitle}>{t('wallpaper.dynamicFailed', { defaultValue: 'Live wallpaper failed to load' })}</div>
             <div className={styles.tipDesc}>
               已为你保留缩略图背景。你可以稍后重试或更换其他动态壁纸。
             </div>
@@ -223,7 +231,7 @@ const WallpaperBackground: React.FC = () => {
         )}
         {!videoError && autoplayBlocked && !dynamicPaused && (
           <div className={styles.tip}>
-            <div className={styles.tipTitle}>无法自动播放声音</div>
+            <div className={styles.tipTitle}>{t('wallpaper.autoplayBlocked', { defaultValue: 'Audio autoplay was blocked' })}</div>
             <div className={styles.tipDesc}>
               浏览器通常会限制自动播放带声音的视频。请先点击页面任意位置，再关闭静音。
             </div>

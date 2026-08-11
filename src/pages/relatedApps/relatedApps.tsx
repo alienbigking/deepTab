@@ -24,7 +24,7 @@ const RelatedApps: React.FC = () => {
   return (
     <div className={cn(styles.container)}>
       <List
-        grid={{ gutter: 16, column: 2 }}
+        grid={{ gutter: 16, column: apps.length > 1 ? 2 : 1 }}
         dataSource={apps}
         locale={{ emptyText: '暂无相关应用' }}
         renderItem={(item) => (

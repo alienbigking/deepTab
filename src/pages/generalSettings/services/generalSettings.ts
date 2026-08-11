@@ -1,5 +1,6 @@
 import { defaultGeneralSettings } from '../stores/generalSettings'
 import { IGeneralSettings } from '../types/generalSettings'
+import requestDeepTabAutoSync from '@/pages/deepTabSync/services/autoSync'
 
 export default {
   async getGeneralSettings(): Promise<IGeneralSettings> {
@@ -22,6 +23,7 @@ export default {
   async saveGeneralSettings(settings: IGeneralSettings): Promise<void> {
     try {
       await chrome.storage.local.set({ generalSettings: settings })
+      requestDeepTabAutoSync('generalSettings')
     } catch (error) {
       console.error('保存常规设置失败:', error)
     }

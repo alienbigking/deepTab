@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { Modal, Slider } from 'antd'
 import cn from 'classnames'
 import styles from './searchStyleModal.module.less'
+import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
+import { useTranslation } from 'react-i18next'
 
 interface SearchStyleModalProps {
   open: boolean
@@ -14,6 +16,7 @@ interface SearchStyleModalProps {
 
 const SearchStyleModal: React.FC<SearchStyleModalProps> = (props) => {
   const { open, widthPercent, opacityPercent, onBack, onDone, onPreview } = props
+  const { t } = useTranslation()
 
   const [draftWidth, setDraftWidth] = useState(widthPercent)
   const [draftOpacity, setDraftOpacity] = useState(opacityPercent)
@@ -34,13 +37,16 @@ const SearchStyleModal: React.FC<SearchStyleModalProps> = (props) => {
       rootClassName={cn(styles.searchStyleModalRoot)}
       getContainer={false}
       maskClosable={false}
+      transitionName=''
+      maskTransitionName={modalMaskTransitionName}
+      maskStyle={modalMaskStyle}
     >
       <div className={cn(styles.searchStyleModal)}>
-        <div className={cn(styles.header)}>搜索框样式</div>
+        <div className={cn(styles.header)}>{t('general.searchBarStyle')}</div>
 
         <div className={cn(styles.body)}>
           <div className={cn(styles.row)}>
-            <div className={cn(styles.label)}>宽度</div>
+            <div className={cn(styles.label)}>{t('general.width')}</div>
             <div className={cn(styles.control)}>
               <Slider
                 min={20}
@@ -58,7 +64,7 @@ const SearchStyleModal: React.FC<SearchStyleModalProps> = (props) => {
           </div>
 
           <div className={cn(styles.row)}>
-            <div className={cn(styles.label)}>透明度</div>
+            <div className={cn(styles.label)}>{t('general.opacity')}</div>
             <div className={cn(styles.control)}>
               <Slider
                 min={20}
@@ -78,7 +84,7 @@ const SearchStyleModal: React.FC<SearchStyleModalProps> = (props) => {
 
         <div className={cn(styles.footer)}>
           <div className={cn(styles.footerBtn)} onClick={onBack} role='button' tabIndex={0}>
-            « 返回
+            « {t('common.back', { defaultValue: 'Back' })}
           </div>
           <div
             className={cn(styles.footerBtn, styles.footerBtnPrimary)}
@@ -86,7 +92,7 @@ const SearchStyleModal: React.FC<SearchStyleModalProps> = (props) => {
             role='button'
             tabIndex={0}
           >
-            完成 »
+            {t('common.done', { defaultValue: 'Done' })} »
           </div>
         </div>
       </div>

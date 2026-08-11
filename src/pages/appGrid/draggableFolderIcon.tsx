@@ -3,6 +3,7 @@ import { useDraggable } from '@dnd-kit/core'
 import type { AppItem, IconSettings } from './types/appGrid'
 import cn from 'classnames'
 import styles from './appGrid.module.less'
+import { createFallbackIcon, isImageIconSource } from './iconFallback'
 
 interface DraggableFolderIconProps {
   icon: AppItem
@@ -17,9 +18,12 @@ const DraggableFolderIcon: React.FC<DraggableFolderIconProps> = ({
   onDelete,
   onContextMenu
 }) => {
+  const [iconLoadFailed, setIconLoadFailed] = React.useState(false)
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: icon.id,
     data: {
+      container: 'folder',
+      appId: icon.id,
       type: 'folder-item',
       item: icon
     }
@@ -30,6 +34,7 @@ const DraggableFolderIcon: React.FC<DraggableFolderIconProps> = ({
     height: iconSettings.size,
     borderRadius: iconSettings.radius,
     opacity: iconSettings.opacity / 100,
+    background: icon.iconBg || 'var(--dt-app-icon-bg)',
     cursor: isDragging ? 'grabbing' : 'grab'
   }
 
@@ -37,6 +42,10 @@ const DraggableFolderIcon: React.FC<DraggableFolderIconProps> = ({
     fontSize: iconSettings.fontSize,
     color: iconSettings.fontColor === 'light' ? '#ffffff' : 'rgba(0,0,0,0.85)'
   }
+
+  const hasImageIcon = isImageIconSource(icon.icon)
+  const isImageIcon = hasImageIcon && !iconLoadFailed
+  const fallbackIcon = createFallbackIcon(icon.name)
 
   return (
     <div
@@ -55,7 +64,20 @@ const DraggableFolderIcon: React.FC<DraggableFolderIconProps> = ({
       <div className={styles.appIcon}>
         {/* 图标 */}
         <div className={styles.iconWrapper} style={iconWrapperStyle}>
-          <span className={styles.iconEmoji}>{icon.icon}</span>
+          <span className={styles.iconEmoji}>
+            {isImageIcon ? (
+              <img
+                className={styles.iconImg}
+                src={icon.icon}
+                alt=''
+                onError={() => setIconLoadFailed(true)}
+              />
+            ) : hasImageIcon ? (
+              <img className={styles.iconImg} src={fallbackIcon} alt='' />
+            ) : (
+              icon.icon || <img className={styles.iconImg} src={fallbackIcon} alt='' />
+            )}
+          </span>
         </div>
 
         {/* 应用名称 */}

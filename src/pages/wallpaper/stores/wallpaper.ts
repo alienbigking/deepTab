@@ -6,10 +6,12 @@ export const useWallpaperStore = create<WallpaperStore>((set) => ({
   activeTab: 'gradient',
   selectedColor: 'all',
   featuredCategory: '全部',
+  dynamicCategory: '全部',
   setConfig: (config) => set({ config }),
   setActiveTab: (activeTab) => set({ activeTab }),
   setSelectedColor: (selectedColor) => set({ selectedColor }),
-  setFeaturedCategory: (featuredCategory) => set({ featuredCategory })
+  setFeaturedCategory: (featuredCategory) => set({ featuredCategory }),
+  setDynamicCategory: (dynamicCategory) => set({ dynamicCategory })
 }))
 
 export default useWallpaperStore

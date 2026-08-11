@@ -5,9 +5,11 @@ export interface Apps {
   id: string // 唯一标识s
   name: string // 应用名称
   icon: string // 图标(emoji 或 URL)
+  iconBg?: string // 文字/emoji 图标背景色
   url: string // 应用链接
   order: number // 排序序号
   categoryId?: string // 分类/分页 ID
+  widgetSpan?: 2 | 4 // 小组件占用的 icon 列数
   userId?: string // 用户 ID(接入后端后使用)
   createdAt?: string // 创建时间
   updatedAt?: string // 更新时间
@@ -30,6 +32,8 @@ export interface IconSettings {
  * 应用节点类型（支持文件夹）
  */
 export type AppNode = AppItem | AppFolder
+
+export type WidgetKind = 'calendar' | 'weather' | 'todo' | 'hotSearch'
 
 /**
  * 普通应用图标项
@@ -55,7 +59,7 @@ export interface ContextMenuState {
   x: number
   y: number
   appId: string
-  appType?: 'item' | 'folder' | 'blank' // 区分图标、文件夹或空白区域
+  appType?: 'item' | 'folder' | 'widget' | 'blank' // 区分图标、文件夹、小组件或空白区域
 }
 
 /**
@@ -64,8 +68,10 @@ export interface ContextMenuState {
 export interface AddAppParams {
   name: string
   icon: string
+  iconBg?: string
   url: string
   categoryId?: string
+  widgetSpan?: 2 | 4
 }
 
 /**
@@ -75,8 +81,10 @@ export interface UpdateAppParams {
   id: string
   name?: string
   icon?: string
+  iconBg?: string
   url?: string
   categoryId?: string
+  widgetSpan?: 2 | 4
 }
 
 /**
@@ -126,6 +134,7 @@ export interface AppGridStore {
   syncStatus: 'idle' | 'syncing' | 'error'
   iconSettings: IconSettings
   openedFolderId: string | null // 当前打开的文件夹 ID
+  dragActiveNode: AppNode | null // 当前拖拽中的节点
 
   // Actions
   setApps: (apps: AppNode[] | ((prevApps: AppNode[]) => AppNode[])) => void
@@ -136,6 +145,7 @@ export interface AppGridStore {
   setIconSettings: (settings: Partial<IconSettings>) => void
   resetIconSettings: () => void
   setOpenedFolderId: (folderId: string | null) => void
+  setDragActiveNode: (node: AppNode | null) => void
 
   // 数据加载 actions
   loadApps: () => Promise<void>

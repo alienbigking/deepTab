@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import cn from 'classnames'
+import { useTranslation } from 'react-i18next'
 import { App, Button, Dropdown, Form, Input, Popover } from 'antd'
 import {
   PlusOutlined,
@@ -18,6 +19,8 @@ import {
 import styles from './appCategorySidebar.module.less'
 import useAppCategoryStore from './stores/appCategory'
 import type { CategoryIconKey } from './types/appCategory'
+import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
+import useAuthStore from '@/pages/auth/stores/auth'
 
 const iconMap: Record<CategoryIconKey, React.ReactNode> = {
   home: <HomeOutlined />,
@@ -59,6 +62,7 @@ interface AppCategorySidebarProps {
 const AppCategorySidebar: React.FC<AppCategorySidebarProps> = (props) => {
   const { position = 'right' } = props
   const { message, modal } = App.useApp()
+  const { t } = useTranslation()
   const {
     categories,
     activeCategoryId,
@@ -71,23 +75,41 @@ const AppCategorySidebar: React.FC<AppCategorySidebarProps> = (props) => {
   const [editorOpen, setEditorOpen] = useState(false)
   const [editorMode, setEditorMode] = useState<'add' | 'edit'>('add')
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [avatarError, setAvatarError] = useState(false)
   const [editorForm] = Form.useForm<CategoryEditorForm>()
   const editorIcon = Form.useWatch('icon', editorForm)
+  const session = useAuthStore((s) => s.session)
+  const initAuth = useAuthStore((s) => s.init)
+  const user = session?.user
+  const avatar = avatarError ? '' : user?.avatar
+
+  const openProfileSettings = () => {
+    window.dispatchEvent(new CustomEvent('dt:openSettings', { detail: { menu: 'profile' } }))
+  }
 
   useEffect(() => {
     void init()
+    void initAuth()
 
     const onChanged = (changes: any, areaName: string) => {
       if (areaName !== 'local') return
-      if (!changes?.app_categories) return
-      void init()
+      if (changes?.app_categories) {
+        void init()
+      }
+      if (changes?.auth_session || changes?.token) {
+        void initAuth()
+      }
     }
 
     chrome.storage.onChanged.addListener(onChanged)
     return () => {
       chrome.storage.onChanged.removeListener(onChanged)
     }
-  }, [init])
+  }, [init, initAuth])
+
+  useEffect(() => {
+    setAvatarError(false)
+  }, [user?.avatar])
 
   const visibleCategories = useMemo(
     () => categories.slice().sort((a, b) => a.order - b.order),
@@ -150,6 +172,8 @@ const AppCategorySidebar: React.FC<AppCategorySidebarProps> = (props) => {
       okText: '删除',
       cancelText: '取消',
       okButtonProps: { danger: true },
+      maskTransitionName: modalMaskTransitionName,
+      maskStyle: modalMaskStyle,
       onOk: async () => {
         try {
           await deleteCategory(id)
@@ -204,15 +228,31 @@ const AppCategorySidebar: React.FC<AppCategorySidebarProps> = (props) => {
           <div className={cn(styles.labelItems)}>
             {visibleCategories.map((c) => (
               <div key={c.id} className={cn(styles.label)}>
-                {c.name}
+                {t(`categories.${c.id}`, { defaultValue: c.name })}
               </div>
             ))}
           </div>
         </div>
 
         <div className={cn(styles.bar)}>
-          <div className={cn(styles.avatar)}>
-            <UserOutlined style={{ fontSize: 22, color: 'rgba(255,255,255,0.85)' }} />
+          <div
+            className={cn(styles.avatar)}
+            role='button'
+            tabIndex={0}
+            title={t('sidebar.profile')}
+            onClick={openProfileSettings}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                openProfileSettings()
+              }
+            }}
+          >
+            {avatar ? (
+              <img src={avatar} alt={user?.nickname || user?.username || 'avatar'} onError={() => setAvatarError(true)} />
+            ) : (
+              <UserOutlined style={{ fontSize: 22, color: 'rgba(255,255,255,0.85)' }} />
+            )}
           </div>
 
           <div className={cn(styles.divider)} />
@@ -224,10 +264,10 @@ const AppCategorySidebar: React.FC<AppCategorySidebarProps> = (props) => {
                 trigger={['contextMenu']}
                 menu={{
                   items: [
-                    { key: 'edit', label: '编辑' },
+                    { key: 'edit', label: t('common.edit') },
                     {
                       key: 'delete',
-                      label: '删除',
+                      label: t('common.delete'),
                       danger: true,
                       disabled: BUILTIN_CATEGORY_IDS.has(c.id)
                     }

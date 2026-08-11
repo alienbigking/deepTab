@@ -7,6 +7,7 @@ import {
   ITodoItem,
   IWidgetConfig
 } from '../types/widgetsContainer'
+import requestDeepTabAutoSync from '@/pages/deepTabSync/services/autoSync'
 
 const HOT_SEARCH_API =
   process.env.HOT_SEARCH_API_URL || 'https://api.zxki.cn/api/jhrs?type={platform}'
@@ -15,6 +16,12 @@ const HOT_SEARCH_FALLBACK_APIS = [
   'https://dailyhot.aizhi.ink/{platform}',
   'https://api-hot.imsyy.top/{platform}'
 ]
+
+const HOT_SEARCH_PLATFORM_ALIASES: Record<string, string[]> = {
+  zhihu: ['zhihu'],
+  weixin: ['weixin', 'weread'],
+  csdn: ['csdn']
+}
 
 const hotSearchPlatforms: IHotSearchPlatform[] = [
   { key: 'baidu', name: '百度·热搜', shortName: '百度热搜', icon: 'du', color: '#4b6bff', path: '/baidu' },
@@ -43,15 +50,15 @@ const weatherCities: IWeatherCity[] = [
 ]
 
 const weatherText = (code: number) => {
-  if ([0].includes(code)) return { condition: '晴', icon: '☀️' }
-  if ([1, 2].includes(code)) return { condition: '少云', icon: '🌤️' }
-  if ([3].includes(code)) return { condition: '阴', icon: '☁️' }
-  if ([45, 48].includes(code)) return { condition: '雾', icon: '🌫️' }
-  if ([51, 53, 55, 56, 57].includes(code)) return { condition: '毛毛雨', icon: '🌦️' }
-  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return { condition: '雨', icon: '🌧️' }
-  if ([71, 73, 75, 77, 85, 86].includes(code)) return { condition: '雪', icon: '❄️' }
-  if ([95, 96, 99].includes(code)) return { condition: '雷雨', icon: '⛈️' }
-  return { condition: '多云', icon: '🌤️' }
+  if ([0].includes(code)) return { condition: 'clear', icon: '☀️' }
+  if ([1, 2].includes(code)) return { condition: 'partlyCloudy', icon: '🌤️' }
+  if ([3].includes(code)) return { condition: 'overcast', icon: '☁️' }
+  if ([45, 48].includes(code)) return { condition: 'fog', icon: '🌫️' }
+  if ([51, 53, 55, 56, 57].includes(code)) return { condition: 'drizzle', icon: '🌦️' }
+  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return { condition: 'rain', icon: '🌧️' }
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return { condition: 'snow', icon: '❄️' }
+  if ([95, 96, 99].includes(code)) return { condition: 'thunderstorm', icon: '⛈️' }
+  return { condition: 'cloudy', icon: '🌤️' }
 }
 
 const cityAliases: Record<string, string> = {
@@ -72,11 +79,38 @@ const pickCity = (city: string) => {
   return weatherCities.find((item) => item.key === key || item.name === city) || weatherCities[0]
 }
 
-const shortWeekday = (dateText: string, index: number) => {
-  if (index === 0) return '今天'
-  if (index === 1) return '明天'
-  const date = new Date(dateText)
-  return ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][date.getDay()]
+const normalizeCityName = (value?: string) =>
+  String(value || '')
+    .replace(/市$/, '')
+    .replace(/特别行政区$/, '')
+    .trim()
+
+const nearestCityByCoords = (latitude: number, longitude: number) => {
+  const distance = (city: IWeatherCity) =>
+    Math.abs(city.latitude - latitude) + Math.abs(city.longitude - longitude)
+  return weatherCities.reduce((best, item) => (distance(item) < distance(best) ? item : best), weatherCities[0])
+}
+
+const resolveCityNameByCoords = async (latitude: number, longitude: number, fallbackName: string) => {
+  try {
+    const params = new URLSearchParams({
+      latitude: String(latitude),
+      longitude: String(longitude),
+      localityLanguage: 'zh'
+    })
+    const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?${params.toString()}`)
+    if (!response.ok) throw new Error('reverse geocode request failed')
+    const data = await response.json()
+    return (
+      normalizeCityName(data?.city) ||
+      normalizeCityName(data?.locality) ||
+      normalizeCityName(data?.principalSubdivision) ||
+      fallbackName
+    )
+  } catch (error) {
+    console.warn('反查定位城市失败:', error)
+    return fallbackName
+  }
 }
 
 const formatHour = (time: string) => {
@@ -87,7 +121,8 @@ const formatHour = (time: string) => {
 const fallbackWeather = (city: string): IWeatherData => ({
   temperature: 20,
   apparentTemperature: 21,
-  condition: '晴',
+  condition: 'clear',
+  weatherCode: 0,
   icon: '☀️',
   city,
   updatedAt: new Date().toISOString(),
@@ -102,7 +137,7 @@ const fallbackWeather = (city: string): IWeatherData => ({
   sunrise: '06:12',
   sunset: '18:42',
   hourly: [
-    { time: '现在', icon: '☀️', temperature: 20, precipitationProbability: 10 },
+    { time: 'now', icon: '☀️', temperature: 20, precipitationProbability: 10 },
     { time: '+1h', icon: '🌤️', temperature: 21, precipitationProbability: 12 },
     { time: '+2h', icon: '🌤️', temperature: 22, precipitationProbability: 8 },
     { time: '+3h', icon: '☁️', temperature: 21, precipitationProbability: 15 },
@@ -110,11 +145,11 @@ const fallbackWeather = (city: string): IWeatherData => ({
     { time: '+5h', icon: '🌧️', temperature: 19, precipitationProbability: 36 }
   ],
   forecast: [
-    { day: '今天', icon: '☀️', condition: '晴', temperature: 24, minTemperature: 16, precipitationProbability: 10 },
-    { day: '明天', icon: '🌤️', condition: '少云', temperature: 25, minTemperature: 17, precipitationProbability: 12 },
-    { day: '周三', icon: '🌧️', condition: '雨', temperature: 21, minTemperature: 15, precipitationProbability: 62 },
-    { day: '周四', icon: '☁️', condition: '阴', temperature: 22, minTemperature: 14, precipitationProbability: 30 },
-    { day: '周五', icon: '☀️', condition: '晴', temperature: 26, minTemperature: 17, precipitationProbability: 8 }
+    { day: new Date().toISOString(), icon: '☀️', condition: 'clear', weatherCode: 0, temperature: 24, minTemperature: 16, precipitationProbability: 10 },
+    { day: new Date(Date.now() + 86400000).toISOString(), icon: '🌤️', condition: 'partlyCloudy', weatherCode: 1, temperature: 25, minTemperature: 17, precipitationProbability: 12 },
+    { day: new Date(Date.now() + 172800000).toISOString(), icon: '🌧️', condition: 'rain', weatherCode: 61, temperature: 21, minTemperature: 15, precipitationProbability: 62 },
+    { day: new Date(Date.now() + 259200000).toISOString(), icon: '☁️', condition: 'overcast', weatherCode: 3, temperature: 22, minTemperature: 14, precipitationProbability: 30 },
+    { day: new Date(Date.now() + 345600000).toISOString(), icon: '☀️', condition: 'clear', weatherCode: 0, temperature: 26, minTemperature: 17, precipitationProbability: 8 }
   ]
 })
 
@@ -234,7 +269,7 @@ const hotSearchUrl = (title: string) => `https://www.baidu.com/s?wd=${encodeURIC
 const fallbackHotSearch = (platform: IHotSearchPlatform): IHotSearchData => ({
   platform,
   updatedAt: new Date().toISOString(),
-  items: hotSearchFallbackTitles(platform).slice(0, 5).map((title, index) => ({
+  items: hotSearchFallbackTitles(platform).map((title, index) => ({
     id: `${platform.key}_fallback_${index}`,
     title,
     hot: `${(790.49 - index * 9.31).toFixed(2)}万`,
@@ -257,11 +292,25 @@ const formatHotValue = (value: unknown) => {
   return String(value)
 }
 
-const hotSearchApiUrl = (template: string, platform: IHotSearchPlatform) => {
+const hotSearchApiUrl = (template: string, platform: IHotSearchPlatform, platformKey = platform.key) => {
   if (template.includes('{platform}')) {
-    return template.replaceAll('{platform}', encodeURIComponent(platform.key))
+    return template.replaceAll('{platform}', encodeURIComponent(platformKey))
   }
   return `${template.replace(/\/$/, '')}${platform.path}`
+}
+
+const stripJsonNoise = (text: string) => {
+  const trimmed = text.trim()
+  const objectIndex = trimmed.indexOf('{')
+  const arrayIndex = trimmed.indexOf('[')
+  const startIndexes = [objectIndex, arrayIndex].filter((index) => index >= 0)
+  if (!startIndexes.length) return trimmed
+  return trimmed.slice(Math.min(...startIndexes))
+}
+
+const readHotSearchPayload = async (response: Response) => {
+  const text = await response.text()
+  return JSON.parse(stripJsonNoise(text))
 }
 
 const normalizeHotSearchItems = (payload: unknown, platform: IHotSearchPlatform): IHotSearchData => {
@@ -289,8 +338,12 @@ const normalizeHotSearchItems = (payload: unknown, platform: IHotSearchPlatform)
       result.push({
         id: `${platform.key}_${String(item.id || item.index || index)}`,
         title,
-        hot: formatHotValue(item.hot || item.hotValue || item.desc || item.follow || item.views),
-        url: typeof item.url === 'string' ? item.url : hotSearchUrl(title)
+        hot: formatHotValue(item.hot || item.hotValue || item.desc || item.follow || item.views || item.author),
+        url: typeof item.url === 'string'
+          ? item.url
+          : typeof item.mobileUrl === 'string'
+            ? item.mobileUrl
+            : hotSearchUrl(title)
       })
       return result
     }, [])
@@ -340,8 +393,10 @@ const fetchWeatherByCity = async (picked: IWeatherCity): Promise<IWeatherData> =
     temperature: Math.round(Number(data?.current?.temperature_2m || 0)),
     apparentTemperature: Math.round(Number(data?.current?.apparent_temperature || 0)),
     condition: current.condition,
+    weatherCode: Number(data?.current?.weather_code || 0),
     icon: current.icon,
     city: picked.name,
+    cityKey: picked.key,
     updatedAt: data?.current?.time || new Date().toISOString(),
     humidity: Math.round(Number(data?.current?.relative_humidity_2m || 0)),
     windSpeed: Math.round(Number(data?.current?.wind_speed_10m || 0)),
@@ -357,7 +412,7 @@ const fetchWeatherByCity = async (picked: IWeatherCity): Promise<IWeatherData> =
       const idx = nowIndex + offset
       const info = weatherText(Number(hourlyCodes[idx] || 0))
       return {
-        time: offset === 0 ? '现在' : formatHour(time),
+        time: offset === 0 ? 'now' : formatHour(time),
         icon: info.icon,
         temperature: Math.round(Number(hourlyTemps[idx] || 0)),
         precipitationProbability: Math.round(Number(hourlyPop[idx] || 0))
@@ -366,9 +421,11 @@ const fetchWeatherByCity = async (picked: IWeatherCity): Promise<IWeatherData> =
     forecast: dailyCodes.slice(0, 5).map((code: number, index: number) => {
       const info = weatherText(Number(code))
       return {
-        day: shortWeekday(dailyTimes[index], index),
+        day: dailyTimes[index],
+        date: dailyTimes[index],
         icon: info.icon,
         condition: info.condition,
+        weatherCode: Number(code),
         temperature: Math.round(Number(dailyMax[index] || 0)),
         minTemperature: Math.round(Number(dailyMin[index] || 0)),
         precipitationProbability: Math.round(Number(dailyPop[index] || 0))
@@ -389,24 +446,37 @@ export default {
   async getHotSearch(platformKey = 'baidu'): Promise<IHotSearchData> {
     const platform =
       hotSearchPlatforms.find((item) => item.key === platformKey) || hotSearchPlatforms[0]
+    const platformKeys = HOT_SEARCH_PLATFORM_ALIASES[platform.key] || [platform.key]
 
-    for (const apiTemplate of [HOT_SEARCH_API, ...HOT_SEARCH_FALLBACK_APIS]) {
-      try {
-        const response = await fetch(hotSearchApiUrl(apiTemplate, platform))
-        if (!response.ok) throw new Error('hot search request failed')
-        const payload = await response.json()
-        const data = normalizeHotSearchItems(payload, platform)
-        if (data.items.length > 0) return data
-      } catch (error) {
-        console.warn(`获取${platform.name}数据失败:`, error)
+    for (const key of platformKeys) {
+      for (const apiTemplate of [HOT_SEARCH_API, ...HOT_SEARCH_FALLBACK_APIS]) {
+        try {
+          const response = await fetch(hotSearchApiUrl(apiTemplate, platform, key))
+          if (!response.ok) throw new Error('hot search request failed')
+          const payload = await readHotSearchPayload(response)
+          const data = normalizeHotSearchItems(payload, platform)
+          if (data.items.length > 0) return data
+        } catch (error) {
+          console.warn(`获取${platform.name}数据失败:`, error)
+        }
       }
     }
 
-    return emptyHotSearch(platform)
+    return fallbackHotSearch(platform)
   },
 
   async getWeather(city: string): Promise<IWeatherData> {
     try {
+      if (city === 'current-location') {
+        const config = await this.getWidgetConfig()
+        if (config.weatherCoords) {
+          return await this.getWeatherByCoords(
+            config.weatherCoords.latitude,
+            config.weatherCoords.longitude,
+            config.weatherCoords.city
+          )
+        }
+      }
       const picked = pickCity(city)
       return await fetchWeatherByCity(picked)
     } catch (error) {
@@ -415,17 +485,27 @@ export default {
     }
   },
 
-  async getWeatherByCoords(latitude: number, longitude: number, name = '当前位置'): Promise<IWeatherData> {
+  async getWeatherByCoords(latitude: number, longitude: number, name?: string): Promise<IWeatherData> {
+    const nearestCity = nearestCityByCoords(latitude, longitude)
+    const cityName = normalizeCityName(name) || await resolveCityNameByCoords(latitude, longitude, nearestCity.name)
     try {
-      return await fetchWeatherByCity({
+      const weather = await fetchWeatherByCity({
         key: 'current-location',
-        name,
+        name: cityName,
         latitude,
         longitude
       })
+      return {
+        ...weather,
+        city: cityName,
+        cityKey: 'current-location'
+      }
     } catch (error) {
       console.error('获取定位天气失败:', error)
-      return fallbackWeather(name)
+      return {
+        ...fallbackWeather(cityName),
+        cityKey: 'current-location'
+      }
     }
   },
 
@@ -443,6 +523,7 @@ export default {
     try {
       const list = await this.getTodoList()
       await chrome.storage.local.set({ todoList: [...list, item] })
+      requestDeepTabAutoSync('todoList')
     } catch (error) {
       console.error('保存待办事项失败:', error)
     }
@@ -453,6 +534,7 @@ export default {
       const list = await this.getTodoList()
       const newList = list.map((item) => (item.id === id ? { ...item, ...updates } : item))
       await chrome.storage.local.set({ todoList: newList })
+      requestDeepTabAutoSync('todoList')
     } catch (error) {
       console.error('更新待办事项失败:', error)
     }
@@ -462,6 +544,7 @@ export default {
     try {
       const list = await this.getTodoList()
       await chrome.storage.local.set({ todoList: list.filter((item) => item.id !== id) })
+      requestDeepTabAutoSync('todoList')
     } catch (error) {
       console.error('删除待办事项失败:', error)
     }
@@ -475,7 +558,9 @@ export default {
           showCalendar: true,
           showWeather: true,
           showTodo: true,
-          weatherCity: 'beijing'
+          weatherCity: 'current-location',
+          weatherCoords: undefined,
+          hotSearchHiddenPlatforms: []
         }
       )
     } catch (error) {
@@ -484,7 +569,9 @@ export default {
         showCalendar: true,
         showWeather: true,
         showTodo: true,
-        weatherCity: 'beijing'
+        weatherCity: 'current-location',
+        weatherCoords: undefined,
+        hotSearchHiddenPlatforms: []
       }
     }
   },
@@ -492,6 +579,7 @@ export default {
   async saveWidgetConfig(config: IWidgetConfig): Promise<void> {
     try {
       await chrome.storage.local.set({ widgetConfig: config })
+      requestDeepTabAutoSync('widgetConfig')
     } catch (error) {
       console.error('保存小组件配置失败:', error)
     }

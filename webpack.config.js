@@ -46,50 +46,6 @@ const buildAppEnvVars = (webpackEnv = {}, argv = {}) => {
   }
 }
 
-class VersionPlugin {
-  apply(compiler) {
-    compiler.hooks.done.tap('VersionPlugin', () => {
-      const outputPath = compiler.options.output.path
-
-      // 获取当前版本号
-      let currentVersion = '1.0.0' // 默认版本号
-      const manifestPath = path.resolve(outputPath, 'manifest.json')
-      if (fs.existsSync(manifestPath)) {
-        const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
-        if (manifest.version) {
-          currentVersion = manifest.version // 读取现有版本号
-          console.log('当前版本号:', currentVersion)
-        }
-      }
-
-      // 解析版本号并增加 patch 部分
-      const versionParts = currentVersion.split('.')
-      const patchVersion = parseInt(versionParts[2], 10) + 1 // 增加 patch 部分
-      const newVersion = `2.0.${patchVersion}`
-
-      // 更新 manifest.json 中的版本号
-      if (fs.existsSync(manifestPath)) {
-        const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
-        manifest.version = newVersion // 更新版本字段
-        fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf-8')
-        console.log('更新 manifest.json 文件为新版本:', newVersion)
-      } else {
-        console.warn('未找到 manifest.json 文件，跳过更新.')
-      }
-
-      // 生成 storage.js 文件，将最新版本号写入 chrome.storage.local
-      const storageScript = `
-        chrome.storage.local.set({ lastVersion: '${newVersion}' }, () => {
-          console.log('版本号已更新到 storage.local: ${newVersion}');
-        });
-      `
-      const storageFilePath = path.resolve(outputPath, 'storage.js')
-      fs.writeFileSync(storageFilePath, storageScript, 'utf-8')
-      console.log('生成 storage.js 文件:', storageFilePath)
-    })
-  }
-}
-
 module.exports = (webpackEnv, argv) => {
   const appEnvVars = buildAppEnvVars(webpackEnv, argv)
 
@@ -98,7 +54,7 @@ module.exports = (webpackEnv, argv) => {
   {
     context: __dirname,
     target: 'web',
-    devtool: 'source-map',
+    devtool: argv.mode === 'production' ? false : 'source-map',
     entry: {
       popup: path.resolve(__dirname, './index.tsx'),
       newtab: path.resolve(__dirname, './newtab.tsx'),
@@ -120,7 +76,6 @@ module.exports = (webpackEnv, argv) => {
       }
     },
     plugins: [
-      // new VersionPlugin(), // 添加 VersionPlugin
       new webpack.DefinePlugin({
         'process.env': JSON.stringify(appEnvVars)
       }),
@@ -145,7 +100,8 @@ module.exports = (webpackEnv, argv) => {
             from: 'manifest.json',
             to: '.'
           },
-          { from: 'src/assets', to: 'src/assets' }
+          { from: 'src/assets', to: 'src/assets' },
+          { from: '_locales', to: '_locales' }
         ]
       })
     ],

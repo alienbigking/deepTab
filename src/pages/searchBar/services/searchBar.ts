@@ -1,8 +1,11 @@
-import { ISearchHistoryItem, ISearchSettings } from '../types/searchBar'
+import { ISearchFavoriteItem, ISearchHistoryItem, ISearchSettings } from '../types/searchBar'
+import requestDeepTabAutoSync from '@/pages/deepTabSync/services/autoSync'
 
 const SEARCH_HISTORY_KEY = 'searchHistory'
+const SEARCH_FAVORITE_KEY = 'favoriteSearches'
 const SEARCH_SETTINGS_KEY = 'searchSettings'
 const DEFAULT_MAX_HISTORY_COUNT = 50
+const DEFAULT_MAX_FAVORITE_COUNT = 12
 
 const normalizeHistoryItem = (raw: any): ISearchHistoryItem | null => {
   if (!raw) return null
@@ -17,6 +20,10 @@ const normalizeHistoryItem = (raw: any): ISearchHistoryItem | null => {
     timestamp,
     engineId
   }
+}
+
+const normalizeFavoriteItem = (raw: any): ISearchFavoriteItem | null => {
+  return normalizeHistoryItem(raw)
 }
 
 /**
@@ -85,6 +92,67 @@ export default {
     }
   },
 
+  // 获取常用搜索
+  async getFavoriteSearches(): Promise<ISearchFavoriteItem[]> {
+    try {
+      const result = await chrome.storage.local.get([SEARCH_FAVORITE_KEY])
+      const raw = result[SEARCH_FAVORITE_KEY] || []
+      if (!Array.isArray(raw)) return []
+
+      return raw
+        .map(normalizeFavoriteItem)
+        .filter(Boolean)
+        .sort((a: any, b: any) => Number(b.timestamp) - Number(a.timestamp))
+    } catch (error) {
+      console.error('获取常用搜索失败:', error)
+      return []
+    }
+  },
+
+  // 保存常用搜索(去重 + 截断)
+  async saveFavoriteSearch(item: ISearchFavoriteItem): Promise<void> {
+    try {
+      const normalized = normalizeFavoriteItem(item)
+      if (!normalized) return
+
+      const favorites = await this.getFavoriteSearches()
+      const deduped = favorites.filter((it) => it.keyword !== normalized.keyword)
+      const next = [
+        {
+          ...normalized,
+          timestamp: Date.now()
+        },
+        ...deduped
+      ].slice(0, DEFAULT_MAX_FAVORITE_COUNT)
+
+      await chrome.storage.local.set({ [SEARCH_FAVORITE_KEY]: next })
+    } catch (error) {
+      console.error('保存常用搜索失败:', error)
+    }
+  },
+
+  // 删除单条常用搜索
+  async removeFavoriteSearch(keyword: string): Promise<void> {
+    try {
+      const k = String(keyword || '').trim()
+      if (!k) return
+      const favorites = await this.getFavoriteSearches()
+      const next = favorites.filter((it) => it.keyword !== k)
+      await chrome.storage.local.set({ [SEARCH_FAVORITE_KEY]: next })
+    } catch (error) {
+      console.error('删除常用搜索失败:', error)
+    }
+  },
+
+  // 清空常用搜索
+  async clearFavoriteSearches(): Promise<void> {
+    try {
+      await chrome.storage.local.remove([SEARCH_FAVORITE_KEY])
+    } catch (error) {
+      console.error('清空常用搜索失败:', error)
+    }
+  },
+
   // 获取搜索设置
   async getSearchSettings(): Promise<ISearchSettings> {
     try {
@@ -110,6 +178,7 @@ export default {
   async saveSearchSettings(settings: ISearchSettings): Promise<void> {
     try {
       await chrome.storage.local.set({ [SEARCH_SETTINGS_KEY]: settings })
+      requestDeepTabAutoSync('searchSettings')
     } catch (error) {
       console.error('保存搜索设置失败:', error)
     }

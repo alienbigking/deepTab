@@ -6,6 +6,9 @@ import { initDefaultApps } from '@/pages/appGrid/initData'
 import useAppGridStore from '@/pages/appGrid/stores/appGrid'
 import useBottomBarStore from '@/pages/bottomBar/stores/bottomBar'
 import useAppCategoryStore from '@/pages/appCategory/stores/appCategory'
+import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
+import requestDeepTabAutoSync from '@/pages/deepTabSync/services/autoSync'
+import { useTranslation } from 'react-i18next'
 
 const storageRemove = (keys: string[]) => {
   return new Promise<void>((resolve, reject) => {
@@ -35,6 +38,7 @@ const storageGet = <T extends Record<string, any>>(keys: string[]) => {
 
 const ResetSettings: React.FC = () => {
   const { message, modal } = App.useApp()
+  const { t } = useTranslation()
   const { setApps, resetIconSettings } = useAppGridStore()
   const { setPinnedAppIds } = useBottomBarStore()
   const { init: initCategories, setActiveCategoryId } = useAppCategoryStore()
@@ -53,8 +57,8 @@ const ResetSettings: React.FC = () => {
     window.location.reload()
   }
 
-  const resetIcons = async (showSuccess = true, shouldReload = true) => {
-    const hide = message.loading('正在重置图标...', 0)
+  const resetIcons = async (showSuccess = true, shouldReload = true, shouldSync = true) => {
+    const hide = message.loading(t('reset.resettingIcons', { defaultValue: 'Resetting icons...' }), 0)
     try {
       let beforeCount = 0
       try {
@@ -70,6 +74,9 @@ const ResetSettings: React.FC = () => {
       setApps(storedApps)
       resetIconSettings()
       setActiveCategoryId('home')
+      if (shouldSync) {
+        await requestDeepTabAutoSync('resetIcons')
+      }
 
       try {
         const verify = await storageGet<{ app_grid_data?: unknown }>(['app_grid_data'])
@@ -78,17 +85,17 @@ const ResetSettings: React.FC = () => {
           : 0
         const count = storedApps.length || countFromStorage
         if (showSuccess) {
-          message.success(`图标已经恢复为默认推荐（${beforeCount} -> ${count}）`)
+          message.success(t('reset.iconsRestoredCount', { defaultValue: `Icons restored (${beforeCount} -> ${count})` }))
         }
       } catch {
         if (showSuccess) {
-          message.success('图标已经恢复为默认推荐')
+          message.success(t('reset.iconsRestored', { defaultValue: 'Icons restored to defaults' }))
         }
       }
 
       if (shouldReload) {
         if (showSuccess) {
-          message.success('即将刷新页面', 1, () => {
+          message.success(t('reset.reloading', { defaultValue: 'Reloading the page' }), 1, () => {
             reloadToNewtab()
           })
         } else {
@@ -100,7 +107,7 @@ const ResetSettings: React.FC = () => {
       }
     } catch (error) {
       console.error('重置图标失败:', error)
-      message.error('重置失败，请稍后再试')
+      message.error(t('reset.failed', { defaultValue: 'Reset failed. Try again later.' }))
       throw error
     } finally {
       hide()
@@ -109,24 +116,28 @@ const ResetSettings: React.FC = () => {
 
   const confirmResetIcons = () => {
     modal.confirm({
-      title: '重置图标',
-      content: '确认清空当前图标并恢复为默认推荐吗？此操作不可撤销。',
-      okText: '重置图标',
+      title: t('reset.icons', { defaultValue: 'Reset icons' }),
+      content: t('reset.iconsConfirm', { defaultValue: 'Clear the current icon layout and restore defaults? This cannot be undone.' }),
+      okText: t('reset.icons', { defaultValue: 'Reset icons' }),
       okButtonProps: { danger: true },
-      cancelText: '取消',
+      cancelText: t('common.cancel'),
+      maskTransitionName: modalMaskTransitionName,
+      maskStyle: modalMaskStyle,
       onOk: () => resetIcons(true, true)
     })
   }
 
   const confirmResetAll = () => {
     modal.confirm({
-      title: '重置全部设置',
-      content: '将恢复图标、外观、布局等所有设置为默认值，是否继续？',
-      okText: '重置所有设置',
+      title: t('reset.all', { defaultValue: 'Reset all settings' }),
+      content: t('reset.allConfirm', { defaultValue: 'Restore icons, appearance, layout, and all other settings to defaults?' }),
+      okText: t('reset.all', { defaultValue: 'Reset all settings' }),
       okButtonProps: { danger: true },
-      cancelText: '取消',
+      cancelText: t('common.cancel'),
+      maskTransitionName: modalMaskTransitionName,
+      maskStyle: modalMaskStyle,
       onOk: async () => {
-        const hide = message.loading('正在恢复默认设置...', 0)
+        const hide = message.loading(t('reset.resettingAll', { defaultValue: 'Restoring default settings...' }), 0)
         try {
           await storageRemove([
             'generalSettings',
@@ -134,6 +145,7 @@ const ResetSettings: React.FC = () => {
             'wallpaperConfig',
             'searchEngineConfig',
             'searchHistory',
+            'favoriteSearches',
             'searchSettings',
             'bottom_bar_pins',
             'app_categories',
@@ -145,18 +157,19 @@ const ResetSettings: React.FC = () => {
             'notifications'
           ])
 
-          await resetIcons(false, false)
+          await resetIcons(false, false, false)
           resetIconSettings()
           setPinnedAppIds([])
           setActiveCategoryId('home')
           await initCategories()
+          await requestDeepTabAutoSync('resetAll')
 
-          message.success('所有设置已恢复默认', 1, () => {
+          message.success(t('reset.allRestored', { defaultValue: 'All settings restored' }), 1, () => {
             reloadToNewtab()
           })
         } catch (error) {
           console.error('重置全部设置失败:', error)
-          message.error('重置失败，请稍后再试')
+          message.error(t('reset.failed', { defaultValue: 'Reset failed. Try again later.' }))
           throw error
         } finally {
           hide()
@@ -167,34 +180,33 @@ const ResetSettings: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <Card className='dtSettingsCard' variant='borderless'>
+      <Card title={t('sidebar.reset')} className='dtSettingsCard' variant='borderless'>
         <div className={styles.content}>
           <div className={styles.header}>
-            <h2 className={styles.title}>重置设置</h2>
-            <p className={styles.subTitle}>当你希望回到出厂默认状态时，可以在这里快速重置。</p>
+            <p className={styles.subTitle}>{t('reset.subtitle', { defaultValue: 'Restore the extension to its original defaults.' })}</p>
           </div>
 
           <div className={styles.sections}>
             <div className={styles.section}>
-              <div className={styles.sectionTitle}>重置图标</div>
+              <div className={styles.sectionTitle}>{t('reset.icons', { defaultValue: 'Reset icons' })}</div>
               <div className={styles.sectionDesc}>
-                清空应用图标布局和自定义图标配置，恢复为默认推荐应用。
+                {t('reset.iconsDescription', { defaultValue: 'Clear the icon layout and custom icon settings, then restore recommended apps.' })}
               </div>
               <div className={styles.actions}>
-                <Button danger onClick={confirmResetIcons}>
-                  重置图标
+                <Button className={styles.dangerOutlineButton} danger onClick={confirmResetIcons}>
+                  {t('reset.icons', { defaultValue: 'Reset icons' })}
                 </Button>
               </div>
             </div>
 
             <div className={styles.section}>
-              <div className={styles.sectionTitle}>重置全部设置</div>
+              <div className={styles.sectionTitle}>{t('reset.all', { defaultValue: 'Reset all settings' })}</div>
               <div className={styles.sectionDesc}>
-                恢复壁纸、主题、搜索引擎等所有设置为默认值（不影响备份数据）。
+                {t('reset.allDescription', { defaultValue: 'Restore wallpapers, themes, search engines, and all other settings without affecting backups.' })}
               </div>
               <div className={styles.actions}>
                 <Button danger type='primary' onClick={confirmResetAll}>
-                  重置所有设置
+                  {t('reset.all', { defaultValue: 'Reset all settings' })}
                 </Button>
               </div>
             </div>

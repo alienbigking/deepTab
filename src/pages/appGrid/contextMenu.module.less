@@ -5,6 +5,10 @@
   :global {
     .ant-dropdown {
       min-width: 160px;
+      animation: none !important;
+      transition: none !important;
+      opacity: 1 !important;
+      transform: none !important;
     }
 
     .ant-dropdown-menu {
@@ -15,15 +19,34 @@
       border: 1px solid rgba(255, 255, 255, 0.2);
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
       border-radius: 12px;
+      animation: none !important;
+      transition: none !important;
+      opacity: 1 !important;
+      transform: none !important;
     }
 
     .ant-dropdown-menu-item {
       min-width: 160px;
       padding: 8px 12px;
-      transition: all 0.2s ease;
+      transition: none !important;
       border-radius: 8px;
       margin: 4px 8px;
       color: rgba(255, 255, 255, 0.9) !important;
+      background: transparent !important;
+      transition-property: none !important;
+
+      &::after,
+      &::before {
+        display: none !important;
+      }
+
+      &.ant-dropdown-menu-item-active,
+      &.ant-dropdown-menu-item-selected,
+      &:not(:hover).ant-dropdown-menu-item-active,
+      &:not(:hover).ant-dropdown-menu-item-selected {
+        background: transparent !important;
+        box-shadow: none !important;
+      }
 
       &:hover {
         background: rgba(255, 255, 255, 0.2) !important;

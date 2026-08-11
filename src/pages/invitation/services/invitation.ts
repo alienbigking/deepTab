@@ -7,13 +7,13 @@ const buildUrl = (path: string) => `${env.HOST_API_URL.replace(/\/$/, '')}${path
 export default {
   async getInvitationStats(): Promise<IInvitationStats> {
     try {
-      const result = await chrome.storage.local.get(['invitationStats'])
+      const response = await http<IInvitationStats>(buildUrl('/api/deepTab/invitations/stats'))
       return (
-        result.invitationStats || {
+        response.data || {
           totalInvites: 0,
           successfulInvites: 0,
           totalRewards: 0,
-          inviteCode: 'DEEP' + Math.random().toString(36).slice(2, 8).toUpperCase()
+          inviteCode: 'DEEPTAB'
         }
       )
     } catch (error) {
@@ -28,24 +28,28 @@ export default {
   },
 
   async getInvitationRecords(): Promise<IInvitationRecord[]> {
-    const local = await chrome.storage.local.get(['invitationRecords'])
     try {
       const response = await http(buildUrl('/api/deepTab/invitations/records'))
-      return response.data || local.invitationRecords || []
+      return response.data || []
     } catch (error) {
-      console.warn('获取远程邀请记录失败，使用本地记录:', error)
-      return local.invitationRecords || []
+      console.warn('获取邀请记录失败:', error)
+      return []
     }
   },
 
-  async sendInvitation(email: string): Promise<void> {
-    try {
-      await http(buildUrl('/api/deepTab/invitations/send'), {
+  async sendInvitation(
+    email: string
+  ): Promise<{ record: IInvitationRecord; stats: IInvitationStats }> {
+    const response = await http<{ record: IInvitationRecord; stats: IInvitationStats }>(
+      buildUrl('/api/deepTab/invitations/send'),
+      {
         method: 'POST',
         data: { email }
-      })
-    } catch (error) {
-      console.warn('发送远程邀请失败，已降级为本地记录:', error)
+      }
+    )
+    if (!response.data?.record || !response.data?.stats) {
+      throw new Error(response.message || '邀请邮件发送失败')
     }
+    return response.data
   }
 }

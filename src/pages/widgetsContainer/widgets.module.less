@@ -1,27 +1,173 @@
 // Widget card
+@widget-card-height: 220px;
+@widget-card-radius: 16px;
+
 .widgetCard {
+  position: relative;
+  height: @widget-card-height;
+  min-height: @widget-card-height;
+  max-height: @widget-card-height;
+  box-sizing: border-box;
   background: var(--dt-widget-bg);
-  border-radius: 16px;
+  border-radius: @widget-card-radius;
+  border: none;
   box-shadow: var(--dt-widget-shadow);
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.88;
+    transition: opacity 0.3s ease;
+  }
 
   &:hover {
-    box-shadow: var(--dt-widget-shadow-hover);
+    box-shadow: var(--dt-widget-shadow);
     transform: translateY(-2px);
+
+    &::before {
+      opacity: 1;
+    }
   }
 
   :global {
     .ant-card-body {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      box-sizing: border-box;
       padding: 16px;
+    }
+
+    .ant-spin-nested-loading,
+    .ant-spin-container {
+      height: 100%;
     }
   }
 }
 
+.widgetCard:has(.calendarWidget)::before {
+  background:
+    radial-gradient(circle at 20% 12%, rgba(255, 210, 92, 0.34), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(255, 250, 232, 0.82));
+}
+
+.widgetCard:has(.weatherWidget)::before {
+  background:
+    radial-gradient(circle at 12% 20%, rgba(103, 181, 255, 0.3), transparent 34%),
+    radial-gradient(circle at 88% 6%, rgba(255, 196, 87, 0.25), transparent 30%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.97), rgba(234, 247, 255, 0.82));
+}
+
+.weatherCard {
+  color: rgba(0, 0, 0, 0.86);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.78;
+    transition: opacity 0.3s ease;
+  }
+
+  &:hover::after {
+    opacity: 1;
+  }
+}
+
+.weatherTheme_sunny::before {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 203, 71, 0.62), transparent 24%),
+    radial-gradient(circle at 86% 12%, rgba(116, 194, 255, 0.28), transparent 30%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.97), rgba(225, 244, 255, 0.88));
+}
+
+.weatherTheme_sunny::after {
+  background:
+    radial-gradient(circle at 14% 18%, rgba(255, 214, 92, 0.4), transparent 18%),
+    linear-gradient(120deg, transparent 52%, rgba(255, 255, 255, 0.22) 52%, transparent 72%);
+}
+
+.weatherTheme_cloudy::before {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(175, 202, 222, 0.48), transparent 28%),
+    radial-gradient(circle at 82% 12%, rgba(255, 255, 255, 0.56), transparent 30%),
+    linear-gradient(145deg, rgba(248, 252, 255, 0.96), rgba(218, 231, 242, 0.86));
+}
+
+.weatherTheme_cloudy::after {
+  background:
+    radial-gradient(ellipse at 70% 30%, rgba(255, 255, 255, 0.58), transparent 24%),
+    radial-gradient(ellipse at 50% 42%, rgba(185, 205, 222, 0.34), transparent 28%);
+}
+
+.weatherTheme_rain::before {
+  background:
+    radial-gradient(circle at 14% 18%, rgba(88, 167, 255, 0.34), transparent 30%),
+    linear-gradient(145deg, rgba(240, 248, 255, 0.96), rgba(196, 220, 238, 0.88));
+}
+
+.weatherTheme_rain::after {
+  background:
+    repeating-linear-gradient(105deg, transparent 0 13px, rgba(65, 130, 194, 0.18) 14px 16px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(61, 118, 170, 0.08));
+}
+
+.weatherTheme_snow::before {
+  background:
+    radial-gradient(circle at 20% 16%, rgba(171, 219, 255, 0.38), transparent 30%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(226, 239, 248, 0.9));
+}
+
+.weatherTheme_snow::after {
+  background:
+    radial-gradient(circle at 20% 28%, rgba(255, 255, 255, 0.86) 0 2px, transparent 3px),
+    radial-gradient(circle at 70% 18%, rgba(255, 255, 255, 0.74) 0 2px, transparent 3px),
+    radial-gradient(circle at 82% 62%, rgba(255, 255, 255, 0.72) 0 2px, transparent 3px);
+}
+
+.weatherTheme_fog::before {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.97), rgba(223, 229, 229, 0.9));
+}
+
+.weatherTheme_fog::after {
+  background:
+    repeating-linear-gradient(0deg, transparent 0 24px, rgba(154, 166, 166, 0.16) 25px 33px),
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+}
+
+.weatherTheme_storm::before {
+  background:
+    radial-gradient(circle at 15% 18%, rgba(130, 104, 255, 0.28), transparent 32%),
+    linear-gradient(145deg, rgba(236, 241, 255, 0.97), rgba(178, 190, 220, 0.88));
+}
+
+.weatherTheme_storm::after {
+  background:
+    linear-gradient(120deg, transparent 48%, rgba(255, 213, 72, 0.42) 49%, transparent 54%),
+    repeating-linear-gradient(105deg, transparent 0 14px, rgba(52, 75, 118, 0.18) 15px 17px);
+}
+
+.widgetCard:has(.todoWidget)::before {
+  background:
+    radial-gradient(circle at 84% 16%, rgba(117, 84, 255, 0.2), transparent 30%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.97), rgba(245, 240, 255, 0.84));
+}
+
 .calendarWidget {
-  width: 180px;
+  width: 100%;
+  height: 100%;
   color: var(--dt-widget-text);
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .calendarCompactTop {
@@ -54,11 +200,14 @@
     display: grid;
     place-items: center;
     border-radius: 16px;
-    background: var(--dt-widget-hover-bg);
+    background: linear-gradient(145deg, #fff7d6, #ffdf6f);
+    box-shadow:
+      0 10px 22px rgba(217, 159, 0, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7);
     font-size: 34px;
     font-weight: 800;
     line-height: 1;
-    color: var(--dt-widget-text);
+    color: #3b2b00;
   }
 
   div {
@@ -78,6 +227,56 @@
     font-style: normal;
     font-size: 12px;
     color: var(--dt-widget-text-3);
+  }
+}
+
+.calendarCompactMeta {
+  margin-top: 2px;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap;
+  gap: 5px !important;
+
+  i {
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: rgba(255, 223, 111, 0.2);
+    font-style: normal;
+    font-size: 11px;
+    line-height: 1;
+    color: rgba(59, 43, 0, 0.68);
+  }
+}
+
+.calendarFestival {
+  min-width: 0;
+  margin-top: 18px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 223, 111, 0.18);
+  border: 1px solid rgba(217, 159, 0, 0.14);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  span,
+  em {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-style: normal;
+    font-size: 12px;
+  }
+
+  span {
+    color: rgba(59, 43, 0, 0.86);
+    font-weight: 700;
+  }
+
+  em {
+    color: rgba(59, 43, 0, 0.52);
   }
 }
 
@@ -105,6 +304,22 @@
       min-height: 0;
       overflow: hidden;
       padding: 0;
+    }
+  }
+}
+
+.widgetModalRoot {
+  :global {
+    .ant-modal-mask {
+      background: rgba(0, 0, 0, 0.25) !important;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+
+    .ant-modal-content {
+      transform: translate3d(0, 0, 0) !important;
+      backdrop-filter: blur(30px) saturate(180%);
+      -webkit-backdrop-filter: blur(30px) saturate(180%);
     }
   }
 }
@@ -140,6 +355,23 @@
     color: #fff;
   }
 
+  .calendarHeroMeta {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+
+    i {
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
+      font-style: normal;
+      font-size: 12px;
+      line-height: 1;
+      color: rgba(255, 255, 255, 0.86);
+    }
+  }
+
   b {
     width: 84px;
     height: 84px;
@@ -158,13 +390,13 @@
   grid-template-columns: minmax(0, 1fr) 280px;
   gap: 12px;
   flex: 1;
+  height: 0;
   min-height: 0;
   padding: 0;
 }
 
 .calendarMonthPanel,
 .calendarInfoPanel {
-  padding: 14px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.92);
   color: rgba(0, 0, 0, 0.86);
@@ -172,9 +404,68 @@
   overflow: hidden;
 }
 
+.calendarInfoPanel {
+  height: 100%;
+  max-height: 100%;
+  min-width: 0;
+  padding: 0;
+}
+
+.calendarInfoScroller {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+
+  :global {
+    .simplebar-wrapper,
+    .simplebar-mask,
+    .simplebar-offset,
+    .simplebar-content-wrapper {
+      height: 100%;
+      max-height: 100%;
+    }
+
+    .simplebar-content-wrapper {
+      overflow: auto !important;
+    }
+
+    .simplebar-track.simplebar-vertical {
+      right: 4px;
+    }
+
+    .simplebar-scrollbar::before {
+      background: rgba(0, 0, 0, 0.28);
+      opacity: 0;
+    }
+
+    .simplebar-scrollbar.simplebar-visible::before,
+    .simplebar-track.simplebar-vertical:hover .simplebar-scrollbar::before {
+      background: rgba(0, 0, 0, 0.38);
+      opacity: 0.9;
+    }
+  }
+
+  &:hover {
+    :global {
+      .simplebar-scrollbar::before {
+        background: rgba(0, 0, 0, 0.38);
+        opacity: 0.9;
+      }
+    }
+  }
+}
+
+.calendarInfoPanelInner {
+  min-height: 100%;
+  padding: 14px 20px 14px 14px;
+  box-sizing: border-box;
+}
+
 .calendarMonthPanel {
+  padding: 14px;
   display: flex;
   flex-direction: column;
+  overflow: auto;
 }
 
 .calendarMonthToolbar {
@@ -217,7 +508,7 @@
 .calendarWeekdays,
 .calendarGrid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 5px;
 }
 
@@ -226,6 +517,7 @@
   flex: 0 0 auto;
 
   span {
+    min-width: 0;
     text-align: center;
     font-size: 11px;
     color: rgba(0, 0, 0, 0.45);
@@ -233,19 +525,71 @@
 }
 
 .calendarDayCell {
-  display: grid;
-  place-items: center;
+  position: relative;
+  min-width: 0;
+  width: calc(100% - 12px);
+  max-width: calc(100% - 12px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
   border-radius: 10px;
   font-size: 13px;
   color: rgba(0, 0, 0, 0.74);
   background: rgba(0, 0, 0, 0.04);
   min-height: 0;
+  padding: 22px 6px 5px;
+  box-sizing: border-box;
+  gap: 2px;
+  overflow: hidden;
+
+  b {
+    position: absolute;
+    top: 6px;
+    left: 9px;
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  em {
+    max-width: 100%;
+    font-size: 10.5px;
+    font-style: normal;
+    line-height: 1.05;
+    color: rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.calendarDayTopLabel {
+  min-height: 10px;
+  margin-top: 2px;
+  font-size: 12px !important;
+  color: #cf5b00 !important;
+  font-weight: 700;
+}
+
+.calendarDayTopLabelLong {
+  display: -webkit-box;
+  max-height: 21px;
+  margin-top: 0;
+  font-size: 9.5px !important;
+  line-height: 1.08 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  text-overflow: clip !important;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .calendarGrid {
-  flex: 1;
+  flex: 0 0 auto;
   min-height: 0;
-  grid-auto-rows: minmax(0, 1fr);
+  grid-auto-rows: 58px;
 }
 
 .muted {
@@ -254,10 +598,107 @@
 }
 
 .today {
-  color: #fff;
+  color: #3a2a00;
   font-weight: 800;
-  background: var(--dt-primary-color);
-  box-shadow: 0 8px 18px rgba(22, 119, 255, 0.28);
+  background: linear-gradient(145deg, rgba(255, 221, 120, 0.58), rgba(255, 245, 216, 0.74));
+  box-shadow: 0 8px 18px rgba(217, 159, 0, 0.18);
+
+  b {
+    color: #3a2a00;
+  }
+
+  em {
+    color: rgba(58, 42, 0, 0.62);
+  }
+}
+
+.weekend {
+  color: #d4380d;
+
+  b,
+  em {
+    color: #d4380d;
+  }
+}
+
+.markedDay {
+  background: rgba(255, 150, 48, 0.08);
+}
+
+.calendarTodayCard {
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  span {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.45);
+  }
+
+  strong {
+    font-size: 16px;
+    color: rgba(0, 0, 0, 0.86);
+  }
+
+  em {
+    font-style: normal;
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.55);
+  }
+}
+
+.calendarMonthSummary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+
+  div {
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.04);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  span {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.48);
+  }
+
+  strong {
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.86);
+  }
+}
+
+.calendarFestivalList {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  span {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.48);
+  }
+
+  em {
+    font-style: normal;
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.78);
+  }
 }
 
 .calendarStats {
@@ -289,8 +730,9 @@
 }
 
 .calendarYearProgress {
+  position: relative;
   margin-top: 10px;
-  padding: 12px;
+  padding: 24px 12px 12px;
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.04);
 
@@ -313,30 +755,42 @@
 
   &::before {
     content: '';
-    display: block;
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    right: 12px;
     height: 8px;
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.08);
+    background: rgba(0, 0, 0, 0.1);
   }
 
   i {
+    position: absolute;
+    top: 10px;
+    left: 12px;
     display: block;
     height: 8px;
-    margin-top: -8px;
     border-radius: 999px;
-    background: var(--dt-primary-color);
+    background: linear-gradient(90deg, #ff8a3d, #ffcf5a);
+    box-shadow: 0 4px 10px rgba(255, 138, 61, 0.26);
   }
 }
 .weatherWidget {
-  width: 260px;
+  width: 100%;
+  height: 100%;
   color: var(--dt-widget-text);
   cursor: pointer;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 46px 44px;
+  gap: 10px;
 }
 
 .weatherCompact {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  justify-content: space-between;
+  align-items: flex-start;
+  min-height: 0;
+  padding-bottom: 2px;
 }
 
 .weatherCompactMain {
@@ -351,7 +805,10 @@
   display: grid;
   place-items: center;
   border-radius: 14px;
-  background: var(--dt-widget-hover-bg);
+  background: linear-gradient(145deg, #e7f5ff, #bfe3ff);
+  box-shadow:
+    0 10px 22px rgba(54, 140, 230, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.74);
   font-size: 24px;
 }
 
@@ -378,20 +835,26 @@
   color: var(--dt-widget-text);
 
   span {
-    font-size: 34px;
+    font-size: 32px;
     line-height: 1;
   }
 }
 
 .weatherCompactForecast {
+  min-height: 0;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: 92%;
+  margin: 0 auto;
 
   div {
-    padding: 7px 6px;
-    border-radius: 9px;
-    background: var(--dt-widget-hover-bg);
+    min-width: 0;
+    padding: 7px 8px;
+    border-radius: 12px;
+    background: rgba(238, 244, 250, 0.92);
+    border: 1px solid rgba(126, 151, 176, 0.24);
+    box-shadow: none;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -400,12 +863,52 @@
 
   span {
     font-size: 11px;
-    color: var(--dt-widget-text-3);
+    line-height: 1.1;
+    color: rgba(0, 0, 0, 0.58);
   }
 
   strong {
     font-size: 11px;
-    color: var(--dt-widget-text-2);
+    color: rgba(0, 0, 0, 0.72);
+    white-space: nowrap;
+  }
+}
+
+.weatherCompactMetrics {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  width: 88%;
+  margin: 0 auto;
+
+  div {
+    min-width: 0;
+    padding: 6px 8px;
+    border-radius: 12px;
+    background: rgba(238, 244, 250, 0.92);
+    border: 1px solid rgba(126, 151, 176, 0.24);
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+
+  span {
+    font-size: 11px;
+    line-height: 1.1;
+    color: rgba(18, 35, 52, 0.58);
+  }
+
+  strong {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: rgba(18, 35, 52, 0.78);
+    font-size: 13px;
+    line-height: 1.15;
+    font-weight: 700;
     white-space: nowrap;
   }
 }
@@ -417,8 +920,8 @@
   box-sizing: border-box;
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(340px, 0.8fr);
-  grid-template-rows: auto 170px auto minmax(0, 1fr);
-  gap: 14px;
+  grid-template-rows: auto 150px auto minmax(0, 1fr);
+  gap: 12px;
   color: #fff;
 }
 
@@ -446,7 +949,7 @@
   gap: 16px;
   grid-column: 1;
   grid-row: 2;
-  padding: 22px 24px;
+  padding: 18px 22px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -505,7 +1008,7 @@
 
   div {
     min-width: 0;
-    padding: 14px;
+    padding: 11px 12px;
     border-radius: 14px;
     background: rgba(255, 255, 255, 0.92);
     display: flex;
@@ -532,7 +1035,7 @@
   justify-content: space-between;
   grid-column: 2;
   grid-row: 3;
-  padding: 14px 16px;
+  padding: 11px 14px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -541,25 +1044,32 @@
 }
 
 .hourlyForecast {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  overflow-y: auto;
   grid-column: 1;
   grid-row: 4;
   min-height: 0;
-  padding: 0 4px 0 0;
-  scrollbar-width: thin;
+
+  :global {
+    .simplebar-content {
+      min-height: 100%;
+    }
+  }
+}
+
+.hourlyForecastInner {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding-right: 10px;
 }
 
 .hourlyItem {
   min-width: 0;
-  min-height: 58px;
+  min-height: 50px;
   display: grid;
   grid-template-columns: 52px 34px minmax(0, 1fr) 44px;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.92);
 
@@ -587,20 +1097,31 @@
 }
 
 .weatherForecast {
+  grid-column: 2;
+  grid-row: 4;
+  min-height: 0;
+
+  :global {
+    .simplebar-content {
+      min-height: 100%;
+    }
+  }
+}
+
+.weatherForecastInner {
   display: grid;
   grid-template-columns: 1fr;
   gap: 8px;
-  grid-column: 2;
-  grid-row: 4;
-  overflow-y: auto;
+  padding-right: 10px;
 
   .forecastItem {
     min-width: 0;
+    min-height: 50px;
     display: grid;
     grid-template-columns: 1fr 34px 56px 44px 42px;
     align-items: center;
     gap: 8px;
-    padding: 10px 12px;
+    padding: 8px 10px;
     border-radius: 14px;
     background: rgba(255, 255, 255, 0.92);
     font-size: 12px;
@@ -608,6 +1129,16 @@
 
     span:nth-child(2) {
       font-size: 20px;
+    }
+
+    span:first-child {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    b {
+      font-weight: 500;
     }
 
     strong {
@@ -624,9 +1155,12 @@
 }
 
 .todoWidget {
-  width: 260px;
+  width: 100%;
+  height: 100%;
   color: var(--dt-widget-text);
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
 }
 
 .todoCompactHeader {
@@ -656,18 +1190,48 @@
   em {
     padding: 4px 8px;
     border-radius: 999px;
-    background: var(--dt-widget-hover-bg);
+    background: linear-gradient(135deg, rgba(112, 83, 255, 0.13), rgba(255, 130, 175, 0.13));
     font-style: normal;
     font-size: 11px;
-    color: var(--dt-widget-text-2);
+    color: #6b4be8;
     white-space: nowrap;
   }
 }
 
 .todoCompactList {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.todoCompactProgress {
+  position: relative;
+  margin-top: 12px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(112, 83, 255, 0.08);
+  overflow: hidden;
+
+  span {
+    position: relative;
+    z-index: 1;
+    display: block;
+    padding: 0 10px;
+    line-height: 22px;
+    font-size: 11px;
+    color: rgba(69, 53, 158, 0.72);
+  }
+
+  i {
+    position: absolute;
+    inset: 0 auto 0 0;
+    min-width: 8px;
+    border-radius: inherit;
+    background: linear-gradient(90deg, rgba(108, 92, 255, 0.28), rgba(255, 122, 168, 0.28));
+    transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
 }
 
 .todoCompactItem {
@@ -677,10 +1241,11 @@
   min-width: 0;
 
   i {
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
-    background: var(--dt-primary-color);
+    background: linear-gradient(135deg, #6c5cff, #ff7aa8);
+    box-shadow: 0 0 0 3px rgba(108, 92, 255, 0.1);
     flex: 0 0 auto;
   }
 
@@ -694,9 +1259,13 @@
 }
 
 .todoCompactEmpty {
+  flex: 1;
+  display: grid;
+  place-items: center;
   padding: 14px;
   border-radius: 12px;
-  background: var(--dt-widget-hover-bg);
+  background: rgba(112, 83, 255, 0.07);
+  border: 1px dashed rgba(112, 83, 255, 0.18);
   text-align: center;
   font-size: 13px;
   color: var(--dt-widget-text-3);
@@ -850,9 +1419,17 @@
 
 .hotSearchCard {
   width: 700px;
-  border-radius: 30px;
+  height: @widget-card-height;
+  min-height: @widget-card-height;
+  max-height: @widget-card-height;
+  box-sizing: border-box;
+  border-radius: @widget-card-radius;
   overflow: hidden;
-  background: var(--dt-widget-bg);
+  background:
+    radial-gradient(circle at 8% 14%, color-mix(in srgb, var(--dt-hot-platform-color, #ff3434) 22%, transparent), transparent 30%),
+    radial-gradient(circle at 92% 6%, rgba(255, 178, 73, 0.16), transparent 30%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(255, 248, 244, 0.88));
+  border: none;
   box-shadow: var(--dt-widget-shadow);
   cursor: pointer;
   backdrop-filter: blur(10px);
@@ -860,48 +1437,110 @@
     box-shadow 0.3s ease,
     transform 0.3s ease;
 
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--dt-hot-platform-color, #ff3434) 13%, transparent), transparent 42%),
+      radial-gradient(circle at 90% 80%, color-mix(in srgb, var(--dt-hot-platform-color, #ff3434) 18%, transparent), transparent 30%);
+    opacity: 0.85;
+    transition: opacity 0.3s ease;
+  }
+
   &:hover {
-    box-shadow: var(--dt-widget-shadow-hover);
+    box-shadow: var(--dt-widget-shadow);
     transform: translateY(-2px);
+
+    &::before {
+      opacity: 1;
+    }
   }
 
   :global {
     .ant-card-body {
-      padding: 16px 28px 18px;
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      box-sizing: border-box;
+      padding: 14px 28px;
+    }
+
+    .ant-spin-nested-loading,
+    .ant-spin-container {
+      height: 100%;
     }
   }
 }
 
 .hotSearchCompact {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   color: var(--dt-widget-text);
 }
 
 .hotSearchCompactHeader {
   display: grid;
-  grid-template-columns: 32px 1fr 32px;
+  grid-template-columns: 28px 28px minmax(0, 1fr) 28px 28px;
   align-items: center;
-  margin-bottom: 14px;
+  column-gap: 12px;
+  margin-bottom: 6px;
 
   strong {
     text-align: center;
-    font-size: 20px;
-    font-weight: 500;
+    font-size: 18px;
+    line-height: 28px;
+    font-weight: 700;
     color: var(--dt-widget-text);
   }
 
   button {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
     border: 0;
     background: transparent;
     color: var(--dt-widget-text-3);
     cursor: pointer;
     font-size: 13px;
+    padding: 0;
+    border-radius: 999px;
+    line-height: 1;
+    transition:
+      color 0.16s ease,
+      background 0.16s ease,
+      opacity 0.16s ease;
+
+    &:hover {
+      color: var(--dt-widget-text);
+      background: rgba(255, 255, 255, 0.14);
+    }
   }
 }
 
+.hotSearchSourceNav {
+  opacity: 0.42;
+  font-size: 14px !important;
+}
+
+.hotSearchPageNav {
+  opacity: 0.82;
+  font-size: 15px !important;
+}
+
 .hotSearchCompactList {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 4px;
+  overflow: hidden;
+  padding: 8px 0;
+  box-sizing: border-box;
 }
 
 .hotSearchCompactItem {
@@ -909,19 +1548,32 @@
   grid-template-columns: 24px minmax(0, 1fr) 92px;
   align-items: center;
   gap: 6px;
+  cursor: pointer;
+  border-radius: 10px;
+  padding: 2px 6px;
+  margin: 0 -6px;
+  transition: color 0.16s ease;
 
   span {
-    font-size: 18px;
+    font-size: 16px;
+    line-height: 1.2;
     font-weight: 800;
     color: var(--dt-widget-text-3);
+    transition: color 0.16s ease;
   }
 
   &:nth-child(1) span {
-    color: #ff3434;
+    color: var(--dt-hot-platform-color, #ff3434);
+    text-shadow: 0 6px 16px color-mix(in srgb, var(--dt-hot-platform-color, #ff3434) 22%, transparent);
   }
 
   &:nth-child(2) span {
     color: #ff9a2f;
+    text-shadow: 0 6px 16px rgba(255, 154, 47, 0.2);
+  }
+
+  &:nth-child(3) span {
+    color: #ffbd35;
   }
 
   strong {
@@ -929,23 +1581,35 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 18px;
+    font-size: 16px;
+    line-height: 1.2;
     font-weight: 400;
     color: var(--dt-widget-text);
+    transition: color 0.16s ease;
   }
 
   em {
     text-align: right;
     font-style: normal;
-    font-size: 18px;
-    color: var(--dt-widget-text-3);
+    font-size: 16px;
+    line-height: 1.2;
+    color: rgba(255, 93, 83, 0.72);
+    transition: color 0.16s ease;
+  }
+
+  &:hover strong {
+    color: var(--dt-hot-platform-color, #4b6bff);
+  }
+
+  &:hover em {
+    color: color-mix(in srgb, var(--dt-hot-platform-color, #4b6bff) 82%, #ff5d53);
   }
 }
 
 .hotSearchTitle {
   display: block;
   text-align: center;
-  color: var(--dt-settings-card-text);
+  color: #000;
   font-size: 30px;
   font-weight: 800;
 
@@ -966,17 +1630,27 @@
   border-radius: 18px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.72);
-  color: var(--dt-settings-card-text);
+  color: #000;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
 }
 
 .hotSearchSidebar {
-  padding: 18px;
   border-right: 1px solid var(--dt-settings-card-border);
+  min-height: 0;
+
+  :global {
+    .simplebar-content {
+      min-height: 100%;
+    }
+  }
+}
+
+.hotSearchSidebarInner {
+  min-height: 100%;
+  padding: 18px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  overflow-y: auto;
 
   button {
     width: 100%;
@@ -987,7 +1661,7 @@
     padding: 8px 10px;
     border-radius: 12px;
     background: transparent;
-    color: var(--dt-settings-card-muted);
+    color: #000;
     cursor: pointer;
     text-align: left;
     transition:
@@ -997,20 +1671,31 @@
     &:hover,
     &.active {
       background: var(--dt-settings-hover-bg);
-      color: var(--dt-settings-card-text);
+      color: #000;
     }
   }
 
-  span {
+  .hotSearchPlatformIcon,
+  .hotSearchPlatformFallback {
     width: 30px;
     height: 30px;
+    border-radius: 9px;
+    flex: 0 0 auto;
+  }
+
+  .hotSearchPlatformIcon {
+    display: block;
+    object-fit: cover;
+    background: #fff;
+  }
+
+  .hotSearchPlatformFallback {
     display: grid;
     place-items: center;
-    border-radius: 9px;
-    color: #fff;
+    background: #f2f3f5;
+    color: #000;
     font-size: 12px;
     font-weight: 800;
-    flex: 0 0 auto;
   }
 
   em {
@@ -1041,7 +1726,7 @@
   flex: 0 0 auto;
 
   span {
-    color: var(--dt-settings-card-muted);
+    color: #000;
     font-size: 17px;
   }
 
@@ -1055,22 +1740,134 @@
   button {
     border: 0;
     background: transparent;
-    color: var(--dt-settings-card-muted);
+    color: #000;
     cursor: pointer;
     font-size: 20px;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    transition:
+      background 0.18s ease,
+      transform 0.18s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.06);
+      transform: translateY(-1px);
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.72;
+      transform: none;
+    }
   }
+}
+
+.activeToolbarButton {
+  background: rgba(0, 0, 0, 0.08) !important;
+}
+
+.refreshingToolbarButton {
+  background: rgba(0, 0, 0, 0.06) !important;
+}
+
+.hotSearchSettingsPanel {
+  position: absolute;
+  top: 54px;
+  right: 28px;
+  z-index: 5;
+  width: 350px;
+  padding: 16px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  background:
+    radial-gradient(circle at 18% 10%, rgba(255, 255, 255, 0.96), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(255, 246, 252, 0.72));
+  box-shadow:
+    0 20px 48px rgba(35, 16, 38, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+
+  :global {
+    .ant-checkbox-wrapper {
+      margin: 0;
+      color: #000;
+      font-size: 14px;
+      line-height: 1.2;
+      min-width: 0;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.48);
+      transition:
+        background 0.18s ease,
+        box-shadow 0.18s ease;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.72);
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+      }
+    }
+
+    .ant-checkbox + span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding-inline-start: 8px;
+      padding-inline-end: 0;
+    }
+  }
+}
+
+.hotSearchSettingsHeader {
+  margin-bottom: 14px;
+
+  div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  strong {
+    color: #000;
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  span {
+    color: rgba(0, 0, 0, 0.48);
+    font-size: 12px;
+    line-height: 1.35;
+  }
+}
+
+.hotSearchSettingsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
 }
 
 .hotSearchModalList {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  padding-right: 10px;
+}
+
+.hotSearchModalListInner {
+  min-height: 100%;
+  padding-right: 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 
   button {
+    min-height: 52px;
     border: 0;
     display: grid;
     grid-template-columns: 40px minmax(0, 1fr) 96px;
@@ -1079,7 +1876,7 @@
     padding: 8px 10px;
     border-radius: 12px;
     background: transparent;
-    color: var(--dt-settings-card-text);
+    color: #000;
     cursor: pointer;
     text-align: left;
     transition: background 0.2s ease;
@@ -1114,18 +1911,18 @@
     text-align: right;
     font-style: normal;
     font-size: 16px;
-    color: var(--dt-settings-card-muted);
+    color: #000;
   }
 }
 
 .hotSearchEmpty {
-  height: 100%;
+  flex: 1;
   min-height: 240px;
   display: grid;
   place-items: center;
   border-radius: 16px;
   background: var(--dt-settings-hover-bg);
-  color: var(--dt-settings-card-muted);
+  color: #000;
   font-size: 17px;
   text-align: center;
 }
@@ -1147,11 +1944,139 @@
 }
 
 :global(html[data-theme='dark']) {
+  .widgetCard {
+    box-shadow: var(--dt-widget-shadow);
+  }
+
+  .widgetCard:has(.calendarWidget)::before {
+    background:
+      radial-gradient(circle at 20% 12%, rgba(255, 194, 64, 0.2), transparent 34%),
+      linear-gradient(145deg, rgba(28, 22, 9, 0.86), rgba(13, 13, 13, 0.72));
+  }
+
+  .widgetCard:has(.weatherWidget)::before {
+    background:
+      radial-gradient(circle at 14% 18%, rgba(59, 139, 255, 0.22), transparent 34%),
+      radial-gradient(circle at 88% 6%, rgba(255, 187, 73, 0.16), transparent 30%),
+      linear-gradient(145deg, rgba(8, 20, 32, 0.84), rgba(10, 10, 10, 0.72));
+  }
+
+  .widgetCard:has(.todoWidget)::before {
+    background:
+      radial-gradient(circle at 84% 16%, rgba(126, 94, 255, 0.22), transparent 30%),
+      linear-gradient(145deg, rgba(22, 16, 42, 0.84), rgba(10, 10, 10, 0.72));
+  }
+
+  .calendarCompactMain strong {
+    background: linear-gradient(145deg, #ffc940, #a56c00);
+    color: #fff9e6;
+  }
+
+  .calendarCompactTop span {
+    color: rgba(255, 255, 255, 0.72);
+  }
+
+  .calendarCompactTop b {
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .calendarCompactMain span {
+    color: rgba(255, 255, 255, 0.96);
+  }
+
+  .calendarCompactMain em {
+    color: rgba(255, 255, 255, 0.72);
+  }
+
+  .calendarCompactMeta i {
+    background: rgba(255, 201, 64, 0.24);
+    color: rgba(255, 244, 201, 0.9);
+  }
+
+  .calendarFestival {
+    background: rgba(255, 201, 64, 0.18);
+    border-color: rgba(255, 201, 64, 0.26);
+  }
+
+  .calendarFestival span {
+    color: rgba(255, 245, 214, 0.92);
+  }
+
+  .calendarFestival em {
+    color: rgba(255, 240, 196, 0.7);
+  }
+
+  .weatherCompactIcon {
+    background: linear-gradient(145deg, rgba(47, 132, 222, 0.55), rgba(26, 66, 116, 0.72));
+  }
+
+  .weatherCompactForecast div,
+  .weatherCompactMetrics div {
+    background: rgba(22, 54, 82, 0.72);
+    border: 1px solid rgba(132, 165, 195, 0.22);
+    box-shadow: none;
+  }
+
+  .weatherCompactForecast span,
+  .weatherCompactMetrics span {
+    color: rgba(255, 255, 255, 0.66);
+  }
+
+  .weatherCompactForecast strong,
+  .weatherCompactMetrics strong {
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .todoCompactHeader em {
+    background: linear-gradient(135deg, rgba(112, 83, 255, 0.22), rgba(255, 130, 175, 0.18));
+    color: rgba(236, 229, 255, 0.95);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .todoCompactHeader span {
+    color: rgba(255, 255, 255, 0.72);
+  }
+
+  .todoCompactHeader strong {
+    color: rgba(255, 255, 255, 0.98);
+  }
+
+  .todoCompactItem span {
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .todoCompactProgress {
+    background: rgba(112, 83, 255, 0.16);
+  }
+
+  .todoCompactProgress span {
+    color: rgba(226, 219, 255, 0.94);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.24);
+  }
+
+  .todoCompactProgress i {
+    background: linear-gradient(90deg, rgba(108, 92, 255, 0.46), rgba(255, 122, 168, 0.4));
+  }
+
+  .todoCompactEmpty {
+    background: rgba(126, 94, 255, 0.11);
+    border-color: rgba(126, 94, 255, 0.22);
+    color: rgba(255, 255, 255, 0.76);
+  }
+
+  .hotSearchCard {
+    background:
+      radial-gradient(circle at 8% 14%, rgba(255, 67, 88, 0.16), transparent 30%),
+      radial-gradient(circle at 92% 6%, rgba(255, 178, 73, 0.12), transparent 30%),
+      linear-gradient(145deg, rgba(34, 15, 18, 0.78), rgba(10, 10, 10, 0.7));
+    box-shadow: var(--dt-widget-shadow);
+  }
+
   .hotSearchModal {
-    background: rgba(10, 10, 10, 0.52);
+    background: rgba(255, 255, 255, 0.82);
   }
 
   .hotSearchMain {
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.48);
   }
 }

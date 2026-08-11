@@ -5,9 +5,11 @@ import styles from './iconControl.module.less'
 import useAppGridStore from '@/pages/appGrid/stores/appGrid'
 import type { IconSettings } from '@/pages/appGrid/types/appGrid'
 import appGridService from '@/pages/appGrid/services/appGrid'
+import { useTranslation } from 'react-i18next'
 
 const IconControl: React.FC = () => {
   const { iconSettings, setIconSettings } = useAppGridStore()
+  const { t } = useTranslation()
 
   const handleSliderChange = useCallback(
     (key: keyof IconSettings) => (value: number) => {
@@ -36,20 +38,19 @@ const IconControl: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <Card className='dtSettingsCard' variant='borderless'>
+      <Card title={t('sidebar.iconControl')} className='dtSettingsCard' variant='borderless'>
         <div className={styles.content}>
           <div className={styles.header}>
-            <h2 className={styles.title}>图标控制</h2>
             <p className={styles.subTitle}>
-              细致调节图标的大小、圆角、间距和文字样式，让桌面更符合你的审美。
+              {t('iconControl.description', { defaultValue: 'Fine-tune icon size, corners, spacing, and text styles.' })}
             </p>
           </div>
 
           <div className={styles.grid}>
             <div className={styles.group}>
-              <div className={styles.groupTitle}>图标外观</div>
+              <div className={styles.groupTitle}>{t('iconControl.appearance', { defaultValue: 'Icon appearance' })}</div>
               <div className={styles.fieldRow}>
-                <span className={styles.label}>图标大小</span>
+                <span className={styles.label}>{t('iconControl.size', { defaultValue: 'Icon size' })}</span>
                 <div className={styles.control}>
                   <Slider
                     min={32}
@@ -60,7 +61,7 @@ const IconControl: React.FC = () => {
                 </div>
               </div>
               <div className={styles.fieldRow}>
-                <span className={styles.label}>图标圆角</span>
+                <span className={styles.label}>{t('iconControl.radius', { defaultValue: 'Corner radius' })}</span>
                 <div className={styles.control}>
                   <Slider
                     min={0}
@@ -71,7 +72,7 @@ const IconControl: React.FC = () => {
                 </div>
               </div>
               <div className={styles.fieldRow}>
-                <span className={styles.label}>不透明度</span>
+                <span className={styles.label}>{t('general.opacity')}</span>
                 <div className={styles.control}>
                   <Slider
                     min={40}
@@ -84,9 +85,9 @@ const IconControl: React.FC = () => {
             </div>
 
             <div className={styles.group}>
-              <div className={styles.groupTitle}>布局与文字</div>
+              <div className={styles.groupTitle}>{t('iconControl.layoutText', { defaultValue: 'Layout & text' })}</div>
               <div className={styles.fieldRow}>
-                <span className={styles.label}>图标间距</span>
+                <span className={styles.label}>{t('iconControl.spacing', { defaultValue: 'Icon spacing' })}</span>
                 <div className={styles.control}>
                   <Slider
                     min={8}
@@ -97,7 +98,7 @@ const IconControl: React.FC = () => {
                 </div>
               </div>
               <div className={styles.fieldRow}>
-                <span className={styles.label}>文字大小</span>
+                <span className={styles.label}>{t('iconControl.fontSize', { defaultValue: 'Text size' })}</span>
                 <div className={styles.control}>
                   <Slider
                     min={10}
@@ -108,13 +109,13 @@ const IconControl: React.FC = () => {
                 </div>
               </div>
               <div className={styles.fieldRow}>
-                <span className={styles.label}>文字颜色</span>
+                <span className={styles.label}>{t('iconControl.fontColor', { defaultValue: 'Text color' })}</span>
                 <div className={styles.control}>
                   <Select
                     value={iconSettings.fontColor}
                     options={[
-                      { label: '亮色', value: 'light' },
-                      { label: '暗色', value: 'dark' }
+                      { label: t('theme.light'), value: 'light' },
+                      { label: t('theme.dark'), value: 'dark' }
                     ]}
                     onChange={handleFontColorChange}
                   />

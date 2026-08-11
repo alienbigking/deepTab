@@ -1,69 +1,179 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react'
-import {
-  DndContext,
-  closestCenter,
-  DragEndEvent,
-  DragOverEvent,
-  DragOverlay,
-  PointerSensor,
-  useSensor,
-  useSensors
-} from '@dnd-kit/core'
-import { SortableContext, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable'
-import { App, Button } from 'antd'
-import { PlusOutlined } from '@ant-design/icons'
+import React, { useEffect, useMemo, useState } from 'react'
+import { useDndMonitor, useDroppable, type DragEndEvent } from '@dnd-kit/core'
+import { SortableContext } from '@dnd-kit/sortable'
+import { App } from 'antd'
 import cn from 'classnames'
 import styles from './appGrid.module.less'
-import AppIcon from './appIcon'
 import DroppableFolder from './droppableFolder'
 import DroppableIcon from './droppableIcon'
+import DroppableWidget from './droppableWidget'
 import ContextMenu from './contextMenu'
 import AddAppModal from './addAppModal'
 import AppFolderPopover from './appFolderPopover'
 import CreateFolderModal from './createFolderModal'
-import DraggableFolderIcon from './draggableFolderIcon'
+import CalendarWidget from '@/pages/widgetsContainer/calendarWidget'
+import WeatherWidget from '@/pages/widgetsContainer/weatherWidget'
+import TodoWidget from '@/pages/widgetsContainer/todoWidget'
+import HotSearchWidget from '@/pages/widgetsContainer/hotSearchWidget'
+import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 import appGridService from './services/appGrid'
+import wallpaperService from '@/pages/wallpaper/services/wallpaper'
 import useAppGridStore from './stores/appGrid'
-import type { AppNode, AppItem, AppFolder, ContextMenuState } from './types/appGrid'
+import type { AppNode, AppItem, AppFolder, ContextMenuState, WidgetKind } from './types/appGrid'
+import type {
+  IDynamicWallpaper,
+  IGradientWallpaper,
+  IImageWallpaper,
+  IWallpaperConfig
+} from '@/pages/wallpaper/types/wallpaper'
 import { initDefaultApps } from './initData'
+import { isImageIconSource } from './iconFallback'
 import { useNotification } from '@/common/ui'
+import syncPresentationStyles from '@/pages/deepTabSync/syncPresentation.module.less'
+import { useTranslation } from 'react-i18next'
 import useAppCategoryStore from '@/pages/appCategory/stores/appCategory'
+import useBottomBarStore from '@/pages/bottomBar/stores/bottomBar'
 
-const REORDER_HOVER_DELAY = 220
+export const MAIN_GRID_DROPPABLE_ID = 'main-grid'
 
-/**
- * 应用图标网格组件
- * 支持拖拽排序、编辑模式、右键菜单
- */
+const delayedReorderStrategy = () => null
+const widgetUrlPrefix = 'deeptab://widget/'
+const iconTrackWidth = 120
+
+const getWidgetKind = (node?: AppNode | null): WidgetKind | null => {
+  if (!node || node.type !== 'item') return null
+  const url = String(node.url || '')
+  if (!url.startsWith(widgetUrlPrefix)) return null
+  const kind = url.slice(widgetUrlPrefix.length)
+  if (kind === 'calendar' || kind === 'weather' || kind === 'todo' || kind === 'hotSearch') {
+    return kind
+  }
+  return null
+}
+
+const widgetPreviewMap: Record<WidgetKind, React.ReactNode> = {
+  calendar: <CalendarWidget />,
+  weather: <WeatherWidget />,
+  todo: <TodoWidget />,
+  hotSearch: <HotSearchWidget />
+}
+
+const getGridItemRects = () => {
+  const rects = new Map<string, DOMRect>()
+  document.querySelectorAll<HTMLElement>('[data-app-grid-id]').forEach((element) => {
+    const id = element.dataset.appGridId
+    if (id) rects.set(id, element.getBoundingClientRect())
+  })
+  return rects
+}
+
+const animateGridReorder = (previousRects: Map<string, DOMRect>, activeId: string) => {
+  requestAnimationFrame(() => {
+    document.querySelectorAll<HTMLElement>('[data-app-grid-id]').forEach((element) => {
+      const id = element.dataset.appGridId
+      if (!id || id === activeId) return
+
+      const previous = previousRects.get(id)
+      if (!previous) return
+
+      const next = element.getBoundingClientRect()
+      const deltaX = previous.left - next.left
+      const deltaY = previous.top - next.top
+
+      if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) return
+
+      element.animate(
+        [
+          { transform: `translate3d(${deltaX}px, ${deltaY}px, 0)` },
+          { transform: 'translate3d(0, 0, 0)' }
+        ],
+        {
+          duration: 460,
+          easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+          fill: 'both'
+        }
+      )
+    })
+  })
+}
+
+const getDropPoint = (event: DragEndEvent) => {
+  const translated = event.active.rect.current.translated
+  const fallback = event.active.rect.current.initial
+  const rect = translated || fallback
+  if (!rect) return null
+
+  return {
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2
+  }
+}
+
+const findClosestGridItemId = (point: { x: number; y: number }, activeId: string) => {
+  let closestId: string | null = null
+  let closestDistance = Number.POSITIVE_INFINITY
+
+  document.querySelectorAll<HTMLElement>('[data-app-grid-id]').forEach((element) => {
+    const id = element.dataset.appGridId
+    if (!id || id === activeId) return
+
+    const rect = element.getBoundingClientRect()
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
+    const distance = Math.hypot(point.x - centerX, point.y - centerY)
+
+    if (distance < closestDistance) {
+      closestDistance = distance
+      closestId = id
+    }
+  })
+
+  return closestId
+}
+
+const getTargetIconRect = (id: string) => {
+  const element = document.querySelector<HTMLElement>(`[data-app-grid-id="${id}"]`)
+  const iconElement = element?.querySelector<HTMLElement>(`.${styles.iconWrapper}`)
+  return iconElement?.getBoundingClientRect() || element?.getBoundingClientRect() || null
+}
+
+const isInsideMergeZone = (dropPoint: { x: number; y: number }, targetId: string) => {
+  const rect = getTargetIconRect(targetId)
+  if (!rect) return false
+
+  const horizontalInset = rect.width * 0.18
+  const verticalInset = rect.height * 0.18
+
+  return (
+    dropPoint.x >= rect.left + horizontalInset &&
+    dropPoint.x <= rect.right - horizontalInset &&
+    dropPoint.y >= rect.top + verticalInset &&
+    dropPoint.y <= rect.bottom - verticalInset
+  )
+}
+
+const getIconTextFromName = (value?: string) => {
+  const text = String(value || '').trim()
+  if (!text) return 'A'
+  const chinese = text.match(/[\u4e00-\u9fa5]/g)
+  if (chinese?.length) return chinese.slice(0, 2).join('')
+  const letters = text.replace(/[^a-z0-9]/gi, '').slice(0, 2)
+  return (letters || text.slice(0, 2)).toUpperCase()
+}
+
 const AppGrid: React.FC = () => {
-  const { notification, message, modal } = App.useApp()
+  const { message, modal } = App.useApp()
+  const { t } = useTranslation()
   const { showNotification } = useNotification()
-
-  // 状态管理
   const [isEditMode, setIsEditMode] = useState(false)
   const [contextMenuData, setContextMenuData] = useState<ContextMenuState | null>(null)
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [editingApp, setEditingApp] = useState<AppItem | null>(null)
   const [openedFolderId, setOpenedFolderId] = useState<string | null>(null)
+  const [createFolderVisible, setCreateFolderVisible] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [activeNode, setActiveNode] = useState<AppNode | AppItem | null>(null)
 
-  // 配置拖拽传感器 - 设置较小的激活距离
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5 // 移动 5px 后才开始拖拽
-      }
-    })
-  )
-
-  // 悬停检测相关
-  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const lastOverIdRef = useRef<string | null>(null)
-  const latestAppsRef = useRef<AppNode[]>([])
-  const originalAppsRef = useRef<AppNode[] | null>(null)
-  const didPreviewReorderRef = useRef(false)
-
-  // Store hooks
   const {
     apps,
     setApps,
@@ -74,116 +184,140 @@ const AppGrid: React.FC = () => {
     moveToFolder,
     moveFromFolder,
     deleteFolder,
-    updateFolder
+    updateFolder,
+    setDragActiveNode
   } = useAppGridStore()
   const activeCategoryId = useAppCategoryStore((s) => s.activeCategoryId)
+  const pinnedAppIds = useBottomBarStore((s) => s.pinnedAppIds)
 
   const visibleApps = useMemo(() => {
-    return apps.filter((app) => (app.categoryId || 'home') === activeCategoryId)
-  }, [activeCategoryId, apps])
+    return apps.filter(
+      (app) =>
+        (app.categoryId || 'home') === activeCategoryId &&
+        !pinnedAppIds.includes(app.id) &&
+        (app.type === 'folder' || app.name || app.url)
+    )
+  }, [activeCategoryId, apps, pinnedAppIds])
 
-  useEffect(() => {
-    latestAppsRef.current = apps
-  }, [apps])
-
-  // 初始化加载数据
-  useEffect(() => {
-    initAndLoadApps()
-  }, [])
-
-  // 初始化并加载应用列表
-  const initAndLoadApps = async () => {
-    try {
-      const persistedIconSettings = await appGridService.getIconSettings()
-      if (persistedIconSettings) {
-        setIconSettings(persistedIconSettings)
-      }
-
-      // 首次使用时初始化默认数据
-      await initDefaultApps()
-      // 加载数据
-      await loadApps()
-    } catch (error) {
-      console.error('初始化失败:', error)
+  const { setNodeRef, isOver } = useDroppable({
+    id: MAIN_GRID_DROPPABLE_ID,
+    data: {
+      container: 'grid'
     }
-  }
+  })
 
-  // 长按进入编辑模式
-  const handleLongPress = () => {
-    setIsEditMode(true)
-  }
+  useEffect(() => {
+    const initAndLoadApps = async () => {
+      try {
+        const persistedIconSettings = await appGridService.getIconSettings()
+        if (persistedIconSettings) {
+          setIconSettings(persistedIconSettings)
+        }
 
-  // 退出编辑模式
-  const exitEditMode = () => {
-    setIsEditMode(false)
-  }
+        await initDefaultApps()
+        await loadApps()
+      } catch (error) {
+        console.error('初始化失败:', error)
+      }
+    }
 
-  // ESC 键退出编辑模式
+    void initAndLoadApps()
+  }, [loadApps, setIconSettings])
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isEditMode) {
-        exitEditMode()
+        setIsEditMode(false)
       }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isEditMode])
 
-  // 点击空白区域退出编辑模式
+  useEffect(() => {
+    const handleCancelEditMode = () => setIsEditMode(false)
+    window.addEventListener('dt:cancelAppGridEditMode', handleCancelEditMode)
+    return () => window.removeEventListener('dt:cancelAppGridEditMode', handleCancelEditMode)
+  }, [])
+
+  const openBlankContextMenu = (x: number, y: number) => {
+    setContextMenuData({
+      visible: true,
+      x,
+      y,
+      appId: '',
+      appType: 'blank'
+    })
+  }
+
+  useEffect(() => {
+    const handleOpenBlankMenu = (event: Event) => {
+      const detail = (event as CustomEvent<{ x?: number; y?: number }>).detail
+      openBlankContextMenu(detail?.x || window.innerWidth / 2, detail?.y || window.innerHeight / 2)
+    }
+
+    window.addEventListener('dt:openAppGridBlankMenu', handleOpenBlankMenu)
+    return () => window.removeEventListener('dt:openAppGridBlankMenu', handleOpenBlankMenu)
+  }, [])
+
   const handleContainerClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && isEditMode) {
-      exitEditMode()
+    if (!isEditMode) return
+
+    const target = e.target as HTMLElement
+    const isInteractiveTarget =
+      target.closest(`.${styles.appIcon}`) ||
+      target.closest(`.${styles.droppableWidget}`) ||
+      target.closest(`.${styles.deleteFloatingBtn}`) ||
+      target.closest('.ant-modal-root') ||
+      target.closest('.ant-dropdown')
+
+    if (!isInteractiveTarget) {
+      setIsEditMode(false)
     }
   }
 
-  // 空白区域右键菜单
   const handleContainerContextMenu = (e: React.MouseEvent) => {
-    // 阻止浏览器默认右键菜单
     e.preventDefault()
     e.stopPropagation()
 
-    // 检查是否点击在空白区域
     const target = e.target as HTMLElement
     const isAppIcon = target.closest(`.${styles.appIcon}`)
-    const isAddButton = target.closest(`.${styles.addBtnWrapper}`)
-
-    // 只有在真正的空白区域才显示右键菜单
-    if (!isAppIcon && !isAddButton) {
-      setContextMenuData({
-        visible: true,
-        x: e.clientX,
-        y: e.clientY,
-        appId: '',
-        appType: 'blank' // 标记为空白区域
-      })
+    if (!isAppIcon) {
+      openBlankContextMenu(e.clientX, e.clientY)
     }
   }
 
-  // 实际删除应用逻辑
   const handleDelete = async (id: string) => {
-    console.log('待删除 id =', id)
     try {
       await appGridService.delete(id)
-      message.success('删除成功，应用已从首页移除')
+      message.success(t('appGrid.deleted', { defaultValue: 'App removed from the home page' }))
+      await loadApps()
     } catch (error) {
       console.error('删除失败:', error)
-      message.error('删除失败，请稍后重试')
+      message.error(t('appGrid.deleteFailed', { defaultValue: 'Could not delete the app' }))
     }
   }
 
-  // 使用 antd modal.confirm 进行删除确认
   const confirmDelete = (id: string) => {
     modal.confirm({
-      title: '确认删除',
-      content: '确定要删除这个应用吗?',
-      okText: '删除',
-      cancelText: '取消',
+      title: t('appGrid.deleteTitle', { defaultValue: 'Delete app' }),
+      content: t('appGrid.deleteConfirm', { defaultValue: 'Delete this app?' }),
+      okText: t('common.delete'),
+      cancelText: t('common.cancel'),
+      rootClassName: syncPresentationStyles.modalRoot,
+      className: syncPresentationStyles.modal,
+      transitionName: '',
+      maskTransitionName: modalMaskTransitionName,
+      maskStyle: modalMaskStyle,
       onOk: () => handleDelete(id)
     })
   }
 
-  // 右键菜单
-  const handleContextMenu = (e: React.MouseEvent, appId: string, nodeType: 'item' | 'folder') => {
+  const handleContextMenu = (
+    e: React.MouseEvent,
+    appId: string,
+    nodeType: 'item' | 'folder' | 'widget'
+  ) => {
     setContextMenuData({
       visible: true,
       x: e.clientX,
@@ -193,22 +327,20 @@ const AppGrid: React.FC = () => {
     })
   }
 
-  // 关闭右键菜单
   const closeContextMenu = () => {
     setContextMenuData(null)
   }
 
-  // URL 规范化 - 确保 URL 以 http:// 或 https:// 开头
   const normalizeUrl = (url: string): string => {
     if (!url) return ''
     const trimmedUrl = url.trim()
+    if (trimmedUrl.startsWith(widgetUrlPrefix)) return ''
     if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
       return `https://${trimmedUrl}`
     }
     return trimmedUrl
   }
 
-  // 右键菜单 - 在当前标签页打开
   const handleOpenCurrent = () => {
     const node = apps.find((a) => a.id === contextMenuData?.appId)
     if (node && node.type === 'item') {
@@ -234,7 +366,6 @@ const AppGrid: React.FC = () => {
     closeContextMenu()
   }
 
-  // 右键菜单 - 在新标签页打开
   const handleOpenNew = () => {
     const node = apps.find((a) => a.id === contextMenuData?.appId)
     closeContextMenu()
@@ -246,20 +377,14 @@ const AppGrid: React.FC = () => {
           message.error('无效的链接地址')
           return
         }
-        chrome.tabs.create(
-          {
-            url: normalizedUrl,
-            active: true
-          },
-          (tab) => {
-            if (chrome.runtime.lastError) {
-              console.error('Chrome API 错误:', chrome.runtime.lastError)
-              message.error('打开失败')
-            } else {
-              message.success(`已在新标签页打开 ${node.name}`)
-            }
+        chrome.tabs.create({ url: normalizedUrl, active: true }, () => {
+          if (chrome.runtime.lastError) {
+            console.error('Chrome API 错误:', chrome.runtime.lastError)
+            message.error('打开失败')
+          } else {
+            message.success(`已在新标签页打开 ${node.name}`)
           }
-        )
+        })
       } catch (error) {
         console.error('打开失败:', error)
         message.error('打开失败')
@@ -267,23 +392,18 @@ const AppGrid: React.FC = () => {
     }
   }
 
-  // 右键菜单 - 编辑
   const handleEdit = () => {
     const node = apps.find((a) => a.id === contextMenuData?.appId)
-    if (node && node.type === 'item') {
-      setEditingApp(node as AppItem)
+    if (node && node.type === 'item' && !getWidgetKind(node)) {
+      setEditingApp(node)
       setAddModalOpen(true)
     }
     closeContextMenu()
   }
 
-  // 右键菜单 - 删除(使用 antd modal.confirm)
   const handleContextDelete = () => {
     const appId = contextMenuData?.appId
-    if (!appId) {
-      console.warn('右键删除时未找到 appId')
-      return
-    }
+    if (!appId) return
 
     const node = apps.find((a) => a.id === appId)
     if (!node) return
@@ -296,6 +416,8 @@ const AppGrid: React.FC = () => {
         content: '删除文件夹时，内部图标将全部移出到主网格，确定删除吗？',
         okText: '删除',
         cancelText: '取消',
+        maskTransitionName: modalMaskTransitionName,
+        maskStyle: modalMaskStyle,
         onOk: async () => {
           try {
             await deleteFolder({ folderId: appId, deleteChildren: false })
@@ -305,14 +427,13 @@ const AppGrid: React.FC = () => {
           }
         }
       })
-    } else {
-      confirmDelete(appId)
+      return
     }
+
+    confirmDelete(appId)
   }
 
-  // 右键菜单 - 创建文件夹
   const handleCreateFolder = async (name: string) => {
-    console.log('handleCreateFolder 被调用，name:', name)
     try {
       await createFolder({ name })
       message.success('文件夹已创建')
@@ -322,23 +443,9 @@ const AppGrid: React.FC = () => {
     }
   }
 
-  // 请求创建文件夹弹窗
-  const [createFolderVisible, setCreateFolderVisible] = useState(false)
-
-  const handleCreateFolderRequested = () => {
-    console.log('请求创建文件夹弹窗')
-    setCreateFolderVisible(true)
-  }
-
-  const handleCreateFolderClose = () => {
-    setCreateFolderVisible(false)
-  }
-
-  // 右键菜单 - 移动到文件夹（只在有源 ID 时生效）
   const handleMoveToFolder = async (targetFolderId: string) => {
     const sourceId = contextMenuData?.appId
-    if (!sourceId || contextMenuData?.appType === 'blank') {
-      // 空白区域不执行移动操作
+    if (!sourceId || contextMenuData?.appType === 'blank' || contextMenuData?.appType === 'widget') {
       return
     }
     try {
@@ -349,293 +456,130 @@ const AppGrid: React.FC = () => {
     }
   }
 
-  const clearHoverTimer = () => {
-    if (hoverTimerRef.current) {
-      clearTimeout(hoverTimerRef.current)
-      hoverTimerRef.current = null
-    }
+  const downloadFile = async (url: string, filename: string) => {
+    const response = await fetch(url, { credentials: 'omit' })
+    if (!response.ok) throw new Error('download failed')
+
+    const blob = await response.blob()
+    const objectUrl = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = objectUrl
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
   }
 
-  const reorderTopLevelApps = (list: AppNode[], draggedId: string, overId: string) => {
-    const categoryItems = list.filter((app) => (app.categoryId || 'home') === activeCategoryId)
-    const oldIndex = categoryItems.findIndex((app) => app.id === draggedId)
-    const newIndex = categoryItems.findIndex((app) => app.id === overId)
+  const handleDownloadWallpaper = async () => {
+    closeContextMenu()
 
-    if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) {
-      return { nextApps: list, changed: false }
-    }
-
-    const movedCategoryItems = arrayMove(categoryItems, oldIndex, newIndex)
-    const categoryIndices = list
-      .map((app, index) => ({ app, index }))
-      .filter(({ app }) => (app.categoryId || 'home') === activeCategoryId)
-      .map(({ index }) => index)
-
-    const nextApps = [...list]
-    categoryIndices.forEach((idx, itemIndex) => {
-      nextApps[idx] = movedCategoryItems[itemIndex]
-    })
-
-    const ordered = nextApps.map((app, index) => ({
-      ...app,
-      order: index,
-      updatedAt: new Date().toISOString(),
-      syncStatus: 'pending' as const
-    }))
-
-    return { nextApps: ordered, changed: true }
-  }
-
-  const previewReorder = (draggedId: string, overId: string) => {
-    setApps((prev) => {
-      const { nextApps, changed } = reorderTopLevelApps(prev, draggedId, overId)
-      if (changed) {
-        didPreviewReorderRef.current = true
-        latestAppsRef.current = nextApps
-      }
-      return nextApps
-    })
-  }
-
-  // 拖拽开始处理
-  const handleDragStart = (event: any) => {
-    setActiveId(event.active.id as string)
-    clearHoverTimer()
-    lastOverIdRef.current = null
-    originalAppsRef.current = latestAppsRef.current
-    didPreviewReorderRef.current = false
-  }
-
-  // 拖拽过程中处理（悬停检测）
-  const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event
-    if (!over || !active) return
-
-    const draggedId = active.id as string
-    const overId = over.id as string
-
-    // 如果悬停目标没有变化，不做处理
-    if (lastOverIdRef.current === overId) return
-
-    clearHoverTimer()
-
-    // 更新当前悬停目标
-    lastOverIdRef.current = overId
-
-    // 忽略拖到自己身上
-    if (draggedId === overId) return
-
-    // 忽略拖到主网格区域（这个在 dragEnd 处理）
-    if (overId === 'main-grid') return
-
-    // 查找节点
-    const draggedNode = apps.find((app) => app.id === draggedId)
-    const overNode = apps.find((app) => app.id === overId)
-
-    // 检查是否是从文件夹内拖出的图标
-    const parentFolder = apps.find(
-      (app) => app.type === 'folder' && app.children.some((child) => child.id === draggedId)
-    ) as AppFolder | undefined
-
-    // 如果悬停在文件夹上，不启动合并计时器
-    if (overNode && overNode.type === 'folder') {
-      return
-    }
-
-    // 如果是主页图标之间的拖拽，启动悬停计时器
-    if (
-      draggedNode &&
-      (draggedNode.type === 'item' || draggedNode.type === 'folder') &&
-      overNode &&
-      (overNode.type === 'item' || overNode.type === 'folder') &&
-      !parentFolder
-    ) {
-      hoverTimerRef.current = setTimeout(() => {
-        if (lastOverIdRef.current === overId) {
-          previewReorder(draggedId, overId)
-        }
-      }, REORDER_HOVER_DELAY)
-    }
-  }
-
-  const handleDragCancel = () => {
-    clearHoverTimer()
-    setActiveId(null)
-    lastOverIdRef.current = null
-    didPreviewReorderRef.current = false
-
-    if (originalAppsRef.current) {
-      setApps(originalAppsRef.current)
-      latestAppsRef.current = originalAppsRef.current
-      originalAppsRef.current = null
-    }
-  }
-
-  // 拖拽结束处理
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event
-
-    clearHoverTimer()
-
-    // 获取待执行操作和最后悬停目标（在重置之前保存）
-    const lastOverId = lastOverIdRef.current
-    const didPreviewReorder = didPreviewReorderRef.current
-
-    // 重置状态
-    setActiveId(null)
-    lastOverIdRef.current = null
-    didPreviewReorderRef.current = false
-    originalAppsRef.current = null
-
-    if (didPreviewReorder) {
-      try {
-        await appGridService.updateOrder(latestAppsRef.current)
-      } catch (error) {
-        console.error('保存排序失败:', error)
-        message.error('排序保存失败，请重试')
-        await loadApps()
-      }
-      return
-    }
-
-    if (!over) {
-      return
-    }
-
-    const draggedId = active.id as string
-    const droppedOnId = over.id as string
-
-    // 防止自己拖到自己身上
-    if (draggedId === droppedOnId) return
-
-    // 查找节点
-    const draggedNode = apps.find((app) => app.id === draggedId)
-    const droppedOnNode = apps.find((app) => app.id === droppedOnId)
-
-    // 检查是否是从文件夹内拖出的图标
-    const parentFolder = apps.find(
-      (app) => app.type === 'folder' && app.children.some((child) => child.id === draggedId)
-    ) as AppFolder | undefined
-
-    // 如果拖拽到主页网格（从文件夹拖拽到主页）
-    if (over.id === 'main-grid') {
-      if (parentFolder) {
-        try {
-          await moveFromFolder({ itemId: draggedId, folderId: parentFolder.id })
-          message.success('图标已移出文件夹')
-          setTimeout(() => {
-            if (openedFolderId === parentFolder.id) {
-              handleFolderClose()
-            }
-          }, 300)
-        } catch (error) {
-          console.error('移出文件夹失败:', error)
-          message.error('移出失败')
-        }
-      }
-      return
-    }
-
-    // 如果拖拽到文件夹上 - 只有当最终放开位置确实在文件夹上时才移入
-    if (droppedOnNode && droppedOnNode.type === 'folder') {
-      // 检查最后悬停的目标是否就是这个文件夹
-      if (lastOverId === droppedOnId) {
-        if (draggedNode && draggedNode.type === 'item') {
-          try {
-            await moveToFolder({ itemId: draggedId, folderId: droppedOnId })
-            message.success('已移入文件夹')
-          } catch (error) {
-            console.error('移入文件夹失败:', error)
-            message.error('移入失败')
-          }
-        }
-      }
-      return
-    }
-
-    // 主页图标之间的拖拽 - 根据悬停时间判断操作
-    if (
-      draggedNode &&
-      draggedNode.type === 'item' &&
-      droppedOnNode &&
-      droppedOnNode.type === 'item' &&
-      !parentFolder
-    ) {
-      const oldIndex = visibleApps.findIndex((app) => app.id === draggedId)
-      const newIndex = visibleApps.findIndex((app) => app.id === droppedOnId)
-
-      if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
-        try {
-          await handleReorder(oldIndex, newIndex)
-        } catch (error) {
-          console.error('排序失败:', error)
-          message.error('排序失败')
-        }
-      }
-      return
-    }
-
-    // 文件夹的排序 - 文件夹拖拽到其他位置
-    if (draggedNode && draggedNode.type === 'folder' && !parentFolder) {
-      const oldIndex = visibleApps.findIndex((app) => app.id === draggedId)
-      const newIndex = visibleApps.findIndex((app) => app.id === droppedOnId)
-
-      if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
-        console.log('执行文件夹排序操作')
-        try {
-          await handleReorder(oldIndex, newIndex)
-        } catch (error) {
-          console.error('文件夹排序失败:', error)
-          message.error('排序失败')
-        }
-      }
-      return
-    }
-
-    console.log('其他情况，不做处理')
-  }
-
-  // 处理排序
-  const handleReorder = async (oldIndex: number, newIndex: number) => {
-    if (oldIndex === newIndex) return
-
-    // 获取新的排序
-    const newApps = arrayMove([...apps], oldIndex, newIndex)
-
-    // 更新 order 字段
-    const updatedApps = newApps.map((app, index) => ({
-      ...app,
-      order: index
-    }))
-
-    // 保存到存储
     try {
-      await appGridService.reorder(updatedApps.map((app) => ({ id: app.id, order: app.order })))
-      await loadApps()
-      console.log('排序完成')
+      const config = await wallpaperService.getWallpaperConfig()
+      const current = config?.currentWallpaper
+      if (!current) {
+        message.warning('当前没有可下载的壁纸')
+        return
+      }
+
+      if (current.type === 'gradient') {
+        message.info('渐变背景不是图片文件，暂不支持下载')
+        return
+      }
+
+      const sourceUrl =
+        current.type === 'image'
+          ? (current as IImageWallpaper).url
+          : (current as IDynamicWallpaper).videoUrl
+      const extension = current.type === 'image' ? 'jpg' : 'mp4'
+      const filename = `deeptab-wallpaper-${Date.now()}.${extension}`
+      await downloadFile(sourceUrl, filename)
+      message.success('壁纸下载已开始')
     } catch (error) {
-      console.error('排序保存失败:', error)
-      throw error
+      console.error('下载壁纸失败:', error)
+      message.error('下载壁纸失败，请稍后重试')
     }
   }
 
-  // 添加应用
-  const handleAddApp = () => {
-    setEditingApp(null)
-    setAddModalOpen(true)
+  const mergeWallpaperConfig = (
+    previous: IWallpaperConfig | null,
+    currentWallpaper: IWallpaperConfig['currentWallpaper']
+  ): IWallpaperConfig => ({
+    currentWallpaper,
+    brightness: previous?.brightness ?? 100,
+    blur: previous?.blur ?? 0,
+    featuredCategory: previous?.featuredCategory,
+    gradientAngle: previous?.gradientAngle,
+    saturation: previous?.saturation ?? 100,
+    dynamicMuted: previous?.dynamicMuted ?? true,
+    dynamicPaused: previous?.dynamicPaused ?? false
+  })
+
+  const pickRandomItem = <T,>(items: T[], excludeId?: string) => {
+    const candidates = items.filter((item) => {
+      const id = (item as { id?: string }).id
+      return !excludeId || id !== excludeId
+    })
+    const list = candidates.length ? candidates : items
+    return list[Math.floor(Math.random() * list.length)]
   }
 
-  // 点击文件夹打开弹层
+  const handleRandomWallpaper = async () => {
+    closeContextMenu()
+
+    try {
+      const config = await wallpaperService.getWallpaperConfig()
+      const current = config?.currentWallpaper
+
+      if (current?.type === 'dynamic') {
+        const result = await wallpaperService.getDynamicWallpapers({
+          category: (current as IDynamicWallpaper).category,
+          page: Math.floor(Math.random() * 5) + 1,
+          pageSize: 18
+        })
+        const next = pickRandomItem(result.list, current.id)
+        if (next) {
+          await wallpaperService.saveWallpaperConfig(mergeWallpaperConfig(config, next))
+          message.success('已随机切换动态壁纸')
+          return
+        }
+      }
+
+      if (current?.type === 'image') {
+        const result = await wallpaperService.getImageWallpapers({
+          category: (current as IImageWallpaper).category,
+          page: Math.floor(Math.random() * 5) + 1,
+          pageSize: 18
+        })
+        const next = pickRandomItem(result.list, current.id)
+        if (next) {
+          await wallpaperService.saveWallpaperConfig(mergeWallpaperConfig(config, next))
+          message.success('已随机切换静态壁纸')
+          return
+        }
+      }
+
+      const gradients = await wallpaperService.getGradientWallpapers()
+      const nextGradient = pickRandomItem(gradients, (current as IGradientWallpaper | undefined)?.id)
+      if (nextGradient) {
+        await wallpaperService.saveWallpaperConfig(mergeWallpaperConfig(config, nextGradient))
+        message.success('已随机切换渐变背景')
+      }
+    } catch (error) {
+      console.error('随机壁纸失败:', error)
+      message.error('随机壁纸失败，请稍后重试')
+    }
+  }
+
+  const handleEditHome = () => {
+    closeContextMenu()
+    setIsEditMode(true)
+  }
+
   const handleFolderClick = (folder: AppFolder) => {
     setOpenedFolderId(folder.id)
   }
 
-  // 关闭文件夹弹层
-  const handleFolderClose = () => {
-    setOpenedFolderId(null)
-  }
-
-  // 从文件夹移出图标
   const handleMoveOut = async (itemId: string, folderId: string) => {
     try {
       await moveFromFolder({ itemId, folderId })
@@ -645,7 +589,6 @@ const AppGrid: React.FC = () => {
     }
   }
 
-  // 删除文件夹内图标
   const handleDeleteItem = async (itemId: string) => {
     try {
       await appGridService.delete(itemId)
@@ -655,58 +598,296 @@ const AppGrid: React.FC = () => {
     }
   }
 
-  // 更新文件夹名称或封面
   const handleUpdateFolder = async (id: string, params: { name?: string; icon?: string }) => {
+    await updateFolder(id, params)
+  }
+
+  const mergeItemsToFolder = async (sourceId: string, targetId: string) => {
+    const currentList = apps
+    const draggedNode = currentList.find((app) => app.id === sourceId)
+    const targetNode = currentList.find((app) => app.id === targetId)
+
+    if (!draggedNode || !targetNode) return false
+    if (draggedNode.type !== 'item' || targetNode.type !== 'item') return false
+    if (getWidgetKind(draggedNode) || getWidgetKind(targetNode)) return false
+    if ((draggedNode.categoryId || 'home') !== activeCategoryId) return false
+    if ((targetNode.categoryId || 'home') !== activeCategoryId) return false
+
+    const previousRects = getGridItemRects()
+    const folderId = `folder_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+    const folder: AppFolder = {
+      type: 'folder',
+      id: folderId,
+      name: '文件夹',
+      icon: '📁',
+      iconBg: targetNode.iconBg,
+      order: 0,
+      categoryId: targetNode.categoryId || draggedNode.categoryId || activeCategoryId,
+      children: [
+        { ...targetNode, order: 0 },
+        { ...draggedNode, order: 1 }
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      syncStatus: 'pending'
+    }
+
+    const nextApps = currentList
+      .reduce<AppNode[]>((next, node) => {
+        if (node.id === sourceId) return next
+        if (node.id === targetId) {
+          next.push(folder)
+          return next
+        }
+        next.push(node)
+        return next
+      }, [])
+      .map((node, index) => ({
+        ...node,
+        order: index,
+        updatedAt: new Date().toISOString(),
+        syncStatus: 'pending' as const
+      }))
+
+    setApps(nextApps)
+    animateGridReorder(previousRects, sourceId)
+
     try {
-      await updateFolder(id, params)
+      await appGridService.saveAll(nextApps)
+      message.success('已合并为文件夹')
+      return true
     } catch (error) {
-      throw error
+      console.error('合并文件夹失败:', error)
+      message.error('合并失败，请重试')
+      await loadApps()
+      return false
     }
   }
 
-  // Modal 成功回调
-  const handleModalSuccess = () => {
-    // 数据会通过 Zustand 自动更新
+  const handleModalSuccess = async () => {
+    await loadApps()
   }
 
   const openedFolder = openedFolderId
     ? (apps.find((a) => a.id === openedFolderId && a.type === 'folder') as AppFolder)
     : null
 
+  useDndMonitor({
+    onDragStart: (event) => {
+      const fromContainer = String(event.active?.data?.current?.container || '')
+      if (fromContainer !== 'grid' && fromContainer !== 'folder') return
+
+      const nextId = String(event.active?.data?.current?.appId || event.active.id)
+      const currentData = event.active?.data?.current
+      const nextNode =
+        (currentData?.item as AppItem | undefined) ||
+        (currentData?.folder as AppFolder | undefined) ||
+        apps.find((app) => app.id === nextId) ||
+        null
+
+      setActiveId(nextId)
+      setActiveNode(nextNode)
+      setDragActiveNode(nextNode)
+    },
+    onDragCancel: (event) => {
+      const fromContainer = String(event.active?.data?.current?.container || '')
+      if (fromContainer !== 'grid' && fromContainer !== 'folder') return
+      setActiveId(null)
+      setActiveNode(null)
+      setDragActiveNode(null)
+    },
+    onDragEnd: async (event) => {
+      const fromContainer = String(event.active?.data?.current?.container || '')
+      if (fromContainer !== 'grid' && fromContainer !== 'folder') return
+
+      const draggedId = String(event.active?.data?.current?.appId || event.active.id)
+      const draggedNode = apps.find((app) => app.id === draggedId) || activeNode
+
+      setActiveId(null)
+      setActiveNode(null)
+      setDragActiveNode(null)
+
+      if (!event.over) return
+
+      const droppedOnId = String(event.over.id)
+      const toContainer = String(event.over?.data?.current?.container || '')
+
+      if (toContainer === 'dock') return
+      if (draggedId === droppedOnId) return
+
+      const dropPoint = getDropPoint(event)
+      const closestGridItemId = dropPoint && fromContainer === 'grid'
+        ? findClosestGridItemId(dropPoint, draggedId)
+        : null
+      const resolvedGridTargetId = closestGridItemId || droppedOnId
+      const droppedOnNode = apps.find((app) => app.id === resolvedGridTargetId)
+      const parentFolder = apps.find(
+        (app) => app.type === 'folder' && app.children.some((child) => child.id === draggedId)
+      ) as AppFolder | undefined
+
+      if (event.over.id === MAIN_GRID_DROPPABLE_ID) {
+        if (fromContainer === 'folder' && parentFolder) {
+          try {
+            await moveFromFolder({ itemId: draggedId, folderId: parentFolder.id })
+            message.success('图标已移出文件夹')
+            window.setTimeout(() => {
+              if (openedFolderId === parentFolder.id) {
+                setOpenedFolderId(null)
+              }
+            }, 300)
+          } catch (error) {
+            console.error('移出文件夹失败:', error)
+            message.error('移出失败')
+          }
+          return
+        }
+
+        if (fromContainer === 'grid' && closestGridItemId) {
+          const oldIndex = visibleApps.findIndex((app) => app.id === draggedId)
+          const newIndex = visibleApps.findIndex((app) => app.id === closestGridItemId)
+
+          if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+            const previousRects = getGridItemRects()
+            const movedVisible = [...visibleApps]
+            const [movedItem] = movedVisible.splice(oldIndex, 1)
+            movedVisible.splice(newIndex, 0, movedItem)
+
+            const indices = apps
+              .map((app, index) => ({ app, index }))
+              .filter(({ app }) => (app.categoryId || 'home') === activeCategoryId)
+              .map(({ index }) => index)
+
+            const nextApps = [...apps]
+            indices.forEach((index, order) => {
+              nextApps[index] = {
+                ...movedVisible[order],
+                order: index
+              }
+            })
+
+            setApps(nextApps)
+            animateGridReorder(previousRects, draggedId)
+
+            try {
+              await appGridService.updateOrder(nextApps)
+            } catch (error) {
+              console.error('空白区域排序保存失败:', error)
+              message.error('排序失败')
+              await loadApps()
+            }
+          }
+        }
+        return
+      }
+
+      if (fromContainer === 'folder') return
+
+      if (droppedOnNode && droppedOnNode.type === 'folder') {
+        if (draggedNode && draggedNode.type === 'item' && !getWidgetKind(draggedNode)) {
+          try {
+            await moveToFolder({ itemId: draggedId, folderId: droppedOnId })
+            message.success('已移入文件夹')
+          } catch (error) {
+            console.error('移入文件夹失败:', error)
+            message.error('移入失败')
+          }
+        }
+        return
+      }
+
+      if (
+        dropPoint &&
+        draggedNode &&
+        droppedOnNode &&
+        draggedNode.type === 'item' &&
+        droppedOnNode.type === 'item' &&
+        !getWidgetKind(draggedNode) &&
+        !getWidgetKind(droppedOnNode) &&
+        isInsideMergeZone(dropPoint, resolvedGridTargetId)
+      ) {
+        const merged = await mergeItemsToFolder(draggedId, resolvedGridTargetId)
+        if (merged) return
+      }
+
+      if (
+        draggedNode &&
+        (draggedNode.type === 'item' || draggedNode.type === 'folder') &&
+        droppedOnNode &&
+        (droppedOnNode.type === 'item' || droppedOnNode.type === 'folder')
+      ) {
+        const oldIndex = visibleApps.findIndex((app) => app.id === draggedId)
+        const newIndex = visibleApps.findIndex((app) => app.id === resolvedGridTargetId)
+
+        if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+          const previousRects = getGridItemRects()
+          const movedVisible = [...visibleApps]
+          const [movedItem] = movedVisible.splice(oldIndex, 1)
+          movedVisible.splice(newIndex, 0, movedItem)
+
+          const indices = apps
+            .map((app, index) => ({ app, index }))
+            .filter(({ app }) => (app.categoryId || 'home') === activeCategoryId)
+            .map(({ index }) => index)
+
+          const nextApps = [...apps]
+          indices.forEach((index, order) => {
+            nextApps[index] = {
+              ...movedVisible[order],
+              order: index
+            }
+          })
+
+          setApps(nextApps)
+          animateGridReorder(previousRects, draggedId)
+
+          try {
+            await appGridService.updateOrder(nextApps)
+          } catch (error) {
+            console.error('排序保存失败:', error)
+            message.error('排序失败')
+            await loadApps()
+          }
+        }
+      }
+    }
+  })
+
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDragCancel={handleDragCancel}
-      onDragEnd={handleDragEnd}
-    >
+    <>
       <div
-        className={cn(styles.appGridContainer, {
-          [styles.editModeContainer]: isEditMode
+        ref={setNodeRef}
+        className={cn(styles.appGridContainer, styles.mainGridDropZone, {
+          [styles.editModeContainer]: isEditMode,
+          [styles.mainGridDropOver]: isOver
         })}
         onClick={handleContainerClick}
         onContextMenu={handleContainerContextMenu}
       >
-        {/* 添加按钮 */}
-        <div className={styles.addBtnWrapper}>
-          <Button type='primary' icon={<PlusOutlined />} onClick={handleAddApp} size='small'>
-            添加应用
-          </Button>
-
-          {isEditMode && (
-            <Button onClick={exitEditMode} size='small' className={cn(styles.doneBtn)}>
-              完成
-            </Button>
-          )}
-        </div>
-
-        {/* 应用网格 */}
-        <SortableContext items={visibleApps.map((app) => app.id)} strategy={rectSortingStrategy}>
-          <div className={styles.appGrid} style={{ gap: `${iconSettings.spacing}px` }}>
-            {visibleApps.map((node) =>
-              node.type === 'folder' ? (
+        <SortableContext
+          items={visibleApps.map((app) => app.id)}
+          strategy={delayedReorderStrategy}
+        >
+          <div
+            className={styles.appGrid}
+            style={
+              {
+                '--dt-grid-gap': `${iconSettings.spacing}px`
+              } as React.CSSProperties
+            }
+          >
+            {visibleApps.map((node) => {
+              const widgetKind = getWidgetKind(node)
+              return widgetKind ? (
+                <DroppableWidget
+                  key={node.id}
+                  widget={node as AppItem}
+                  kind={widgetKind}
+                  isEditMode={isEditMode}
+                  gridGap={iconSettings.spacing}
+                  onDelete={handleDelete}
+                  onContextMenu={handleContextMenu}
+                />
+              ) : node.type === 'folder' ? (
                 <DroppableFolder
                   key={node.id}
                   folder={node as AppFolder}
@@ -714,7 +895,7 @@ const AppGrid: React.FC = () => {
                   iconSettings={iconSettings}
                   onDelete={handleDelete}
                   onContextMenu={handleContextMenu}
-                  onLongPress={handleLongPress}
+                  onLongPress={() => setIsEditMode(true)}
                   onFolderClick={handleFolderClick}
                 />
               ) : (
@@ -725,14 +906,13 @@ const AppGrid: React.FC = () => {
                   iconSettings={iconSettings}
                   onDelete={handleDelete}
                   onContextMenu={handleContextMenu}
-                  onLongPress={handleLongPress}
+                  onLongPress={() => setIsEditMode(true)}
                 />
               )
-            )}
+            })}
           </div>
         </SortableContext>
 
-        {/* 右键菜单 */}
         {contextMenuData && (
           <ContextMenu
             visible={contextMenuData.visible}
@@ -747,31 +927,35 @@ const AppGrid: React.FC = () => {
             onMoveToFolder={handleMoveToFolder}
             onClose={closeContextMenu}
             allFolders={apps.filter((a) => a.type === 'folder') as AppFolder[]}
-            onCreateFolderRequested={handleCreateFolderRequested}
+            onCreateFolderRequested={() => setCreateFolderVisible(true)}
+            onAddAppRequested={() => {
+              setEditingApp(null)
+              setAddModalOpen(true)
+            }}
+            onDownloadWallpaper={handleDownloadWallpaper}
+            onRandomWallpaper={handleRandomWallpaper}
+            onEditHome={handleEditHome}
           />
         )}
 
-        {/* 创建文件夹弹窗 */}
         <CreateFolderModal
           visible={createFolderVisible}
-          onClose={handleCreateFolderClose}
+          onClose={() => setCreateFolderVisible(false)}
           onCreateFolder={handleCreateFolder}
         />
 
-        {/* 文件夹弹层 */}
         {openedFolder && (
           <AppFolderPopover
             folder={openedFolder}
             iconSettings={iconSettings}
             visible={!!openedFolderId}
-            onClose={handleFolderClose}
+            onClose={() => setOpenedFolderId(null)}
             onMoveOut={handleMoveOut}
             onDeleteItem={handleDeleteItem}
             onUpdateFolder={handleUpdateFolder}
           />
         )}
 
-        {/* 添加/编辑 Modal */}
         <AddAppModal
           open={addModalOpen}
           editingApp={editingApp}
@@ -779,62 +963,79 @@ const AppGrid: React.FC = () => {
           onSuccess={handleModalSuccess}
         />
       </div>
+    </>
+  )
+}
 
-      {/* 拖拽覆盖层 - 显示拖拽中的图标 */}
-      <DragOverlay>
-        {activeId ? (
-          <div
-            style={{
-              opacity: 0.9,
-              transform: 'rotate(5deg) scale(1.1)',
-              cursor: 'grabbing',
-              pointerEvents: 'none',
-              transition: 'transform 0.2s cubic-bezier(0.2, 0, 0, 1)',
-              filter: 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15))',
-              zIndex: 9999
-            }}
-          >
-            {(() => {
-              const activeNode = apps.find((app) => app.id === activeId)
-              if (activeNode) {
-                if (activeNode.type === 'item') {
-                  return (
-                    <div className={styles.appIcon}>
-                      <div
-                        className={styles.iconWrapper}
-                        style={{
-                          width: iconSettings.size,
-                          height: iconSettings.size,
-                          borderRadius: iconSettings.radius,
-                          opacity: iconSettings.opacity / 100,
-                          transform: 'translateZ(0)',
-                          willChange: 'transform'
-                        }}
-                      >
-                        <span className={styles.iconEmoji}>{activeNode.icon}</span>
-                      </div>
-                      <div
-                        className={styles.appName}
-                        style={{
-                          fontSize: iconSettings.fontSize,
-                          color:
-                            iconSettings.fontColor === 'light' ? '#ffffff' : 'rgba(0,0,0,0.85)',
-                          transform: 'translateZ(0)',
-                          willChange: 'transform'
-                        }}
-                      >
-                        {activeNode.name}
-                      </div>
-                    </div>
-                  )
-                }
-              }
-              return null
-            })()}
+/**
+ * Grid 拖拽 Overlay 内容组件
+ * 提供给 main.tsx 的 DragOverlay 使用
+ */
+export const GridDragOverlayContent: React.FC = () => {
+  const { dragActiveNode, iconSettings } = useAppGridStore()
+
+  if (!dragActiveNode) return null
+
+  const activeWidgetKind = getWidgetKind(dragActiveNode)
+
+  if (activeWidgetKind && dragActiveNode.type === 'item') {
+    const span = dragActiveNode.widgetSpan === 2 ? 2 : 4
+    const gap = Number.isFinite(iconSettings.spacing) ? iconSettings.spacing : 24
+    const width = span * iconTrackWidth + (span - 1) * gap
+
+    return (
+      <div
+        className={cn(styles.dragOverlayRoot, styles.dragOverlayWidget)}
+        style={
+          {
+            width,
+            '--dt-widget-node-width': `${width}px`
+          } as React.CSSProperties
+        }
+      >
+        {widgetPreviewMap[activeWidgetKind]}
+      </div>
+    )
+  }
+
+  const isImageIcon = isImageIconSource(String(dragActiveNode.icon || ''))
+  const overlayIconStyle: React.CSSProperties = {
+    width: iconSettings.size,
+    height: iconSettings.size,
+    borderRadius: iconSettings.radius,
+    opacity: iconSettings.opacity / 100,
+    background: isImageIcon ? 'var(--dt-app-icon-bg)' : dragActiveNode.iconBg || 'var(--dt-app-icon-bg)'
+  }
+
+  return (
+    <div className={cn(styles.dragOverlayRoot, styles.droppableIcon, styles.appIcon)}>
+      <div className={styles.iconWrapper} style={overlayIconStyle}>
+        {dragActiveNode.type === 'folder' && (dragActiveNode as AppFolder).children.length ? (
+          <div className={styles.folderCover}>
+            {(dragActiveNode as AppFolder).children.slice(0, 4).map((child) => {
+              const isChildImage = isImageIconSource(String(child.icon || ''))
+              return (
+                <span key={child.id} className={styles.folderCoverIcon}>
+                  {isChildImage ? (
+                    <img className={styles.folderCoverImg} src={child.icon} alt='' />
+                  ) : (
+                    child.icon || getIconTextFromName(child.name)
+                  )}
+                </span>
+              )
+            })}
           </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+        ) : (
+          <span className={styles.iconEmoji}>
+            {isImageIcon ? (
+              <img className={styles.iconImg} src={String(dragActiveNode.icon || '')} alt='' />
+            ) : (
+              dragActiveNode.icon || getIconTextFromName(dragActiveNode.name)
+            )}
+          </span>
+        )}
+      </div>
+    </div>
   )
 }
 

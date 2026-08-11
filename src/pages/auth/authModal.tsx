@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { App, Button, Form, Input, Modal, Tabs } from 'antd'
 import useAuthStore from './stores/auth'
 import styles from './authModal.module.less'
+import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
+import { useTranslation } from 'react-i18next'
 
 interface AuthModalProps {
   open: boolean
@@ -15,6 +17,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose }) => {
   const [loginForm] = Form.useForm()
   const [registerForm] = Form.useForm()
   const { message } = App.useApp()
+  const { t } = useTranslation()
   const login = useAuthStore((s) => s.login)
   const register = useAuthStore((s) => s.register)
   const isLoading = useAuthStore((s) => s.isLoading)
@@ -33,11 +36,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose }) => {
         userIdentifier: values.userIdentifier,
         password: values.password
       })
-      message.success('登录成功')
+      message.success(t('auth.loginSuccess', { defaultValue: 'Signed in successfully' }))
       onClose()
     } catch (error: any) {
       if (error?.errorFields) return
-      message.error(error?.message || '登录失败，请检查账号或密码')
+      message.error(error?.message || t('auth.loginFailed', { defaultValue: 'Sign-in failed. Check your account and password.' }))
     }
   }
 
@@ -49,7 +52,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose }) => {
         password: values.password,
         nickname: values.nickname
       })
-      message.success('注册成功，请登录')
+      message.success(t('auth.registerSuccess', { defaultValue: 'Registration complete. Please sign in.' }))
       loginForm.setFieldsValue({
         userIdentifier: values.identifier,
         password: values.password
@@ -57,19 +60,23 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose }) => {
       setMode('login')
     } catch (error: any) {
       if (error?.errorFields) return
-      message.error(error?.message || '注册失败，请稍后再试')
+      message.error(error?.message || t('auth.registerFailed', { defaultValue: 'Registration failed. Try again later.' }))
     }
   }
 
   return (
     <Modal
       open={open}
-      title='Deep Tab 账号'
+      title={t('auth.title', { defaultValue: 'Deep Tab account' })}
       onCancel={onClose}
       footer={null}
       centered
       width={420}
+      rootClassName={styles.authModalRoot}
       className={styles.authModal}
+      transitionName=''
+      maskTransitionName={modalMaskTransitionName}
+      maskStyle={modalMaskStyle}
       destroyOnHidden
     >
       <Tabs
@@ -78,27 +85,27 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose }) => {
         items={[
           {
             key: 'login',
-            label: '登录',
+            label: t('auth.login', { defaultValue: 'Sign in' }),
             children: (
               <Form form={loginForm} layout='vertical' requiredMark={false}>
                 <Form.Item
                   name='userIdentifier'
-                  label='账号'
-                  rules={[{ required: true, message: '请输入用户名、邮箱或手机号' }]}
+                  label={t('auth.account', { defaultValue: 'Account' })}
+                  rules={[{ required: true, message: t('auth.accountRequired', { defaultValue: 'Enter a username, email, or phone number' }) }]}
                 >
-                  <Input autoComplete='username' placeholder='用户名 / 邮箱 / 手机号' />
+                  <Input autoComplete='username' placeholder={t('auth.accountPlaceholder', { defaultValue: 'Username / Email / Phone' })} />
                 </Form.Item>
                 <Form.Item
                   name='password'
-                  label='密码'
-                  rules={[{ required: true, message: '请输入密码' }]}
+                  label={t('auth.password', { defaultValue: 'Password' })}
+                  rules={[{ required: true, message: t('auth.passwordRequired', { defaultValue: 'Enter your password' }) }]}
                 >
-                  <Input.Password autoComplete='current-password' placeholder='请输入密码' />
+                  <Input.Password autoComplete='current-password' placeholder={t('auth.passwordRequired', { defaultValue: 'Enter your password' })} />
                 </Form.Item>
                 <div className={styles.footer}>
-                  <Button onClick={onClose}>取消</Button>
+                  <Button onClick={onClose}>{t('common.cancel')}</Button>
                   <Button type='primary' loading={isLoading} onClick={handleLogin}>
-                    登录
+                    {t('auth.login', { defaultValue: 'Sign in' })}
                   </Button>
                 </div>
               </Form>
@@ -106,36 +113,36 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose }) => {
           },
           {
             key: 'register',
-            label: '注册',
+            label: t('auth.register', { defaultValue: 'Register' }),
             children: (
               <Form form={registerForm} layout='vertical' requiredMark={false}>
                 <Form.Item
                   name='identifier'
-                  label='账号'
+                  label={t('auth.account', { defaultValue: 'Account' })}
                   rules={[
-                    { required: true, message: '请输入用户名、邮箱或手机号' },
-                    { min: 3, message: '账号至少 3 个字符' }
+                    { required: true, message: t('auth.accountRequired', { defaultValue: 'Enter a username, email, or phone number' }) },
+                    { min: 3, message: t('auth.accountMin', { defaultValue: 'Account must contain at least 3 characters' }) }
                   ]}
                 >
-                  <Input autoComplete='username' placeholder='用户名 / 邮箱 / 手机号' />
+                  <Input autoComplete='username' placeholder={t('auth.accountPlaceholder', { defaultValue: 'Username / Email / Phone' })} />
                 </Form.Item>
-                <Form.Item name='nickname' label='昵称'>
-                  <Input autoComplete='nickname' placeholder='可选' />
+                <Form.Item name='nickname' label={t('auth.nickname', { defaultValue: 'Nickname' })}>
+                  <Input autoComplete='nickname' placeholder={t('auth.optional', { defaultValue: 'Optional' })} />
                 </Form.Item>
                 <Form.Item
                   name='password'
-                  label='密码'
+                  label={t('auth.password', { defaultValue: 'Password' })}
                   rules={[
-                    { required: true, message: '请输入密码' },
-                    { min: 6, message: '密码至少 6 个字符' }
+                    { required: true, message: t('auth.passwordRequired', { defaultValue: 'Enter your password' }) },
+                    { min: 6, message: t('auth.passwordMin', { defaultValue: 'Password must contain at least 6 characters' }) }
                   ]}
                 >
-                  <Input.Password autoComplete='new-password' placeholder='请输入密码' />
+                  <Input.Password autoComplete='new-password' placeholder={t('auth.passwordRequired', { defaultValue: 'Enter your password' })} />
                 </Form.Item>
                 <div className={styles.footer}>
-                  <Button onClick={onClose}>取消</Button>
+                  <Button onClick={onClose}>{t('common.cancel')}</Button>
                   <Button type='primary' loading={isLoading} onClick={handleRegister}>
-                    注册
+                    {t('auth.register', { defaultValue: 'Register' })}
                   </Button>
                 </div>
               </Form>

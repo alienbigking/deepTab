@@ -2,34 +2,58 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Button, Card, Checkbox, Empty, Input, Modal, Radio, Select, Tag } from 'antd'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import addAppModalStyles from '@/pages/appGrid/addAppModal.module.less'
+import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
 import styles from './widgets.module.less'
 import widgetsContainerService from './services/widgetsContainer'
 import type { ITodoItem } from './types/widgetsContainer'
+import { useTranslation } from 'react-i18next'
 
 type TodoFilter = 'all' | 'active' | 'completed'
 
-const priorityOptions = [
-  { label: '高', value: 'high' },
-  { label: '中', value: 'medium' },
-  { label: '低', value: 'low' }
-]
+const priorityColors = { high: 'red', medium: 'gold', low: 'blue' } as const
 
-const priorityMeta: Record<NonNullable<ITodoItem['priority']>, { label: string; color: string }> = {
-  high: { label: '高', color: 'red' },
-  medium: { label: '中', color: 'gold' },
-  low: { label: '低', color: 'blue' }
+const todoWidgetCache: {
+  loaded: boolean
+  todos: ITodoItem[]
+  loadingPromise: Promise<ITodoItem[]> | null
+} = {
+  loaded: false,
+  todos: [],
+  loadingPromise: null
 }
 
 const TodoWidget: React.FC = () => {
   const [open, setOpen] = useState(false)
-  const [todos, setTodos] = useState<ITodoItem[]>([])
+  const [todos, setTodos] = useState<ITodoItem[]>(todoWidgetCache.todos)
   const [text, setText] = useState('')
   const [priority, setPriority] = useState<NonNullable<ITodoItem['priority']>>('medium')
   const [filter, setFilter] = useState<TodoFilter>('all')
+  const { t, i18n } = useTranslation()
+  const priorityLabel = (value: NonNullable<ITodoItem['priority']>) =>
+    t(`todo.priority.${value}`, { defaultValue: value === 'high' ? 'High' : value === 'medium' ? 'Medium' : 'Low' })
+  const priorityOptions = (['high', 'medium', 'low'] as const).map((value) => ({ label: priorityLabel(value), value }))
 
-  const loadTodos = async () => {
-    const list = await widgetsContainerService.getTodoList()
-    setTodos(list)
+  const loadTodos = async (force = false) => {
+    if (!force && todoWidgetCache.loaded) {
+      setTodos(todoWidgetCache.todos)
+      return
+    }
+
+    if (!force && todoWidgetCache.loadingPromise) {
+      const list = await todoWidgetCache.loadingPromise
+      setTodos(list)
+      return
+    }
+
+    try {
+      todoWidgetCache.loadingPromise = widgetsContainerService.getTodoList()
+      const list = await todoWidgetCache.loadingPromise
+      todoWidgetCache.todos = list
+      todoWidgetCache.loaded = true
+      setTodos(list)
+    } finally {
+      todoWidgetCache.loadingPromise = null
+    }
   }
 
   useEffect(() => {
@@ -38,6 +62,7 @@ const TodoWidget: React.FC = () => {
 
   const activeTodos = todos.filter((todo) => !todo.completed)
   const completedTodos = todos.filter((todo) => todo.completed)
+  const completionRate = todos.length ? Math.round((completedTodos.length / todos.length) * 100) : 0
   const filteredTodos = useMemo(() => {
     const nextList =
       filter === 'active' ? activeTodos : filter === 'completed' ? completedTodos : todos
@@ -50,32 +75,32 @@ const TodoWidget: React.FC = () => {
     await widgetsContainerService.saveTodoItem({
       id: `todo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       text: value,
-      time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+      time: new Date().toLocaleTimeString(i18n.resolvedLanguage, { hour: '2-digit', minute: '2-digit' }),
       completed: false,
       priority
     })
     setText('')
-    await loadTodos()
+    await loadTodos(true)
   }
 
   const toggleTodo = async (todo: ITodoItem) => {
     await widgetsContainerService.updateTodoItem(todo.id, { completed: !todo.completed })
-    await loadTodos()
+    await loadTodos(true)
   }
 
   const deleteTodo = async (id: string) => {
     await widgetsContainerService.deleteTodoItem(id)
-    await loadTodos()
+    await loadTodos(true)
   }
 
   const clearCompleted = async () => {
     await Promise.all(completedTodos.map((todo) => widgetsContainerService.deleteTodoItem(todo.id)))
-    await loadTodos()
+    await loadTodos(true)
   }
 
   const renderPriority = (todo: ITodoItem) => {
-    const meta = priorityMeta[todo.priority || 'medium']
-    return <Tag color={meta.color}>{meta.label}</Tag>
+    const value = todo.priority || 'medium'
+    return <Tag color={priorityColors[value]}>{priorityLabel(value)}</Tag>
   }
 
   return (
@@ -84,15 +109,15 @@ const TodoWidget: React.FC = () => {
         <div className={styles.todoWidget}>
           <div className={styles.todoCompactHeader}>
             <div>
-              <span>待办事项</span>
+              <span>{t('todo.title', { defaultValue: 'Tasks' })}</span>
               <strong>{activeTodos.length}</strong>
             </div>
-            <em>{completedTodos.length} 已完成</em>
+            <em>{t('todo.completedCount', { count: completedTodos.length, defaultValue: `${completedTodos.length} completed` })}</em>
           </div>
 
           <div className={styles.todoCompactList}>
             {activeTodos.length === 0 ? (
-              <div className={styles.todoCompactEmpty}>暂无待办</div>
+              <div className={styles.todoCompactEmpty}>{t('todo.empty', { defaultValue: 'No tasks' })}</div>
             ) : (
               activeTodos.slice(0, 3).map((todo) => (
                 <div key={todo.id} className={styles.todoCompactItem}>
@@ -102,17 +127,24 @@ const TodoWidget: React.FC = () => {
               ))
             )}
           </div>
+          <div className={styles.todoCompactProgress}>
+            <span>{t('todo.completionRate', { value: completionRate, defaultValue: `Completed ${completionRate}%` })}</span>
+            <i style={{ width: `${completionRate}%` }} />
+          </div>
         </div>
       </Card>
 
       <Modal
-        title='待办事项'
+        title={t('todo.title', { defaultValue: 'Tasks' })}
         open={open}
         onCancel={() => setOpen(false)}
-        rootClassName={addAppModalStyles.addAppModalRoot}
+        rootClassName={`${addAppModalStyles.addAppModalRoot} ${styles.widgetModalRoot}`}
         className={styles.widgetModal}
         centered
         width={1000}
+        transitionName=''
+        maskTransitionName={modalMaskTransitionName}
+        maskStyle={modalMaskStyle}
         styles={{ body: { overflow: 'hidden' } }}
         footer={null}
         destroyOnHidden
@@ -121,20 +153,20 @@ const TodoWidget: React.FC = () => {
           <div className={styles.todoModalLayout}>
             <section className={styles.todoSummaryPanel}>
               <div className={styles.todoSummaryMain}>
-                <span>未完成</span>
+                <span>{t('todo.active', { defaultValue: 'Active' })}</span>
                 <strong>{activeTodos.length}</strong>
               </div>
               <div className={styles.todoSummaryStats}>
                 <div>
-                  <span>全部</span>
+                  <span>{t('todo.all', { defaultValue: 'All' })}</span>
                   <strong>{todos.length}</strong>
                 </div>
                 <div>
-                  <span>已完成</span>
+                  <span>{t('todo.completed', { defaultValue: 'Completed' })}</span>
                   <strong>{completedTodos.length}</strong>
                 </div>
                 <div>
-                  <span>完成率</span>
+                  <span>{t('todo.rate', { defaultValue: 'Completion' })}</span>
                   <strong>
                     {todos.length ? Math.round((completedTodos.length / todos.length) * 100) : 0}%
                   </strong>
@@ -146,7 +178,7 @@ const TodoWidget: React.FC = () => {
               <div className={styles.todoComposer}>
                 <Input
                   value={text}
-                  placeholder='添加新的待办事项'
+                  placeholder={t('todo.placeholder', { defaultValue: 'Add a new task' })}
                   onChange={(event) => setText(event.target.value)}
                   onPressEnter={() => void addTodo()}
                 />
@@ -157,7 +189,7 @@ const TodoWidget: React.FC = () => {
                   onChange={setPriority}
                 />
                 <Button type='primary' icon={<PlusOutlined />} onClick={() => void addTodo()}>
-                  添加
+                  {t('common.add')}
                 </Button>
               </div>
 
@@ -168,22 +200,22 @@ const TodoWidget: React.FC = () => {
                   buttonStyle='solid'
                   onChange={(event) => setFilter(event.target.value)}
                 >
-                  <Radio.Button value='all'>全部</Radio.Button>
-                  <Radio.Button value='active'>未完成</Radio.Button>
-                  <Radio.Button value='completed'>已完成</Radio.Button>
+                  <Radio.Button value='all'>{t('todo.all', { defaultValue: 'All' })}</Radio.Button>
+                  <Radio.Button value='active'>{t('todo.active', { defaultValue: 'Active' })}</Radio.Button>
+                  <Radio.Button value='completed'>{t('todo.completed', { defaultValue: 'Completed' })}</Radio.Button>
                 </Radio.Group>
                 <Button
                   size='small'
                   disabled={completedTodos.length === 0}
                   onClick={() => void clearCompleted()}
                 >
-                  清理已完成
+                  {t('todo.clearCompleted', { defaultValue: 'Clear completed' })}
                 </Button>
               </div>
 
               <div className={styles.todoModalList}>
                 {filteredTodos.length === 0 ? (
-                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description='暂无待办' />
+                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('todo.empty', { defaultValue: 'No tasks' })} />
                 ) : (
                   filteredTodos.map((todo) => (
                     <div

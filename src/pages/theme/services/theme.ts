@@ -1,4 +1,5 @@
 import type { IThemeConfig } from '../types/theme'
+import requestDeepTabAutoSync from '@/pages/deepTabSync/services/autoSync'
 
 export default {
   async getThemeConfig(): Promise<IThemeConfig> {
@@ -39,6 +40,7 @@ export default {
   async saveThemeConfig(config: IThemeConfig): Promise<void> {
     try {
       await chrome.storage.local.set({ themeConfig: config })
+      requestDeepTabAutoSync('themeConfig')
     } catch (error) {
       console.error('保存主题配置失败:', error)
     }

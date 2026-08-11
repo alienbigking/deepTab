@@ -5,9 +5,26 @@ import { CheckCircleOutlined, CrownOutlined } from '@ant-design/icons'
 import styles from './subscription.module.less'
 import subscriptionService from './services/subscription'
 import type { ISubscriptionPackage, ISubscriptionStatus } from './types/subscription'
+import { useTranslation } from 'react-i18next'
+
+const FEATURE_TRANSLATION_KEYS: Record<string, string> = {
+  '无限壁纸': 'unlimitedWallpapers',
+  'Unlimited wallpapers': 'unlimitedWallpapers',
+  '高级主题': 'advancedThemes',
+  'Advanced themes': 'advancedThemes',
+  '优先支持': 'prioritySupport',
+  'Priority support': 'prioritySupport',
+  '专业版所有功能': 'allProFeatures',
+  'All Pro features': 'allProFeatures',
+  '自定义开发': 'customDevelopment',
+  'Custom development': 'customDevelopment',
+  'VIP专属客服': 'vipSupport',
+  'VIP support': 'vipSupport'
+}
 
 const Subscription: React.FC = () => {
   const { message } = App.useApp()
+  const { t, i18n } = useTranslation()
   const [status, setStatus] = useState<ISubscriptionStatus>({
     plan: 'free',
     isActive: true,
@@ -41,27 +58,34 @@ const Subscription: React.FC = () => {
       }
       await chrome.storage.local.set({ subscriptionStatus: next })
       setStatus(next)
-      message.success('订阅状态已更新')
+      message.success(t('subscription.updated', { defaultValue: 'Subscription updated' }))
     } catch (error: any) {
-      message.error(error?.message || '订阅失败，请稍后再试')
+      console.error('Subscription purchase failed:', error)
+      message.error(t('subscription.failed', { defaultValue: 'Subscription failed. Try again later.' }))
     } finally {
       setLoadingId(null)
     }
   }
 
-  const planName = status.plan === 'free' ? '免费版' : status.plan === 'pro' ? '专业版' : '高级版'
+  const planName = status.plan === 'free' ? t('subscription.free', { defaultValue: 'Free' }) : status.plan === 'pro' ? t('subscription.pro', { defaultValue: 'Pro' }) : t('subscription.premium', { defaultValue: 'Premium' })
+  const getPackageName = (item: ISubscriptionPackage) =>
+    t(`subscription.${item.plan}`, { defaultValue: item.name })
+  const getFeatureName = (feature: string) => {
+    const key = FEATURE_TRANSLATION_KEYS[feature]
+    return key ? t(`subscription.features.${key}`, { defaultValue: feature }) : feature
+  }
 
   return (
     <div className={cn(styles.container)}>
       <div className={cn(styles.currentPlan)}>
-        <Badge.Ribbon text={status.plan.toUpperCase()} color={status.plan === 'free' ? 'gray' : 'gold'}>
+        <Badge.Ribbon text={planName} color={status.plan === 'free' ? 'gray' : 'gold'}>
           <Card className='dtSettingsCard' variant='borderless'>
             <div className={cn(styles.planInfo)}>
               <CrownOutlined className={styles.planIcon} />
               <h3>{planName}</h3>
-              <p>{status.isActive ? '当前订阅有效' : '订阅已过期'}</p>
+              <p>{status.isActive ? t('subscription.active', { defaultValue: 'Subscription active' }) : t('subscription.expired', { defaultValue: 'Subscription expired' })}</p>
               {status.endDate ? (
-                <Tag color='processing'>到期：{new Date(status.endDate).toLocaleDateString()}</Tag>
+                <Tag color='processing'>{t('subscription.expires', { defaultValue: 'Expires' })}: {new Date(status.endDate).toLocaleDateString(i18n.resolvedLanguage)}</Tag>
               ) : null}
             </div>
           </Card>
@@ -73,17 +97,17 @@ const Subscription: React.FC = () => {
           <Card key={item.id} className='dtSettingsCard' variant='borderless'>
             <div className={styles.packageHeader}>
               <div>
-                <h3>{item.name}</h3>
-                <p>{item.duration} 天</p>
+                <h3>{getPackageName(item)}</h3>
+                <p>{t('subscription.days', { count: item.duration, defaultValue: `${item.duration} days` })}</p>
               </div>
-              {item.popular ? <Tag color='gold'>推荐</Tag> : null}
+              {item.popular ? <Tag color='gold'>{t('subscription.popular', { defaultValue: 'Popular' })}</Tag> : null}
             </div>
             <div className={styles.price}>¥{item.price}</div>
             <div className={styles.features}>
               {item.features.map((feature) => (
                 <span key={feature}>
                   <CheckCircleOutlined />
-                  {feature}
+                  {getFeatureName(feature)}
                 </span>
               ))}
             </div>
@@ -94,7 +118,7 @@ const Subscription: React.FC = () => {
               loading={loadingId === item.id}
               onClick={() => void handlePurchase(item)}
             >
-              {status.plan === item.plan ? '当前方案' : '选择方案'}
+              {status.plan === item.plan ? t('subscription.current', { defaultValue: 'Current plan' }) : t('subscription.choose', { defaultValue: 'Choose plan' })}
             </Button>
           </Card>
         ))}

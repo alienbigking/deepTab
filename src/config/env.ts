@@ -16,22 +16,22 @@ interface IEnv {
 const configMap: Record<EnvName, Omit<IEnv, 'APP_ENV' | 'NODE_ENV' | 'isDevelopment' | 'isProduction'>> = {
   develop: {
     HOST_API_URL: 'http://localhost:3000',
-    OAUTH_CLIENT_ID: 'webApp_prod_05ee',
-    OAUTH_CLIENT_SECRET: 'a1123087c319e66afd0f787fbb50dbe3',
+    OAUTH_CLIENT_ID: 'webapp_prod_9bc1',
+    OAUTH_CLIENT_SECRET: '27f9b0c8dc2d968117c270a64c22e318',
     LOG_LEVEL: 'debug',
     ENABLE_MOCK: true
   },
   stage: {
     HOST_API_URL: 'http://101.33.234.107:3000',
-    OAUTH_CLIENT_ID: 'webApp_prod_05ee',
-    OAUTH_CLIENT_SECRET: 'a1123087c319e66afd0f787fbb50dbe3',
+    OAUTH_CLIENT_ID: 'webapp_prod_9bc1',
+    OAUTH_CLIENT_SECRET: '27f9b0c8dc2d968117c270a64c22e318',
     LOG_LEVEL: 'info',
     ENABLE_MOCK: false
   },
   production: {
     HOST_API_URL: 'http://101.33.234.107:3000',
-    OAUTH_CLIENT_ID: 'webApp_prod_05ee',
-    OAUTH_CLIENT_SECRET: 'a1123087c319e66afd0f787fbb50dbe3',
+    OAUTH_CLIENT_ID: 'webapp_prod_9bc1',
+    OAUTH_CLIENT_SECRET: '27f9b0c8dc2d968117c270a64c22e318',
     LOG_LEVEL: 'warn',
     ENABLE_MOCK: false
   }

@@ -4,9 +4,11 @@ import { App, Button, Card, Form, Select, Switch } from 'antd'
 import styles from './notification.module.less'
 import notificationService from './services/notification'
 import type { INotificationSettings } from './types/notification'
+import { useTranslation } from 'react-i18next'
 
 const Notification: React.FC = () => {
   const { message } = App.useApp()
+  const { t } = useTranslation()
   const [settings, setSettings] = useState<INotificationSettings>({
     enableBrowserNotification: true,
     enableEmailNotification: false,
@@ -29,66 +31,66 @@ const Notification: React.FC = () => {
   const save = async (next: INotificationSettings) => {
     setSettings(next)
     await notificationService.saveNotificationSettings(next)
-    message.success('通知设置已保存')
+    message.success(t('notification.saved', { defaultValue: 'Notification settings saved' }))
   }
 
   const requestPermission = async () => {
     if (!('Notification' in window)) {
-      message.warning('当前浏览器不支持通知')
+      message.warning(t('notification.unsupported', { defaultValue: 'This browser does not support notifications' }))
       return
     }
     const next = await window.Notification.requestPermission()
     setPermission(next)
     if (next === 'granted') {
-      message.success('浏览器通知已开启')
+      message.success(t('notification.enabled', { defaultValue: 'Browser notifications enabled' }))
     }
   }
 
   const sendTest = () => {
     if (permission !== 'granted') {
-      message.warning('请先授权浏览器通知')
+      message.warning(t('notification.permissionRequired', { defaultValue: 'Allow browser notifications first' }))
       return
     }
     new window.Notification('Deep Tab', {
-      body: '这是一条测试通知'
+      body: t('notification.testBody', { defaultValue: 'This is a test notification' })
     })
   }
 
   return (
     <div className={cn(styles.container)}>
-      <Card title='通知设置' className='dtSettingsCard' variant='borderless'>
+      <Card title={t('notification.title', { defaultValue: 'Notification settings' })} className='dtSettingsCard' variant='borderless'>
         <Form layout='vertical'>
-          <Form.Item label='浏览器通知' valuePropName='checked'>
+          <Form.Item label={t('notification.browser', { defaultValue: 'Browser notifications' })} valuePropName='checked'>
             <Switch
               checked={settings.enableBrowserNotification}
               onChange={(value) => save({ ...settings, enableBrowserNotification: value })}
             />
           </Form.Item>
-          <Form.Item label='邮件通知' valuePropName='checked'>
+          <Form.Item label={t('notification.email', { defaultValue: 'Email notifications' })} valuePropName='checked'>
             <Switch
               checked={settings.enableEmailNotification}
               onChange={(value) => save({ ...settings, enableEmailNotification: value })}
             />
           </Form.Item>
-          <Form.Item label='声音提示' valuePropName='checked'>
+          <Form.Item label={t('notification.sound', { defaultValue: 'Notification sound' })} valuePropName='checked'>
             <Switch
               checked={settings.enableSoundNotification}
               onChange={(value) => save({ ...settings, enableSoundNotification: value })}
             />
           </Form.Item>
-          <Form.Item label='通知频率'>
+          <Form.Item label={t('notification.frequency', { defaultValue: 'Frequency' })}>
             <Select
               value={settings.notificationFrequency}
               onChange={(value) => save({ ...settings, notificationFrequency: value })}
             >
-              <Select.Option value='realtime'>实时</Select.Option>
-              <Select.Option value='daily'>每日汇总</Select.Option>
-              <Select.Option value='weekly'>每周汇总</Select.Option>
+              <Select.Option value='realtime'>{t('notification.realtime', { defaultValue: 'Real time' })}</Select.Option>
+              <Select.Option value='daily'>{t('notification.daily', { defaultValue: 'Daily summary' })}</Select.Option>
+              <Select.Option value='weekly'>{t('notification.weekly', { defaultValue: 'Weekly summary' })}</Select.Option>
             </Select>
           </Form.Item>
           <div className={styles.actions}>
-            <Button onClick={requestPermission}>授权浏览器通知</Button>
-            <Button onClick={sendTest}>发送测试通知</Button>
+            <Button onClick={requestPermission}>{t('notification.allow', { defaultValue: 'Allow browser notifications' })}</Button>
+            <Button onClick={sendTest}>{t('notification.sendTest', { defaultValue: 'Send test notification' })}</Button>
           </div>
         </Form>
       </Card>

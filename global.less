@@ -30,6 +30,7 @@
   --dt-settings-text: rgba(255, 255, 255, 0.9);
   --dt-settings-text-2: rgba(255, 255, 255, 0.85);
   --dt-settings-text-3: rgba(255, 255, 255, 0.7);
+  --dt-settings-strong-text: rgba(255, 255, 255, 0.96);
   --dt-settings-hover-bg: rgba(255, 255, 255, 0.15);
   --dt-settings-card-bg: rgba(255, 255, 255, 0.12);
   --dt-settings-card-border: rgba(255, 255, 255, 0.32);
@@ -59,20 +60,21 @@ html[data-theme='light'] {
   --dt-widget-hover-bg: rgba(0, 0, 0, 0.04);
 
   --dt-drawer-mask: rgba(0, 0, 0, 0.18);
-  --dt-drawer-wrapper-bg: rgba(255, 255, 255, 0.65);
-  --dt-settings-left-bg: rgba(255, 255, 255, 0.78);
-  --dt-settings-right-bg: rgba(255, 255, 255, 0.55);
+  --dt-drawer-wrapper-bg: rgba(255, 255, 255, 0.34);
+  --dt-settings-left-bg: rgba(255, 255, 255, 0.42);
+  --dt-settings-right-bg: rgba(255, 255, 255, 0.3);
   --dt-settings-border: rgba(0, 0, 0, 0.08);
   --dt-settings-text: rgba(0, 0, 0, 0.85);
   --dt-settings-text-2: rgba(0, 0, 0, 0.65);
   --dt-settings-text-3: rgba(0, 0, 0, 0.55);
+  --dt-settings-strong-text: rgba(0, 0, 0, 0.88);
   --dt-settings-hover-bg: rgba(0, 0, 0, 0.06);
-  --dt-settings-card-bg: rgba(255, 255, 255, 1);
+  --dt-settings-card-bg: rgba(255, 255, 255, 0.66);
   --dt-settings-card-border: rgba(15, 18, 34, 0.08);
   --dt-settings-card-text: rgba(15, 18, 34, 0.92);
   --dt-settings-card-muted: rgba(15, 18, 34, 0.6);
   --dt-settings-card-shadow: 0 20px 36px rgba(0, 0, 0, 0.08);
-  --dt-settings-card-backdrop: blur(0px);
+  --dt-settings-card-backdrop: blur(22px) saturate(160%);
 }
 
 html[data-theme='dark'] {
@@ -102,6 +104,7 @@ html[data-theme='dark'] {
   --dt-settings-text: rgba(255, 255, 255, 0.9);
   --dt-settings-text-2: rgba(255, 255, 255, 0.75);
   --dt-settings-text-3: rgba(255, 255, 255, 0.65);
+  --dt-settings-strong-text: rgba(255, 255, 255, 0.96);
   --dt-settings-hover-bg: rgba(255, 255, 255, 0.12);
   --dt-settings-card-bg: rgba(10, 10, 10, 0.85);
   --dt-settings-card-border: rgba(255, 255, 255, 0.08);
@@ -112,6 +115,61 @@ html[data-theme='dark'] {
 }
 
 :global {
+  .dtPrettyScrollbar {
+    min-height: 0;
+
+    .simplebar-wrapper,
+    .simplebar-mask,
+    .simplebar-offset,
+    .simplebar-content-wrapper {
+      height: 100%;
+    }
+
+    .simplebar-content {
+      min-height: 100%;
+    }
+
+    .simplebar-content::before,
+    .simplebar-content::after {
+      display: none;
+    }
+
+    .simplebar-track.simplebar-vertical {
+      width: 8px;
+      right: 6px;
+      top: 10px;
+      bottom: 10px;
+      background: transparent;
+    }
+
+    .simplebar-scrollbar::before {
+      left: 1px;
+      right: 1px;
+      top: 2px;
+      bottom: 2px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.34);
+      opacity: 0.36;
+      transition:
+        opacity 0.18s ease,
+        background 0.18s ease;
+    }
+
+    .simplebar-scrollbar.simplebar-visible::before {
+      opacity: 0.86;
+    }
+
+    .simplebar-track.simplebar-vertical:hover .simplebar-scrollbar::before {
+      background: rgba(255, 255, 255, 0.54);
+    }
+  }
+
+  .dtPrettyScrollbar:hover {
+    .simplebar-scrollbar::before {
+      opacity: 0.72;
+    }
+  }
+
   .dtSettingsCard {
     background: var(--dt-settings-card-bg) !important;
     border: 1px solid var(--dt-settings-card-border) !important;
@@ -168,6 +226,14 @@ html {
   --dt-font-family:
     system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
     sans-serif;
+}
+
+html[dir='rtl'] {
+  body,
+  #root {
+    direction: rtl;
+  }
+
 }
 
 html[data-font='default'] {

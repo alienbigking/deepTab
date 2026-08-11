@@ -4,9 +4,9 @@
 
   .tipAlert {
     margin-bottom: 16px;
-    background: rgba(53, 63, 92, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    color: rgba(255, 255, 255, 0.95);
+    background: color-mix(in srgb, var(--dt-settings-card-bg) 78%, #7aa8ff 22%);
+    border: 1px solid var(--dt-settings-card-border);
+    color: var(--dt-settings-card-text);
 
     :global {
       .ant-alert-message,
@@ -17,11 +17,48 @@
   }
 
   .icpLink {
-    color: rgba(255, 255, 255, 0.85);
+    color: var(--dt-settings-card-text);
 
     &:hover {
-      color: rgba(255, 255, 255, 1);
+      color: var(--dt-settings-strong-text);
       text-decoration: underline;
+    }
+  }
+
+  .privacySummary {
+    display: grid;
+    gap: 10px;
+    color: var(--dt-settings-card-text);
+
+    p {
+      margin: 0;
+      line-height: 1.7;
+    }
+  }
+
+  :global {
+    .dtSettingsCard {
+      margin-bottom: 16px;
+    }
+
+    .dtSettingsCard .ant-descriptions,
+    .dtSettingsCard .ant-descriptions-item-label,
+    .dtSettingsCard .ant-descriptions-item-content {
+      color: var(--dt-settings-card-text) !important;
+    }
+
+    .dtSettingsCard .ant-descriptions-item-label {
+      color: var(--dt-settings-card-muted) !important;
+    }
+
+    .dtSettingsCard .ant-btn-link {
+      height: auto;
+      padding: 0;
+      color: var(--dt-settings-card-text);
+    }
+
+    .dtSettingsCard .ant-btn-link:hover {
+      color: var(--dt-settings-strong-text);
     }
   }
 }

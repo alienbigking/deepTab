@@ -7,8 +7,10 @@ interface IWeatherData {
   temperature: number
   apparentTemperature?: number
   condition: string
+  weatherCode?: number
   icon: string
   city?: string
+  cityKey?: string
   updatedAt?: string
   humidity?: number
   windSpeed?: number
@@ -26,8 +28,10 @@ interface IWeatherData {
 
 interface IForecastItem {
   day: string
+  date?: string
   icon: string
   condition?: string
+  weatherCode?: number
   temperature: number
   minTemperature?: number
   precipitationProbability?: number
@@ -65,6 +69,12 @@ interface IWidgetConfig {
   showTodo: boolean
   showHotSearch?: boolean
   weatherCity?: string
+  weatherCoords?: {
+    latitude: number
+    longitude: number
+    city?: string
+  }
+  hotSearchHiddenPlatforms?: string[]
 }
 
 interface IWeatherCity {

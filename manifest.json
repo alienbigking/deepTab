@@ -1,39 +1,40 @@
 {
-  "name": "Deep Tab",
-  "version": "2.0.0",
-  "description": "一款用于搜索、应用快捷入口、壁纸和个性化设置的新标签页插件",
+  "name": "__MSG_extensionName__",
+  "version": "1.0.3",
+  "description": "__MSG_extensionDescription__",
+  "default_locale": "en",
   "manifest_version": 3,
   "permissions": [
     "storage",
-    "unlimitedStorage",
-    "tabs",
-    "topSites",
-    "bookmarks"
+    "alarms",
+    "tabs"
   ],
   "host_permissions": [
+    "https://webapi.aizerospace.com/*",
     "https://api.bing.com/*",
     "https://api-hot.imsyy.top/*",
     "https://dailyhot.aizhi.ink/*",
     "https://api.zxki.cn/*",
     "https://dailyhotapi.3yu3.top/*",
     "https://api.open-meteo.com/*",
-    "http://localhost:3000/*",
-    "http://101.33.234.107:3000/*"
+    "https://api.bigdatacloud.net/*",
+    "https://icons.duckduckgo.com/*",
+    "https://www.google.com/*"
   ],
   "background": {
     "service_worker": "extension/background/index.js"
   },
   "action": {
-    "default_title": "Deep Tab",
-    "default_icon": "src/assets/images/icon.png",
+    "default_title": "__MSG_extensionName__",
+    "default_icon": "src/assets/images/favicon-300.png",
     "default_popup": "popup.html"
   },
   "chrome_url_overrides": {
     "newtab": "newtab.html"
   },
   "icons": {
-    "16": "src/assets/images/icon16.png",
-    "48": "src/assets/images/icon48.png",
-    "128": "src/assets/images/icon128.png"
+    "16": "src/assets/images/favicon-300.png",
+    "48": "src/assets/images/favicon-300.png",
+    "128": "src/assets/images/favicon-300.png"
   }
 }
