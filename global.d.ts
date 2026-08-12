@@ -1,7 +1,11 @@
+/// <reference types="chrome" />
+
 declare module '*.less' {
   const classes: { [key: string]: string };
   export default classes;
 }
+
+declare module '*.css';
 
 declare module '*.png' {
   const value: string;
