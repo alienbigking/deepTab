@@ -32,7 +32,8 @@ const SYNC_KEYS = [
   'todoList',
   'bottom_bar_pins',
   'notificationSettings',
-  'appSettings'
+  'appSettings',
+  'desktopPetConfig'
 ]
 
 const storageToPayload = (storage: Record<string, any>): DeepTabSyncPayload => ({
@@ -48,7 +49,8 @@ const storageToPayload = (storage: Record<string, any>): DeepTabSyncPayload => (
   todoList: storage.todoList,
   bottomBarPins: storage.bottom_bar_pins,
   notificationSettings: storage.notificationSettings,
-  appSettings: storage.appSettings
+  appSettings: storage.appSettings,
+  desktopPetConfig: storage.desktopPetConfig
 })
 
 const payloadToStorage = (payload: DeepTabSyncPayload): Record<string, any> => {
@@ -69,7 +71,8 @@ const payloadToStorage = (payload: DeepTabSyncPayload): Record<string, any> => {
     ['todoList', payload.todoList],
     ['bottom_bar_pins', bottomBarPins],
     ['notificationSettings', payload.notificationSettings],
-    ['appSettings', payload.appSettings]
+    ['appSettings', payload.appSettings],
+    ['desktopPetConfig', payload.desktopPetConfig]
   ]
   return Object.fromEntries(entries.filter(([, value]) => value !== undefined))
 }
@@ -149,7 +152,9 @@ export default {
   },
 
   async getCloudSync(): Promise<DeepTabSyncRecord | null> {
-    const response = await http<{ syncData: DeepTabSyncRecord | null }>(buildUrl('/api/deepTab/sync'))
+    const response = await http<{ syncData: DeepTabSyncRecord | null }>(
+      buildUrl('/api/deepTab/sync')
+    )
     return response.data?.syncData || null
   },
 
@@ -174,10 +179,7 @@ export default {
     const [local, cloud, storage] = await Promise.all([
       this.collectLocalPayload(),
       this.getCloudSync(),
-      chrome.storage.local.get([
-        DEEP_TAB_SYNC_BASELINE_KEY,
-        DEEP_TAB_SYNC_CLOUD_UPDATED_AT_KEY
-      ])
+      chrome.storage.local.get([DEEP_TAB_SYNC_BASELINE_KEY, DEEP_TAB_SYNC_CLOUD_UPDATED_AT_KEY])
     ])
 
     if (!cloud) return { status: 'localOnly', cloud: null }

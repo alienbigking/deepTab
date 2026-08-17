@@ -1,0 +1,259 @@
+.pet {
+  position: fixed;
+  z-index: 120;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  transform: translate(-50%, -50%);
+  transform-origin: 50% 100%;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 14px 18px rgba(34, 23, 10, 0.22));
+
+  &:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.9);
+    outline-offset: 5px;
+    border-radius: 46%;
+  }
+}
+
+.dragging {
+  cursor: grabbing;
+  filter: drop-shadow(0 20px 24px rgba(34, 23, 10, 0.3));
+
+  .character {
+    animation: none;
+    transform: scale(1.04) rotate(-1deg);
+  }
+}
+
+.character {
+  position: absolute;
+  display: block;
+  width: calc(100% * 560 / 391);
+  aspect-ratio: 560 / 712;
+  left: calc(-100% * 74 / 391);
+  top: calc(-100% * 93 / 541);
+  transform-origin: 50% 92%;
+  animation: petIdle 3.8s ease-in-out infinite;
+  pointer-events: none;
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+  }
+}
+
+.eyelid {
+  position: absolute;
+  top: 29.5%;
+  width: 12%;
+  height: 5.8%;
+  border-radius: 50% 50% 44% 44%;
+  background: linear-gradient(180deg, #efbb51, #dfa03e);
+  border-bottom: 1px solid rgba(91, 55, 19, 0.55);
+  opacity: 0;
+  transform-origin: 50% 0;
+  pointer-events: none;
+}
+
+.eyelidLeft {
+  left: 31.9%;
+  transform: rotate(-4deg) scaleY(0.04);
+  animation: petBlinkLeft 6.8s ease-in-out infinite;
+}
+
+.eyelidRight {
+  right: 31.5%;
+  transform: rotate(4deg) scaleY(0.04);
+  animation: petBlinkRight 6.8s ease-in-out infinite;
+}
+
+.reaction {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: max-content;
+  min-width: 120px;
+  max-width: min(260px, calc(100vw - 32px));
+  padding: 8px 11px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 8px 22px rgba(45, 28, 9, 0.16);
+  backdrop-filter: blur(14px);
+  color: #7b4b19;
+  opacity: 0;
+  translate: -50% 0;
+  transform: translateY(10px) scale(0.94);
+  pointer-events: none;
+
+  i {
+    color: #ff657a;
+    font-size: 13px;
+    font-style: normal;
+  }
+
+  b {
+    min-width: 0;
+    white-space: normal;
+    line-height: 1.45;
+    font-size: 11px;
+    font-weight: 600;
+  }
+}
+
+.reactionAlignLeft {
+  left: 0;
+  translate: 0 0;
+}
+
+.reactionAlignRight {
+  right: 0;
+  left: auto;
+  translate: 0 0;
+}
+
+.happy .character {
+  animation: petHappy 900ms ease-in-out infinite alternate;
+}
+
+.sleepy .character {
+  animation: petSleepy 2.8s ease-in-out infinite;
+}
+
+.focus .character {
+  animation: petFocus 2.2s ease-in-out infinite;
+}
+
+.reactionActive {
+  animation: petReaction 1.7s ease both;
+
+  + .character {
+    animation: petHop 700ms cubic-bezier(0.2, 0.8, 0.25, 1);
+  }
+}
+
+.animationDisabled {
+  .character,
+  .eyelid {
+    animation: none;
+  }
+}
+
+@keyframes petIdle {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-0.8deg) scaleY(1);
+  }
+  50% {
+    transform: translateY(-5px) rotate(0.8deg) scaleY(1.012);
+  }
+}
+
+@keyframes petBlinkLeft {
+  0%,
+  46%,
+  50%,
+  100% {
+    opacity: 0;
+    transform: rotate(-4deg) scaleY(0.04);
+  }
+
+  47.5%,
+  48.5% {
+    opacity: 1;
+    transform: rotate(-4deg) scaleY(1);
+  }
+}
+
+@keyframes petBlinkRight {
+  0%,
+  46%,
+  50%,
+  100% {
+    opacity: 0;
+    transform: rotate(4deg) scaleY(0.04);
+  }
+
+  47.5%,
+  48.5% {
+    opacity: 1;
+    transform: rotate(4deg) scaleY(1);
+  }
+}
+
+@keyframes petHop {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  38% {
+    transform: translateY(-18px) scale(1.03, 0.97) rotate(-2deg);
+  }
+  70% {
+    transform: translateY(2px) scale(0.98, 1.02) rotate(1deg);
+  }
+}
+
+@keyframes petReaction {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.94);
+  }
+  18%,
+  70% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+}
+
+@keyframes petHappy {
+  from {
+    transform: translateY(0) rotate(-1deg);
+  }
+  to {
+    transform: translateY(-4px) rotate(1deg);
+  }
+}
+
+@keyframes petSleepy {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-0.5deg) scaleY(1);
+  }
+  50% {
+    transform: translateY(2px) rotate(0.5deg) scaleY(0.985);
+  }
+}
+
+@keyframes petFocus {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-2px) scale(1.008);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .character,
+  .eyelid,
+  .reactionActive,
+  .reactionActive + .character {
+    animation: none;
+  }
+}

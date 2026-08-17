@@ -40,6 +40,7 @@ import { isImageIconSource } from './appGrid/iconFallback'
 import SyncConflictModal from './deepTabSync/SyncConflictModal'
 import syncPresentationStyles from './deepTabSync/syncPresentation.module.less'
 import { useTranslation } from 'react-i18next'
+import DesktopPet from './desktopPet/DesktopPet'
 
 const pageCollisionDetection: CollisionDetection = (args) => {
   const isContainerId = (id: string | number) =>
@@ -118,9 +119,7 @@ const Main: React.FC<MainProps> = ({ initialWallpaperConfig }) => {
 
   const handlePageContextMenu = (event: React.MouseEvent) => {
     const target = event.target as HTMLElement | null
-    if (
-      target?.closest('input, textarea, [contenteditable="true"], [role="textbox"]')
-    ) {
+    if (target?.closest('input, textarea, [contenteditable="true"], [role="textbox"]')) {
       return
     }
 
@@ -552,6 +551,7 @@ const Main: React.FC<MainProps> = ({ initialWallpaperConfig }) => {
       onContextMenu={handlePageContextMenu}
     >
       <WallpaperBackground initialConfig={initialWallpaperConfig} />
+      <DesktopPet />
 
       {/* 搜索框 */}
       <SearchBar />
@@ -576,10 +576,7 @@ const Main: React.FC<MainProps> = ({ initialWallpaperConfig }) => {
           onDragEnd={handleDragEnd}
         >
           <div
-            className={cn(
-              styles.homePage,
-              homePageMotion.tick > 0 && styles.homePageAnimating
-            )}
+            className={cn(styles.homePage, homePageMotion.tick > 0 && styles.homePageAnimating)}
             style={
               homePageMotion.tick > 0
                 ? {

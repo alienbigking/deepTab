@@ -9,6 +9,7 @@ import styles from './widgets.module.less'
 import widgetsContainerService from './services/widgetsContainer'
 import type { IWeatherData } from './types/widgetsContainer'
 import { useTranslation } from 'react-i18next'
+import useWidgetsContainerStore from './stores/widgetsContainer'
 
 const weatherWidgetCache: {
   city: string
@@ -24,7 +25,16 @@ const weatherWidgetCache: {
 
 const windDirectionText = (degree?: number) => {
   if (degree === undefined) return '--'
-  const dirs = ['north', 'northEast', 'east', 'southEast', 'south', 'southWest', 'west', 'northWest']
+  const dirs = [
+    'north',
+    'northEast',
+    'east',
+    'southEast',
+    'south',
+    'southWest',
+    'west',
+    'northWest'
+  ]
   return dirs[Math.round(degree / 45) % 8]
 }
 
@@ -70,6 +80,7 @@ const WeatherWidget: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [locating, setLocating] = useState(false)
   const [open, setOpen] = useState(false)
+  const setWeatherData = useWidgetsContainerStore((state) => state.setWeatherData)
 
   const loadWeather = async (nextCity = city) => {
     setLoading(true)
@@ -79,6 +90,7 @@ const WeatherWidget: React.FC = () => {
       weatherWidgetCache.data = weather
       weatherWidgetCache.initialized = true
       setData(weather)
+      setWeatherData(weather)
       setCity(nextCity)
       return weather
     } finally {
@@ -108,6 +120,7 @@ const WeatherWidget: React.FC = () => {
       weatherWidgetCache.data = weather
       weatherWidgetCache.initialized = true
       setData(weather)
+      setWeatherData(weather)
       setCity('current-location')
       if (save) {
         const config = await widgetsContainerService.getWidgetConfig()
@@ -133,6 +146,7 @@ const WeatherWidget: React.FC = () => {
       if (weatherWidgetCache.initialized) {
         setCity(weatherWidgetCache.city)
         setData(weatherWidgetCache.data)
+        setWeatherData(weatherWidgetCache.data)
         return
       }
 
@@ -140,6 +154,7 @@ const WeatherWidget: React.FC = () => {
         const cached = await weatherWidgetCache.initialPromise
         setCity(cached.city)
         setData(cached.data)
+        setWeatherData(cached.data)
         return
       }
 
@@ -159,6 +174,7 @@ const WeatherWidget: React.FC = () => {
         const cached = await weatherWidgetCache.initialPromise
         setCity(cached.city)
         setData(cached.data)
+        setWeatherData(cached.data)
       } finally {
         weatherWidgetCache.initialPromise = null
       }
@@ -184,7 +200,11 @@ const WeatherWidget: React.FC = () => {
   return (
     <>
       <Card
-        className={cn(styles.widgetCard, styles.weatherCard, styles[`weatherTheme_${getWeatherTheme(data)}`])}
+        className={cn(
+          styles.widgetCard,
+          styles.weatherCard,
+          styles[`weatherTheme_${getWeatherTheme(data)}`]
+        )}
         variant='borderless'
         onClick={() => setOpen(true)}
       >
@@ -193,8 +213,12 @@ const WeatherWidget: React.FC = () => {
             <div className={styles.weatherCompact}>
               <div className={styles.weatherCompactMain}>
                 <div>
-                  <div className={styles.weatherCompactCity}>{data?.city || t('weather.title', { defaultValue: 'Weather' })}</div>
-                  <div className={styles.weatherCompactDesc}>{data ? conditionText(data.condition) : t('common.loading')}</div>
+                  <div className={styles.weatherCompactCity}>
+                    {data?.city || t('weather.title', { defaultValue: 'Weather' })}
+                  </div>
+                  <div className={styles.weatherCompactDesc}>
+                    {data ? conditionText(data.condition) : t('common.loading')}
+                  </div>
                 </div>
               </div>
               <div className={styles.weatherCompactCurrent}>
@@ -262,7 +286,14 @@ const WeatherWidget: React.FC = () => {
                 className={styles.weatherCitySelect}
                 options={[
                   ...(city === 'current-location'
-                    ? [{ label: data?.city || t('weather.currentCity', { defaultValue: 'Current location' }), value: 'current-location' }]
+                    ? [
+                        {
+                          label:
+                            data?.city ||
+                            t('weather.currentCity', { defaultValue: 'Current location' }),
+                          value: 'current-location'
+                        }
+                      ]
                     : []),
                   ...cities.map((item) => ({ label: item.name, value: item.key }))
                 ]}
@@ -294,11 +325,15 @@ const WeatherWidget: React.FC = () => {
               <div>
                 <div className={styles.weatherCity}>{data?.city || t('common.loading')}</div>
                 <div className={styles.weatherDesc}>
-                  {conditionText(data?.condition)} · {t('weather.feelsLike', { defaultValue: 'Feels like' })} {data?.apparentTemperature ?? '--'}°
+                  {conditionText(data?.condition)} ·{' '}
+                  {t('weather.feelsLike', { defaultValue: 'Feels like' })}{' '}
+                  {data?.apparentTemperature ?? '--'}°
                 </div>
                 <div className={styles.weatherUpdated}>
                   {data?.updatedAt
-                    ? `${t('weather.updated', { defaultValue: 'Updated' })} ${new Date(data.updatedAt).toLocaleTimeString(locale, {
+                    ? `${t('weather.updated', { defaultValue: 'Updated' })} ${new Date(
+                        data.updatedAt
+                      ).toLocaleTimeString(locale, {
                         hour: '2-digit',
                         minute: '2-digit'
                       })}`
@@ -342,15 +377,21 @@ const WeatherWidget: React.FC = () => {
             </div>
 
             <div className={styles.weatherSun}>
-              <span>{t('weather.sunrise', { defaultValue: 'Sunrise' })} {data?.sunrise || '--'}</span>
-              <span>{t('weather.sunset', { defaultValue: 'Sunset' })} {data?.sunset || '--'}</span>
+              <span>
+                {t('weather.sunrise', { defaultValue: 'Sunrise' })} {data?.sunrise || '--'}
+              </span>
+              <span>
+                {t('weather.sunset', { defaultValue: 'Sunset' })} {data?.sunset || '--'}
+              </span>
             </div>
 
             <SimpleBar className={`${styles.hourlyForecast} dtPrettyScrollbar`} autoHide>
               <div className={styles.hourlyForecastInner}>
                 {(data?.hourly || []).map((item) => (
                   <div key={item.time} className={styles.hourlyItem}>
-                    <span>{item.time === 'now' ? t('weather.now', { defaultValue: 'Now' }) : item.time}</span>
+                    <span>
+                      {item.time === 'now' ? t('weather.now', { defaultValue: 'Now' }) : item.time}
+                    </span>
                     <b>{item.icon}</b>
                     <strong>{item.temperature}°</strong>
                     <em>{item.precipitationProbability ?? 0}%</em>

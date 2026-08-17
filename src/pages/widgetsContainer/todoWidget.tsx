@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Button, Card, Checkbox, Empty, Input, Modal, Radio, Select, Tag } from 'antd'
+import { Button, Card, Checkbox, DatePicker, Empty, Input, Modal, Radio, Select, Tag } from 'antd'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import addAppModalStyles from '@/pages/appGrid/addAppModal.module.less'
 import { modalMaskStyle, modalMaskTransitionName } from '@/common/modalMotion'
@@ -7,6 +7,8 @@ import styles from './widgets.module.less'
 import widgetsContainerService from './services/widgetsContainer'
 import type { ITodoItem } from './types/widgetsContainer'
 import { useTranslation } from 'react-i18next'
+import type { Dayjs } from 'dayjs'
+import useWidgetsContainerStore from './stores/widgetsContainer'
 
 type TodoFilter = 'all' | 'active' | 'completed'
 
@@ -27,21 +29,30 @@ const TodoWidget: React.FC = () => {
   const [todos, setTodos] = useState<ITodoItem[]>(todoWidgetCache.todos)
   const [text, setText] = useState('')
   const [priority, setPriority] = useState<NonNullable<ITodoItem['priority']>>('medium')
+  const [reminderAt, setReminderAt] = useState<Dayjs | null>(null)
   const [filter, setFilter] = useState<TodoFilter>('all')
   const { t, i18n } = useTranslation()
+  const setTodoList = useWidgetsContainerStore((state) => state.setTodoList)
   const priorityLabel = (value: NonNullable<ITodoItem['priority']>) =>
-    t(`todo.priority.${value}`, { defaultValue: value === 'high' ? 'High' : value === 'medium' ? 'Medium' : 'Low' })
-  const priorityOptions = (['high', 'medium', 'low'] as const).map((value) => ({ label: priorityLabel(value), value }))
+    t(`todo.priority.${value}`, {
+      defaultValue: value === 'high' ? 'High' : value === 'medium' ? 'Medium' : 'Low'
+    })
+  const priorityOptions = (['high', 'medium', 'low'] as const).map((value) => ({
+    label: priorityLabel(value),
+    value
+  }))
 
   const loadTodos = async (force = false) => {
     if (!force && todoWidgetCache.loaded) {
       setTodos(todoWidgetCache.todos)
+      setTodoList(todoWidgetCache.todos)
       return
     }
 
     if (!force && todoWidgetCache.loadingPromise) {
       const list = await todoWidgetCache.loadingPromise
       setTodos(list)
+      setTodoList(list)
       return
     }
 
@@ -51,6 +62,7 @@ const TodoWidget: React.FC = () => {
       todoWidgetCache.todos = list
       todoWidgetCache.loaded = true
       setTodos(list)
+      setTodoList(list)
     } finally {
       todoWidgetCache.loadingPromise = null
     }
@@ -75,11 +87,16 @@ const TodoWidget: React.FC = () => {
     await widgetsContainerService.saveTodoItem({
       id: `todo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       text: value,
-      time: new Date().toLocaleTimeString(i18n.resolvedLanguage, { hour: '2-digit', minute: '2-digit' }),
+      time: new Date().toLocaleTimeString(i18n.resolvedLanguage, {
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
       completed: false,
-      priority
+      priority,
+      reminderAt: reminderAt?.valueOf()
     })
     setText('')
+    setReminderAt(null)
     await loadTodos(true)
   }
 
@@ -105,19 +122,30 @@ const TodoWidget: React.FC = () => {
 
   return (
     <>
-      <Card className={`${styles.widgetCard} ${styles.todoCard}`} variant='borderless' onClick={() => setOpen(true)}>
+      <Card
+        className={`${styles.widgetCard} ${styles.todoCard}`}
+        variant='borderless'
+        onClick={() => setOpen(true)}
+      >
         <div className={styles.todoWidget}>
           <div className={styles.todoCompactHeader}>
             <div>
               <span>{t('todo.title', { defaultValue: 'Tasks' })}</span>
               <strong>{activeTodos.length}</strong>
             </div>
-            <em>{t('todo.completedCount', { count: completedTodos.length, defaultValue: `${completedTodos.length} completed` })}</em>
+            <em>
+              {t('todo.completedCount', {
+                count: completedTodos.length,
+                defaultValue: `${completedTodos.length} completed`
+              })}
+            </em>
           </div>
 
           <div className={styles.todoCompactList}>
             {activeTodos.length === 0 ? (
-              <div className={styles.todoCompactEmpty}>{t('todo.empty', { defaultValue: 'No tasks' })}</div>
+              <div className={styles.todoCompactEmpty}>
+                {t('todo.empty', { defaultValue: 'No tasks' })}
+              </div>
             ) : (
               activeTodos.slice(0, 3).map((todo) => (
                 <div key={todo.id} className={styles.todoCompactItem}>
@@ -128,7 +156,12 @@ const TodoWidget: React.FC = () => {
             )}
           </div>
           <div className={styles.todoCompactProgress}>
-            <span>{t('todo.completionRate', { value: completionRate, defaultValue: `Completed ${completionRate}%` })}</span>
+            <span>
+              {t('todo.completionRate', {
+                value: completionRate,
+                defaultValue: `Completed ${completionRate}%`
+              })}
+            </span>
             <i style={{ width: `${completionRate}%` }} />
           </div>
         </div>
@@ -188,6 +221,13 @@ const TodoWidget: React.FC = () => {
                   className={styles.todoPrioritySelect}
                   onChange={setPriority}
                 />
+                <DatePicker
+                  showTime
+                  value={reminderAt}
+                  onChange={setReminderAt}
+                  placeholder={t('todo.reminderTime', { defaultValue: 'Reminder time' })}
+                  disabledDate={(date) => date.endOf('day').valueOf() < Date.now()}
+                />
                 <Button type='primary' icon={<PlusOutlined />} onClick={() => void addTodo()}>
                   {t('common.add')}
                 </Button>
@@ -201,8 +241,12 @@ const TodoWidget: React.FC = () => {
                   onChange={(event) => setFilter(event.target.value)}
                 >
                   <Radio.Button value='all'>{t('todo.all', { defaultValue: 'All' })}</Radio.Button>
-                  <Radio.Button value='active'>{t('todo.active', { defaultValue: 'Active' })}</Radio.Button>
-                  <Radio.Button value='completed'>{t('todo.completed', { defaultValue: 'Completed' })}</Radio.Button>
+                  <Radio.Button value='active'>
+                    {t('todo.active', { defaultValue: 'Active' })}
+                  </Radio.Button>
+                  <Radio.Button value='completed'>
+                    {t('todo.completed', { defaultValue: 'Completed' })}
+                  </Radio.Button>
                 </Radio.Group>
                 <Button
                   size='small'
@@ -215,7 +259,10 @@ const TodoWidget: React.FC = () => {
 
               <div className={styles.todoModalList}>
                 {filteredTodos.length === 0 ? (
-                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('todo.empty', { defaultValue: 'No tasks' })} />
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description={t('todo.empty', { defaultValue: 'No tasks' })}
+                  />
                 ) : (
                   filteredTodos.map((todo) => (
                     <div
@@ -225,7 +272,16 @@ const TodoWidget: React.FC = () => {
                       <Checkbox checked={todo.completed} onChange={() => void toggleTodo(todo)} />
                       <div className={styles.todoModalText}>
                         <strong>{todo.text}</strong>
-                        <span>{todo.time}</span>
+                        <span>
+                          {todo.time}
+                          {todo.reminderAt
+                            ? ` · ${t('todo.remindAt', {
+                                time: new Date(todo.reminderAt).toLocaleString(
+                                  i18n.resolvedLanguage
+                                )
+                              })}`
+                            : ''}
+                        </span>
                       </div>
                       {renderPriority(todo)}
                       <Button

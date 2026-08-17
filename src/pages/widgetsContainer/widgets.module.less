@@ -62,14 +62,24 @@
 
 .widgetCard:has(.calendarWidget)::before {
   background:
-    radial-gradient(ellipse 58% 76% at 48% 52%, rgba(211, 74, 126, 0.7) 0%, rgba(232, 112, 145, 0.46) 42%, transparent 76%),
+    radial-gradient(
+      ellipse 58% 76% at 48% 52%,
+      rgba(211, 74, 126, 0.7) 0%,
+      rgba(232, 112, 145, 0.46) 42%,
+      transparent 76%
+    ),
     radial-gradient(ellipse 40% 52% at 62% 45%, rgba(255, 169, 162, 0.42) 0%, transparent 72%),
     radial-gradient(ellipse 46% 36% at 38% 64%, rgba(193, 74, 145, 0.36) 0%, transparent 74%);
 }
 
 .widgetCard:has(.weatherWidget)::before {
   background:
-    radial-gradient(ellipse 60% 74% at 50% 52%, rgba(10, 186, 181, 0.76) 0%, rgba(49, 205, 199, 0.5) 43%, transparent 76%),
+    radial-gradient(
+      ellipse 60% 74% at 50% 52%,
+      rgba(10, 186, 181, 0.76) 0%,
+      rgba(49, 205, 199, 0.5) 43%,
+      transparent 76%
+    ),
     radial-gradient(ellipse 42% 50% at 63% 43%, rgba(126, 236, 230, 0.46) 0%, transparent 72%),
     radial-gradient(ellipse 48% 34% at 37% 65%, rgba(0, 151, 156, 0.4) 0%, transparent 74%);
 }
@@ -143,8 +153,7 @@
 }
 
 .weatherTheme_fog::before {
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.97), rgba(223, 229, 229, 0.9));
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.97), rgba(223, 229, 229, 0.9));
 }
 
 .weatherTheme_fog::after {
@@ -177,19 +186,33 @@
 
 .weatherCard::before {
   background:
-    radial-gradient(ellipse 60% 74% at 50% 52%, rgba(10, 186, 181, 0.76) 0%, rgba(49, 205, 199, 0.5) 43%, transparent 76%),
+    radial-gradient(
+      ellipse 60% 74% at 50% 52%,
+      rgba(10, 186, 181, 0.76) 0%,
+      rgba(49, 205, 199, 0.5) 43%,
+      transparent 76%
+    ),
     radial-gradient(ellipse 42% 50% at 63% 43%, rgba(126, 236, 230, 0.46) 0%, transparent 72%),
     radial-gradient(ellipse 48% 34% at 37% 65%, rgba(0, 151, 156, 0.4) 0%, transparent 74%);
 }
 
 .weatherCard::after {
-  background: radial-gradient(ellipse 48% 38% at 50% 50%, rgba(255, 255, 255, 0.12), transparent 78%);
+  background: radial-gradient(
+    ellipse 48% 38% at 50% 50%,
+    rgba(255, 255, 255, 0.12),
+    transparent 78%
+  );
   opacity: 1;
 }
 
 .widgetCard:has(.todoWidget)::before {
   background:
-    radial-gradient(ellipse 58% 76% at 49% 52%, rgba(129, 72, 204, 0.68) 0%, rgba(166, 91, 205, 0.44) 42%, transparent 76%),
+    radial-gradient(
+      ellipse 58% 76% at 49% 52%,
+      rgba(129, 72, 204, 0.68) 0%,
+      rgba(166, 91, 205, 0.44) 42%,
+      transparent 76%
+    ),
     radial-gradient(ellipse 40% 52% at 63% 44%, rgba(215, 123, 202, 0.4) 0%, transparent 72%),
     radial-gradient(ellipse 46% 36% at 37% 65%, rgba(112, 84, 211, 0.36) 0%, transparent 74%);
 }
@@ -1218,7 +1241,12 @@
 
   &::before {
     background:
-      radial-gradient(ellipse 58% 76% at 49% 52%, rgba(129, 72, 204, 0.68) 0%, rgba(166, 91, 205, 0.44) 42%, transparent 76%),
+      radial-gradient(
+        ellipse 58% 76% at 49% 52%,
+        rgba(129, 72, 204, 0.68) 0%,
+        rgba(166, 91, 205, 0.44) 42%,
+        transparent 76%
+      ),
       radial-gradient(ellipse 40% 52% at 63% 44%, rgba(215, 123, 202, 0.4) 0%, transparent 72%),
       radial-gradient(ellipse 46% 36% at 37% 65%, rgba(112, 84, 211, 0.36) 0%, transparent 74%);
   }
@@ -1409,9 +1437,19 @@
 
 .todoComposer {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 92px 96px;
+  grid-template-columns: minmax(0, 1fr) 92px 190px 96px;
   gap: 10px;
   margin-bottom: 12px;
+}
+
+@media (max-width: 860px) {
+  .todoComposer {
+    grid-template-columns: minmax(0, 1fr) 92px;
+
+    > :global(.ant-picker) {
+      width: 100%;
+    }
+  }
 }
 
 .todoPrioritySelect {
@@ -1506,7 +1544,12 @@
     inset: 0;
     pointer-events: none;
     background:
-      radial-gradient(ellipse 60% 76% at 50% 52%, rgba(235, 108, 47, 0.7) 0%, rgba(242, 142, 63, 0.46) 42%, transparent 76%),
+      radial-gradient(
+        ellipse 60% 76% at 50% 52%,
+        rgba(235, 108, 47, 0.7) 0%,
+        rgba(242, 142, 63, 0.46) 42%,
+        transparent 76%
+      ),
       radial-gradient(ellipse 42% 52% at 63% 44%, rgba(255, 192, 93, 0.42) 0%, transparent 72%),
       radial-gradient(ellipse 48% 36% at 37% 65%, rgba(220, 72, 61, 0.36) 0%, transparent 74%);
     opacity: 0.86;
@@ -1634,7 +1677,8 @@
 
   &:nth-child(1) span {
     color: var(--dt-hot-platform-color, #ff3434);
-    text-shadow: 0 6px 16px color-mix(in srgb, var(--dt-hot-platform-color, #ff3434) 22%, transparent);
+    text-shadow: 0 6px 16px
+      color-mix(in srgb, var(--dt-hot-platform-color, #ff3434) 22%, transparent);
   }
 
   &:nth-child(2) span {
@@ -2020,7 +2064,12 @@
 
   .widgetCard:has(.calendarWidget)::before {
     background:
-      radial-gradient(ellipse 58% 76% at 48% 52%, rgba(151, 42, 86, 0.62) 0%, rgba(161, 52, 91, 0.38) 43%, transparent 78%),
+      radial-gradient(
+        ellipse 58% 76% at 48% 52%,
+        rgba(151, 42, 86, 0.62) 0%,
+        rgba(161, 52, 91, 0.38) 43%,
+        transparent 78%
+      ),
       radial-gradient(ellipse 42% 50% at 63% 44%, rgba(191, 76, 104, 0.3) 0%, transparent 74%);
   }
 
@@ -2036,7 +2085,12 @@
 
   .widgetCard:has(.weatherWidget)::before {
     background:
-      radial-gradient(ellipse 60% 74% at 50% 52%, rgba(5, 157, 157, 0.68) 0%, rgba(8, 122, 126, 0.42) 43%, transparent 78%),
+      radial-gradient(
+        ellipse 60% 74% at 50% 52%,
+        rgba(5, 157, 157, 0.68) 0%,
+        rgba(8, 122, 126, 0.42) 43%,
+        transparent 78%
+      ),
       radial-gradient(ellipse 42% 50% at 63% 43%, rgba(61, 211, 205, 0.34) 0%, transparent 74%);
   }
 
@@ -2050,7 +2104,12 @@
 
   .widgetCard:has(.todoWidget)::before {
     background:
-      radial-gradient(ellipse 58% 76% at 49% 52%, rgba(92, 47, 158, 0.62) 0%, rgba(123, 57, 151, 0.38) 43%, transparent 78%),
+      radial-gradient(
+        ellipse 58% 76% at 49% 52%,
+        rgba(92, 47, 158, 0.62) 0%,
+        rgba(123, 57, 151, 0.38) 43%,
+        transparent 78%
+      ),
       radial-gradient(ellipse 42% 50% at 63% 44%, rgba(163, 70, 146, 0.28) 0%, transparent 74%);
   }
 
@@ -2146,7 +2205,12 @@
 
     &::before {
       background:
-        radial-gradient(ellipse 58% 76% at 49% 52%, rgba(92, 47, 158, 0.62) 0%, rgba(123, 57, 151, 0.38) 43%, transparent 78%),
+        radial-gradient(
+          ellipse 58% 76% at 49% 52%,
+          rgba(92, 47, 158, 0.62) 0%,
+          rgba(123, 57, 151, 0.38) 43%,
+          transparent 78%
+        ),
         radial-gradient(ellipse 42% 50% at 63% 44%, rgba(163, 70, 146, 0.28) 0%, transparent 74%);
     }
   }
@@ -2191,7 +2255,12 @@
 
     &::before {
       background:
-        radial-gradient(ellipse 60% 76% at 50% 52%, rgba(184, 67, 30, 0.62) 0%, rgba(194, 91, 35, 0.38) 43%, transparent 78%),
+        radial-gradient(
+          ellipse 60% 76% at 50% 52%,
+          rgba(184, 67, 30, 0.62) 0%,
+          rgba(194, 91, 35, 0.38) 43%,
+          transparent 78%
+        ),
         radial-gradient(ellipse 42% 50% at 63% 44%, rgba(219, 139, 51, 0.28) 0%, transparent 74%);
     }
   }

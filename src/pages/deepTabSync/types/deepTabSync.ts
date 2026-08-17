@@ -9,6 +9,7 @@ import type { IAppSettings } from '@/pages/settingsSidebar/types/settingsSidebar
 import type { IThemeConfig } from '@/pages/theme/types/theme'
 import type { IWallpaperConfig } from '@/pages/wallpaper/types/wallpaper'
 import type { ITodoItem, IWidgetConfig } from '@/pages/widgetsContainer/types/widgetsContainer'
+import type { DesktopPetConfig } from '@/pages/desktopPet/types/desktopPet'
 
 export interface DeepTabSyncPayload {
   appGridData?: AppNode[]
@@ -24,6 +25,7 @@ export interface DeepTabSyncPayload {
   bottomBarPins?: BottomBarPins
   notificationSettings?: INotificationSettings
   appSettings?: IAppSettings
+  desktopPetConfig?: DesktopPetConfig
 }
 
 export interface DeepTabSyncRecord {

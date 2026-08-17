@@ -16,7 +16,8 @@ import {
   MessageOutlined,
   ReloadOutlined,
   CloudSyncOutlined,
-  AppstoreAddOutlined
+  AppstoreAddOutlined,
+  SmileOutlined
 } from '@ant-design/icons'
 import styles from './settingsSidebar.module.less'
 import Subscription from '@/pages/subscription/subscription'
@@ -38,6 +39,7 @@ import LegalModal from '@/pages/legal/legalModal'
 import type { LegalDocumentType } from '@/pages/legal/legalDocuments'
 import Profile from '@/pages/profile/profile'
 import { useTranslation } from 'react-i18next'
+import DesktopPetSettings from '@/pages/desktopPet/DesktopPetSettings'
 
 interface SettingsSidebarProps {
   open: boolean
@@ -60,6 +62,7 @@ type MenuKey =
   | 'reset'
   | 'backup'
   | 'iconControl'
+  | 'pet'
 
 /**
  * 设置侧边栏组件
@@ -118,7 +121,8 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
       'feedback',
       'reset',
       'backup',
-      'iconControl'
+      'iconControl',
+      'pet'
     ])
 
     if (keys.has(openToMenu as MenuKey)) {
@@ -129,7 +133,12 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
   // 菜单项
   const menuItems = [
     { key: 'profile', icon: <UserOutlined />, label: t('sidebar.profile') },
-    { key: 'subscription', icon: <CrownOutlined />, label: t('sidebar.subscription'), badge: 'FREE' },
+    {
+      key: 'subscription',
+      icon: <CrownOutlined />,
+      label: t('sidebar.subscription'),
+      badge: 'FREE'
+    },
     { key: 'invitation', icon: <GiftOutlined />, label: t('sidebar.invitation') },
     { key: 'settings', icon: <SettingOutlined />, label: t('sidebar.general') },
     { key: 'wallpaper', icon: <BgColorsOutlined />, label: t('sidebar.wallpaper') },
@@ -139,6 +148,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
     { key: 'reset', icon: <ReloadOutlined />, label: t('sidebar.reset') },
     { key: 'backup', icon: <CloudSyncOutlined />, label: t('sidebar.backup') },
     { key: 'iconControl', icon: <AppstoreAddOutlined />, label: t('sidebar.iconControl') },
+    { key: 'pet', icon: <SmileOutlined />, label: t('pet.title', { defaultValue: 'Desktop pet' }) },
     { key: 'about', icon: <InfoCircleOutlined />, label: t('sidebar.about') },
     { key: 'apps', icon: <AppstoreOutlined />, label: t('sidebar.relatedApps') },
     { key: 'feedback', icon: <MessageOutlined />, label: t('sidebar.feedback') }
@@ -168,6 +178,8 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
         return <BackupRestore />
       case 'iconControl':
         return <IconControl />
+      case 'pet':
+        return <DesktopPetSettings />
       case 'about':
         return <About />
       case 'apps':
@@ -206,7 +218,10 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
                 trigger={['click']}
                 menu={{
                   items: [
-                    { key: 'avatar', label: isAuthLoading ? t('sidebar.uploading') : t('sidebar.changeAvatar') },
+                    {
+                      key: 'avatar',
+                      label: isAuthLoading ? t('sidebar.uploading') : t('sidebar.changeAvatar')
+                    },
                     { key: 'logout', label: t('sidebar.logout') }
                   ],
                   onClick: async ({ key }) => {
@@ -280,7 +295,11 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
         onChange={handleAvatarChange}
       />
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
-      <LegalModal open={Boolean(legalType)} type={legalType || 'terms'} onClose={() => setLegalType(null)} />
+      <LegalModal
+        open={Boolean(legalType)}
+        type={legalType || 'terms'}
+        onClose={() => setLegalType(null)}
+      />
     </Drawer>
   )
 }

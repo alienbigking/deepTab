@@ -51,6 +51,7 @@ interface ITodoItem {
   time: string
   completed: boolean
   priority?: 'low' | 'medium' | 'high'
+  reminderAt?: number
 }
 
 // 日历事件

@@ -58,7 +58,10 @@ const ResetSettings: React.FC = () => {
   }
 
   const resetIcons = async (showSuccess = true, shouldReload = true, shouldSync = true) => {
-    const hide = message.loading(t('reset.resettingIcons', { defaultValue: 'Resetting icons...' }), 0)
+    const hide = message.loading(
+      t('reset.resettingIcons', { defaultValue: 'Resetting icons...' }),
+      0
+    )
     try {
       let beforeCount = 0
       try {
@@ -85,7 +88,11 @@ const ResetSettings: React.FC = () => {
           : 0
         const count = storedApps.length || countFromStorage
         if (showSuccess) {
-          message.success(t('reset.iconsRestoredCount', { defaultValue: `Icons restored (${beforeCount} -> ${count})` }))
+          message.success(
+            t('reset.iconsRestoredCount', {
+              defaultValue: `Icons restored (${beforeCount} -> ${count})`
+            })
+          )
         }
       } catch {
         if (showSuccess) {
@@ -117,7 +124,9 @@ const ResetSettings: React.FC = () => {
   const confirmResetIcons = () => {
     modal.confirm({
       title: t('reset.icons', { defaultValue: 'Reset icons' }),
-      content: t('reset.iconsConfirm', { defaultValue: 'Clear the current icon layout and restore defaults? This cannot be undone.' }),
+      content: t('reset.iconsConfirm', {
+        defaultValue: 'Clear the current icon layout and restore defaults? This cannot be undone.'
+      }),
       okText: t('reset.icons', { defaultValue: 'Reset icons' }),
       okButtonProps: { danger: true },
       cancelText: t('common.cancel'),
@@ -130,14 +139,19 @@ const ResetSettings: React.FC = () => {
   const confirmResetAll = () => {
     modal.confirm({
       title: t('reset.all', { defaultValue: 'Reset all settings' }),
-      content: t('reset.allConfirm', { defaultValue: 'Restore icons, appearance, layout, and all other settings to defaults?' }),
+      content: t('reset.allConfirm', {
+        defaultValue: 'Restore icons, appearance, layout, and all other settings to defaults?'
+      }),
       okText: t('reset.all', { defaultValue: 'Reset all settings' }),
       okButtonProps: { danger: true },
       cancelText: t('common.cancel'),
       maskTransitionName: modalMaskTransitionName,
       maskStyle: modalMaskStyle,
       onOk: async () => {
-        const hide = message.loading(t('reset.resettingAll', { defaultValue: 'Restoring default settings...' }), 0)
+        const hide = message.loading(
+          t('reset.resettingAll', { defaultValue: 'Restoring default settings...' }),
+          0
+        )
         try {
           await storageRemove([
             'generalSettings',
@@ -154,7 +168,10 @@ const ResetSettings: React.FC = () => {
             'widgetConfig',
             'todoList',
             'notificationSettings',
-            'notifications'
+            'notifications',
+            'desktopPetConfig',
+            'desktopPetFocusTimer',
+            'desktopPetTodoReminderSeen'
           ])
 
           await resetIcons(false, false, false)
@@ -164,9 +181,13 @@ const ResetSettings: React.FC = () => {
           await initCategories()
           await requestDeepTabAutoSync('resetAll')
 
-          message.success(t('reset.allRestored', { defaultValue: 'All settings restored' }), 1, () => {
-            reloadToNewtab()
-          })
+          message.success(
+            t('reset.allRestored', { defaultValue: 'All settings restored' }),
+            1,
+            () => {
+              reloadToNewtab()
+            }
+          )
         } catch (error) {
           console.error('重置全部设置失败:', error)
           message.error(t('reset.failed', { defaultValue: 'Reset failed. Try again later.' }))
@@ -183,14 +204,23 @@ const ResetSettings: React.FC = () => {
       <Card title={t('sidebar.reset')} className='dtSettingsCard' variant='borderless'>
         <div className={styles.content}>
           <div className={styles.header}>
-            <p className={styles.subTitle}>{t('reset.subtitle', { defaultValue: 'Restore the extension to its original defaults.' })}</p>
+            <p className={styles.subTitle}>
+              {t('reset.subtitle', {
+                defaultValue: 'Restore the extension to its original defaults.'
+              })}
+            </p>
           </div>
 
           <div className={styles.sections}>
             <div className={styles.section}>
-              <div className={styles.sectionTitle}>{t('reset.icons', { defaultValue: 'Reset icons' })}</div>
+              <div className={styles.sectionTitle}>
+                {t('reset.icons', { defaultValue: 'Reset icons' })}
+              </div>
               <div className={styles.sectionDesc}>
-                {t('reset.iconsDescription', { defaultValue: 'Clear the icon layout and custom icon settings, then restore recommended apps.' })}
+                {t('reset.iconsDescription', {
+                  defaultValue:
+                    'Clear the icon layout and custom icon settings, then restore recommended apps.'
+                })}
               </div>
               <div className={styles.actions}>
                 <Button className={styles.dangerOutlineButton} danger onClick={confirmResetIcons}>
@@ -200,9 +230,14 @@ const ResetSettings: React.FC = () => {
             </div>
 
             <div className={styles.section}>
-              <div className={styles.sectionTitle}>{t('reset.all', { defaultValue: 'Reset all settings' })}</div>
+              <div className={styles.sectionTitle}>
+                {t('reset.all', { defaultValue: 'Reset all settings' })}
+              </div>
               <div className={styles.sectionDesc}>
-                {t('reset.allDescription', { defaultValue: 'Restore wallpapers, themes, search engines, and all other settings without affecting backups.' })}
+                {t('reset.allDescription', {
+                  defaultValue:
+                    'Restore wallpapers, themes, search engines, and all other settings without affecting backups.'
+                })}
               </div>
               <div className={styles.actions}>
                 <Button danger type='primary' onClick={confirmResetAll}>
