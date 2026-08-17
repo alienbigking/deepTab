@@ -50,6 +50,8 @@ const normalizeDynamicWallpaper = (
     id: item.id || fallbackId,
     type: 'dynamic',
     videoUrl: item.videoUrl,
+    videoWidth: item.videoWidth,
+    videoHeight: item.videoHeight,
     thumbnail: item.thumbnail,
     category: item.category || '其他',
     title: item.title,

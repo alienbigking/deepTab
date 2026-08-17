@@ -18,6 +18,10 @@
     "https://dailyhotapi.3yu3.top/*",
     "https://api.open-meteo.com/*",
     "https://api.bigdatacloud.net/*",
+    "https://images.pexels.com/*",
+    "https://videos.pexels.com/*",
+    "https://cdn.coverr.co/*",
+    "https://picsum.photos/*",
     "https://icons.duckduckgo.com/*",
     "https://www.google.com/*"
   ],

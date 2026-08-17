@@ -192,14 +192,16 @@ const WeatherWidget: React.FC = () => {
           <div className={styles.weatherWidget}>
             <div className={styles.weatherCompact}>
               <div className={styles.weatherCompactMain}>
-                <span className={styles.weatherCompactIcon}>{data?.icon || '☀️'}</span>
                 <div>
                   <div className={styles.weatherCompactCity}>{data?.city || t('weather.title', { defaultValue: 'Weather' })}</div>
                   <div className={styles.weatherCompactDesc}>{data ? conditionText(data.condition) : t('common.loading')}</div>
                 </div>
               </div>
-              <div className={styles.weatherCompactTemp}>
-                <span>{data?.temperature ?? '--'}</span>°
+              <div className={styles.weatherCompactCurrent}>
+                <div className={styles.weatherCompactTemp}>
+                  <span>{data?.temperature ?? '--'}</span>°
+                </div>
+                <span className={styles.weatherCompactIcon}>{data?.icon || '☀️'}</span>
               </div>
             </div>
 

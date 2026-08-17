@@ -105,7 +105,7 @@ const TodoWidget: React.FC = () => {
 
   return (
     <>
-      <Card className={styles.widgetCard} variant='borderless' onClick={() => setOpen(true)}>
+      <Card className={`${styles.widgetCard} ${styles.todoCard}`} variant='borderless' onClick={() => setOpen(true)}>
         <div className={styles.todoWidget}>
           <div className={styles.todoCompactHeader}>
             <div>

@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react'
-import { Tabs, Slider, Empty, Switch, Spin } from 'antd'
+import { Tabs, Slider, Empty, Switch, Spin, message } from 'antd'
 import SimpleBar from 'simplebar-react'
 import styles from './wallpaper.module.less'
 import { wallpaperService } from './services'
@@ -226,8 +226,25 @@ const Wallpaper: React.FC = () => {
   const preloadWallpaperImage = (url: string) => {
     return new Promise<void>((resolve, reject) => {
       const img = new Image()
-      img.onload = () => resolve()
-      img.onerror = () => reject(new Error('图片加载失败'))
+      const cleanup = () => {
+        img.onload = null
+        img.onerror = null
+      }
+      const timer = window.setTimeout(() => {
+        cleanup()
+        img.src = ''
+        reject(new Error('图片加载超时'))
+      }, 20000)
+      img.onload = () => {
+        window.clearTimeout(timer)
+        cleanup()
+        resolve()
+      }
+      img.onerror = () => {
+        window.clearTimeout(timer)
+        cleanup()
+        reject(new Error('图片加载失败'))
+      }
       img.src = url
     })
   }
@@ -434,17 +451,16 @@ const Wallpaper: React.FC = () => {
     setApplyingWallpaperId(loadingKey)
     try {
       await preloadWallpaperImage(wallpaper.url)
-    } catch (error) {
-      console.warn('预加载静态壁纸失败，继续应用:', error)
-    }
-    const next: IWallpaperConfig = {
-      currentWallpaper: wallpaper,
-      brightness,
-      blur,
-      featuredCategory: featuredCategory || wallpaper.category
-    }
-    try {
+      const next: IWallpaperConfig = {
+        currentWallpaper: wallpaper,
+        brightness,
+        blur,
+        featuredCategory: featuredCategory || wallpaper.category
+      }
       await saveConfig(next)
+    } catch (error) {
+      console.warn('加载 4K 静态壁纸失败，已取消应用:', error)
+      message.error(`${t('wallpaper.featured')} ${t('common.failed')}`)
     } finally {
       setApplyingWallpaperId((current) => (current === loadingKey ? '' : current))
     }

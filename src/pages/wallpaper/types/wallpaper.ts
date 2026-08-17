@@ -30,6 +30,8 @@ export interface IDynamicWallpaper {
   id: string
   type: 'dynamic'
   videoUrl: string
+  videoWidth?: number
+  videoHeight?: number
   thumbnail: string
   category: string
   title?: string

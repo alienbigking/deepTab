@@ -48,6 +48,7 @@ const buildAppEnvVars = (webpackEnv = {}, argv = {}) => {
 
 module.exports = (webpackEnv, argv) => {
   const appEnvVars = buildAppEnvVars(webpackEnv, argv)
+  const appEnv = appEnvVars.APP_ENV
 
   return [
   // **Popup 页面的 Webpack 配置**
@@ -98,7 +99,16 @@ module.exports = (webpackEnv, argv) => {
         patterns: [
           {
             from: 'manifest.json',
-            to: '.'
+            to: '.',
+            transform(content) {
+              const manifest = JSON.parse(content.toString())
+              if (appEnv === 'develop') {
+                manifest.host_permissions = Array.from(
+                  new Set([...(manifest.host_permissions || []), 'http://localhost:3000/*'])
+                )
+              }
+              return JSON.stringify(manifest, null, 2)
+            }
           },
           { from: 'src/assets', to: 'src/assets' },
           { from: '_locales', to: '_locales' }
