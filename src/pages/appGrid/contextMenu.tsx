@@ -184,7 +184,7 @@ const ContextMenu: React.FC<ContextMenuProps> = (props) => {
     }
 
     return items
-  }, [nodeType, allFolders, onMoveToFolder])
+  }, [nodeType, allFolders, onMoveToFolder, t])
 
   // 处理菜单点击事件
   const handleMenuClick: MenuProps['onClick'] = ({ key }) => {

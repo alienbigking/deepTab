@@ -1,6 +1,6 @@
 {
   "name": "deepTab",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "A customizable Chrome new tab extension with search, shortcuts, wallpapers, widgets, and settings.",
   "main": "index.js",
   "scripts": {

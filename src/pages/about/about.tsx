@@ -45,7 +45,7 @@ const About: React.FC = () => {
       />
       <Card title={t('sidebar.about')} className='dtSettingsCard' variant='borderless'>
         <Descriptions column={1}>
-          <Descriptions.Item label={t('about.version', { defaultValue: 'Version' })}>V2.2.22</Descriptions.Item>
+          <Descriptions.Item label={t('about.version', { defaultValue: 'Version' })}>V1.1.0</Descriptions.Item>
           <Descriptions.Item label={t('about.author', { defaultValue: 'Author' })}>deepTab Team</Descriptions.Item>
           <Descriptions.Item label={t('profile.email', { defaultValue: 'Email' })}>1260213657@qq.com</Descriptions.Item>
           <Descriptions.Item label={t('about.website', { defaultValue: 'Website' })}>https://deeptab.com</Descriptions.Item>

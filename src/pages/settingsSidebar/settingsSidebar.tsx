@@ -270,7 +270,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = (props) => {
 
           {/* 底部信息 */}
           <div className={cn(styles.bottomInfo)}>
-            <div className={cn(styles.version)}>V2.2.22</div>
+            <div className={cn(styles.version)}>V1.1.0</div>
             <div className={cn(styles.links)}>
               <button type='button' onClick={() => setLegalType('terms')}>
                 {t('sidebar.terms')}
